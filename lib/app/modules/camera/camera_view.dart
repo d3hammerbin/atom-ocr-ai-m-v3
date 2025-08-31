@@ -156,6 +156,10 @@ class _CameraViewState extends State<CameraView> {
                     
                     // Texto de instrucción
                     _buildInstructionText(orientation),
+                    
+                    // Indicador del lado de escaneo (solo en landscape)
+                    if (orientation == Orientation.landscape)
+                      _buildSideIndicator(),
                   ],
                 );
               },
@@ -201,10 +205,94 @@ class _CameraViewState extends State<CameraView> {
       }
     }
     
-    return Center(
-      child: Container(
-        width: frameWidth,
-        height: frameHeight,
+    if (orientation == Orientation.portrait) {
+      return Center(
+        child: Container(
+          width: frameWidth,
+          height: frameHeight,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              // Esquinas del marco
+              Positioned(
+                top: -1,
+                left: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.blue, width: 4),
+                      left: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -1,
+                right: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.blue, width: 4),
+                      right: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -1,
+                left: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.blue, width: 4),
+                      left: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -1,
+                right: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.blue, width: 4),
+                      right: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // En landscape, centrar verticalmente en el espacio disponible
+      // Calcular altura del tip (aproximadamente 60px incluyendo padding)
+      const double tipHeight = 60;
+      final double availableHeight = screenHeight - tipHeight;
+      final double topPosition = tipHeight + (availableHeight - frameHeight) / 2 - 20; // Subir 20px para evitar fusión con parte inferior
+      
+      return Positioned(
+        top: topPosition, // Centrar en el espacio disponible
+        left: (screenWidth - frameWidth) / 2, // Centrar horizontalmente
+        child: Container(
+          width: frameWidth,
+          height: frameHeight,
         decoration: BoxDecoration(
           border: Border.all(
             color: Colors.white,
@@ -275,6 +363,7 @@ class _CameraViewState extends State<CameraView> {
         ),
       ),
     );
+    }
   }
 
   Widget _buildCameraControls(Orientation orientation) {
@@ -294,12 +383,12 @@ class _CameraViewState extends State<CameraView> {
             ),
             // Botón capturar
             _buildCaptureButton(),
-            // Botón cambiar cámara
-            _buildControlButton(
-              icon: Icons.flip_camera_ios,
-              onPressed: controller.switchCamera,
+            // Botón lado de credencial
+            Obx(() => _buildControlButton(
+              icon: controller.isFrontSide.value ? Icons.person : Icons.qr_code,
+              onPressed: controller.switchCredentialSide,
               backgroundColor: Colors.blue.withOpacity(0.8),
-            ),
+            )),
           ],
         ),
       );
@@ -308,14 +397,10 @@ class _CameraViewState extends State<CameraView> {
         right: 0,
         top: 0,
         bottom: 0,
-        width: 80,
+        width: 60,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.3),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              bottomLeft: Radius.circular(20),
-            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -329,13 +414,13 @@ class _CameraViewState extends State<CameraView> {
               ),
               // Botón capturar
               _buildCaptureButton(),
-              // Botón cambiar cámara
-              _buildControlButton(
-                icon: Icons.flip_camera_ios,
-                onPressed: controller.switchCamera,
+              // Botón lado de credencial
+              Obx(() => _buildControlButton(
+                icon: controller.isFrontSide.value ? Icons.person : Icons.qr_code,
+                onPressed: controller.switchCredentialSide,
                 backgroundColor: Colors.black.withOpacity(0.6),
                 size: 45,
-              ),
+              )),
             ],
           ),
         ),
@@ -446,16 +531,11 @@ class _CameraViewState extends State<CameraView> {
       return Positioned(
         top: 0,
         left: 0,
-        right: 0,
+        right: 60, // Terminar donde comienza el menú lateral
         child: Container(
-          width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.4),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(15),
-              bottomRight: Radius.circular(15),
-            ),
           ),
           child: const Text(
             'Coloca la credencial dentro del marco y presiona el botón para capturar',
@@ -476,5 +556,28 @@ class _CameraViewState extends State<CameraView> {
         ),
       );
     }
+  }
+
+  Widget _buildSideIndicator() {
+    return Positioned(
+      left: 20,
+      top: MediaQuery.of(context).size.height * 0.4, // Centrar verticalmente
+      child: Obx(() => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Icon(
+          controller.isFrontSide.value ? Icons.person : Icons.qr_code,
+          color: Colors.white,
+          size: 32,
+        ),
+      )),
+    );
   }
 }

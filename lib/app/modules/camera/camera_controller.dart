@@ -11,10 +11,12 @@ class CameraCaptureController extends GetxController {
   final capturedImagePath = ''.obs;
   final hasPermission = false.obs;
   final errorMessage = ''.obs;
+  final isFrontSide = true.obs; // true = frontal (persona), false = reverso (QR)
   
   // Controlador de cámara
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
+  CameraDescription? _backCamera; // Siempre usar cámara trasera
   
   // Getters
   CameraController? get cameraController => _cameraController;
@@ -51,9 +53,15 @@ class CameraCaptureController extends GetxController {
         return;
       }
       
-      // Inicializar controlador con la primera cámara (trasera)
+      // Buscar específicamente la cámara trasera
+      _backCamera = _cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => _cameras.first, // Fallback a la primera disponible
+      );
+      
+      // Inicializar controlador siempre con la cámara trasera
       _cameraController = CameraController(
-        _cameras.first,
+        _backCamera!,
         ResolutionPreset.high,
         enableAudio: false,
       );
@@ -124,31 +132,17 @@ class CameraCaptureController extends GetxController {
     }
   }
   
-  /// Cambia entre cámara frontal y trasera
-  Future<void> switchCamera() async {
-    if (_cameras.length < 2) return;
+  /// Alterna entre lado frontal y reverso de la credencial
+  void switchCredentialSide() {
+    isFrontSide.value = !isFrontSide.value;
     
-    try {
-      final currentCamera = _cameraController!.description;
-      final newCamera = _cameras.firstWhere(
-        (camera) => camera != currentCamera,
-        orElse: () => _cameras.first,
-      );
-      
-      await _cameraController!.dispose();
-      
-      _cameraController = CameraController(
-        newCamera,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-      
-      await _cameraController!.initialize();
-      
-    } catch (e) {
-      errorMessage.value = 'Error al cambiar cámara: $e';
-      print('Error cambiando cámara: $e');
-    }
+    // Mostrar mensaje informativo sobre el lado seleccionado
+    Get.snackbar(
+      'Lado de credencial',
+      isFrontSide.value ? 'Capturando lado frontal' : 'Capturando lado reverso',
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
+    );
   }
   
   /// Reinicia la cámara

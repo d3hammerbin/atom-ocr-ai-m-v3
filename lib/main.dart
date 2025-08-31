@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 import 'app/routes/app_pages.dart';
 import 'app/core/user_preferences_controller.dart';
 import 'app/core/app_version_service.dart';
+import 'app/core/services/permission_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

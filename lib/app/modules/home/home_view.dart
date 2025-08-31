@@ -31,9 +31,10 @@ class HomeView extends GetView<HomeController> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const Text(
                 'Atom OCR AI',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -94,7 +95,8 @@ class HomeView extends GetView<HomeController> {
                 ),
               ),
               const SizedBox(height: 40),
-            ],
+              ],
+            ),
           ),
         ),
       ),

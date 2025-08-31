@@ -1,8 +1,13 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:gal/gal.dart';
+import '../../core/utils/secure_storage.dart';
+import '../../core/services/permission_service.dart';
 
 class CameraCaptureController extends GetxController {
   // Variables observables
@@ -84,41 +89,87 @@ class CameraCaptureController extends GetxController {
   
   /// Captura una imagen
   Future<void> captureImage() async {
-    if (!isInitialized.value || _cameraController == null) {
-      Get.snackbar(
-        'Error',
-        'La cámara no está inicializada',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
+    if (isCapturing.value) return;
     
     try {
       isCapturing.value = true;
       
-      // Capturar imagen
-      final XFile image = await _cameraController!.takePicture();
+      // Verificar que el directorio seguro esté listo
+      final bool isSecureReady = await SecureStorage.isSecureDirectoryReady();
+      if (!isSecureReady) {
+        throw Exception('Directorio seguro no disponible');
+      }
       
-      // Obtener directorio de documentos
-      final Directory appDir = await getApplicationDocumentsDirectory();
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      final String fileName = 'credential_$timestamp.jpg';
-      final String filePath = '${appDir.path}/$fileName';
+      // Verificar permisos de almacenamiento usando el servicio de permisos
+      final bool storageGranted = await PermissionService.checkStoragePermission();
+      if (!storageGranted) {
+        // Intentar solicitar permisos de almacenamiento
+        final bool storageRequested = await PermissionService.requestStoragePermissions();
+        if (!storageRequested) {
+          throw Exception('Permisos de almacenamiento requeridos');
+        }
+      }
       
-      // Copiar imagen al directorio de la aplicación
-      await File(image.path).copy(filePath);
+      // Verificar permisos de galería para guardar la imagen
+      final bool galleryGranted = await PermissionService.checkGalleryPermission();
+      if (!galleryGranted) {
+        // Intentar solicitar permisos de galería
+        final bool galleryRequested = await PermissionService.requestGalleryPermissions();
+        if (!galleryRequested) {
+          throw Exception('Permisos de galería requeridos para guardar la imagen');
+        }
+      }
+      
+      // Verificar que el controlador esté inicializado
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
+        throw Exception('Controlador de cámara no inicializado');
+      }
+      
+      // Capturar la imagen
+      final XFile? image = await _cameraController?.takePicture();
+      if (image == null) {
+        throw Exception('No se pudo capturar la imagen');
+      }
+      
+      // Leer los bytes de la imagen
+      final Uint8List imageBytes = await image.readAsBytes();
+      if (imageBytes.isEmpty) {
+        throw Exception('La imagen capturada está vacía');
+      }
+      
+      // Guardar imagen en la galería
+       await Gal.putImageBytes(
+         imageBytes,
+         name: "atom_ocr_${DateTime.now().millisecondsSinceEpoch}.jpg",
+       );
+       
+       // Guardar imagen en directorio seguro y oculto
+       final String secureFileName = SecureStorage.generateSecureFileName(
+         prefix: 'credential',
+         extension: 'jpg',
+       );
+       final File secureFile = await SecureStorage.saveImageBytes(
+         imageBytes,
+         fileName: secureFileName,
+       );
+       final String filePath = secureFile.path;
       
       capturedImagePath.value = filePath;
       isCapturing.value = false;
       
       Get.snackbar(
         'Éxito',
-        'Credencial capturada correctamente',
-        snackPosition: SnackPosition.BOTTOM,
+        'Imagen guardada en la galería',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
       );
       
-      // Navegar de regreso con la imagen capturada
-      Get.back(result: filePath);
+      // Navegar a la pantalla de procesamiento con la imagen capturada
+      Get.toNamed('/processing', arguments: {
+        'imagePath': filePath,
+        'side': isFrontSide.value ? 'front' : 'back',
+      });
       
     } catch (e) {
       isCapturing.value = false;

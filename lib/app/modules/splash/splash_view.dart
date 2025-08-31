@@ -22,7 +22,7 @@ class SplashView extends GetView<SplashController> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
-                Icons.document_scanner,
+                Icons.lightbulb_outline,
                 size: 60,
                 color: Theme.of(context).colorScheme.onPrimary,
               ),

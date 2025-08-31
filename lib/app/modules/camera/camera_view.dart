@@ -39,16 +39,12 @@ class _CameraViewState extends State<CameraView> {
   }
 
   void _restorePortraitOrientation() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   Future<void> _exitToHome() async {
     // Restaurar orientación vertical antes de navegar
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     // Delay para asegurar que la orientación se aplique antes de navegar
     await Future.delayed(const Duration(milliseconds: 200));
     Get.offAllNamed('/home');
@@ -67,73 +63,62 @@ class _CameraViewState extends State<CameraView> {
         ),
         child: SafeArea(
           child: Obx(() {
-             if (!controller.isInitialized.value && controller.errorMessage.value.isEmpty) {
-               return const Center(
-                 child: Column(
-                   mainAxisAlignment: MainAxisAlignment.center,
-                   children: [
-                     CircularProgressIndicator(
-                       color: Colors.white,
-                     ),
-                     SizedBox(height: 16),
-                     Text(
-                       'Inicializando cámara...',
-                       style: TextStyle(
-                         color: Colors.white,
-                         fontSize: 16,
-                       ),
-                     ),
-                   ],
-                 ),
-               );
-             }
- 
-             if (controller.errorMessage.value.isNotEmpty) {
-               return Center(
-                 child: Column(
-                   mainAxisAlignment: MainAxisAlignment.center,
-                   children: [
-                     const Icon(
-                       Icons.error_outline,
-                       color: Colors.red,
-                       size: 64,
-                     ),
-                     const SizedBox(height: 16),
-                     Text(
-                       controller.errorMessage.value,
-                       style: const TextStyle(
-                         color: Colors.white,
-                         fontSize: 16,
-                       ),
-                       textAlign: TextAlign.center,
-                     ),
-                     const SizedBox(height: 24),
-                     ElevatedButton(
-                       onPressed: _exitToHome,
-                       style: ElevatedButton.styleFrom(
-                         backgroundColor: Colors.blue,
-                         foregroundColor: Colors.white,
-                       ),
-                       child: const Text('Regresar al inicio'),
-                     ),
-                   ],
-                 ),
-               );
-             }
- 
-             if (!controller.isInitialized.value) {
-               return const Center(
-                 child: CircularProgressIndicator(
-                   color: Colors.white,
-                 ),
-               );
-             }
+            if (!controller.isInitialized.value &&
+                controller.errorMessage.value.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Inicializando cámara...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (controller.errorMessage.value.isNotEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 64,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      controller.errorMessage.value,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _exitToHome,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Regresar al inicio'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (!controller.isInitialized.value) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
 
             return OrientationBuilder(
               builder: (context, orientation) {
                 final size = MediaQuery.of(context).size;
-                final deviceRatio = size.width / size.height;
-                
                 return Stack(
                   children: [
                     // Vista previa de la cámara con AspectRatio correcto
@@ -142,21 +127,23 @@ class _CameraViewState extends State<CameraView> {
                         fit: BoxFit.cover,
                         child: SizedBox(
                           width: size.width,
-                          height: size.width / controller.cameraController!.value.aspectRatio,
+                          height:
+                              size.width /
+                              controller.cameraController!.value.aspectRatio,
                           child: CameraPreview(controller.cameraController!),
                         ),
                       ),
                     ),
-                    
+
                     // Marco de guía para la credencial
                     _buildCredentialFrame(orientation),
-                    
+
                     // Controles de la cámara
                     _buildCameraControls(orientation),
-                    
+
                     // Texto de instrucción
                     _buildInstructionText(orientation),
-                    
+
                     // Indicador del lado de escaneo (solo en landscape)
                     if (orientation == Orientation.landscape)
                       _buildSideIndicator(),
@@ -173,19 +160,19 @@ class _CameraViewState extends State<CameraView> {
   Widget _buildCredentialFrame(Orientation orientation) {
     // Aspect ratio de credencial: 790:490 ≈ 1.61:1
     const double credentialAspectRatio = 790 / 490;
-    
+
     // Obtener dimensiones de pantalla
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    
+
     double frameWidth, frameHeight;
-    
+
     if (orientation == Orientation.portrait) {
       // En portrait, usar 80% del ancho disponible
       frameWidth = screenWidth * 0.8;
       frameHeight = frameWidth / credentialAspectRatio;
-      
+
       // Verificar que no exceda la altura disponible (dejando espacio para controles)
       final maxHeight = screenHeight * 0.5;
       if (frameHeight > maxHeight) {
@@ -196,7 +183,7 @@ class _CameraViewState extends State<CameraView> {
       // En landscape, maximizar área de captura (85% ancho, dejando solo espacio para barra de botones)
       frameWidth = screenWidth * 0.85;
       frameHeight = frameWidth / credentialAspectRatio;
-      
+
       // Verificar que no exceda la altura disponible (dejando espacio para tip superior)
       final maxHeight = screenHeight * 0.85;
       if (frameHeight > maxHeight) {
@@ -204,17 +191,14 @@ class _CameraViewState extends State<CameraView> {
         frameWidth = frameHeight * credentialAspectRatio;
       }
     }
-    
+
     if (orientation == Orientation.portrait) {
       return Center(
         child: Container(
           width: frameWidth,
           height: frameHeight,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: Colors.white,
-              width: 2,
-            ),
+            border: Border.all(color: Colors.white, width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Stack(
@@ -285,84 +269,84 @@ class _CameraViewState extends State<CameraView> {
       // Calcular altura del tip (aproximadamente 60px incluyendo padding)
       const double tipHeight = 60;
       final double availableHeight = screenHeight - tipHeight;
-      final double topPosition = tipHeight + (availableHeight - frameHeight) / 2 - 20; // Subir 20px para evitar fusión con parte inferior
-      
+      final double topPosition =
+          tipHeight +
+          (availableHeight - frameHeight) / 2 -
+          20; // Subir 20px para evitar fusión con parte inferior
+
       return Positioned(
         top: topPosition, // Centrar en el espacio disponible
         left: (screenWidth - frameWidth) / 2, // Centrar horizontalmente
         child: Container(
           width: frameWidth,
           height: frameHeight,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white, width: 2),
+            borderRadius: BorderRadius.circular(12),
           ),
-          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              // Esquinas del marco
+              Positioned(
+                top: -1,
+                left: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.blue, width: 4),
+                      left: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -1,
+                right: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.blue, width: 4),
+                      right: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -1,
+                left: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.blue, width: 4),
+                      left: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -1,
+                right: -1,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.blue, width: 4),
+                      right: BorderSide(color: Colors.blue, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Stack(
-          children: [
-            // Esquinas del marco
-            Positioned(
-              top: -1,
-              left: -1,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.blue, width: 4),
-                    left: BorderSide(color: Colors.blue, width: 4),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: -1,
-              right: -1,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.blue, width: 4),
-                    right: BorderSide(color: Colors.blue, width: 4),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -1,
-              left: -1,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.blue, width: 4),
-                    left: BorderSide(color: Colors.blue, width: 4),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -1,
-              right: -1,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.blue, width: 4),
-                    right: BorderSide(color: Colors.blue, width: 4),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      );
     }
   }
 
@@ -384,11 +368,14 @@ class _CameraViewState extends State<CameraView> {
             // Botón capturar
             _buildCaptureButton(),
             // Botón lado de credencial
-            Obx(() => _buildControlButton(
-              icon: controller.isFrontSide.value ? Icons.person : Icons.qr_code,
-              onPressed: controller.switchCredentialSide,
-              backgroundColor: Colors.blue.withOpacity(0.8),
-            )),
+            Obx(
+              () => _buildControlButton(
+                icon:
+                    controller.isFrontSide.value ? Icons.person : Icons.qr_code,
+                onPressed: controller.switchCredentialSide,
+                backgroundColor: Colors.blue.withOpacity(0.8),
+              ),
+            ),
           ],
         ),
       );
@@ -399,9 +386,7 @@ class _CameraViewState extends State<CameraView> {
         bottom: 0,
         width: 60,
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-          ),
+          decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -415,12 +400,17 @@ class _CameraViewState extends State<CameraView> {
               // Botón capturar
               _buildCaptureButton(),
               // Botón lado de credencial
-              Obx(() => _buildControlButton(
-                icon: controller.isFrontSide.value ? Icons.person : Icons.qr_code,
-                onPressed: controller.switchCredentialSide,
-                backgroundColor: Colors.black.withOpacity(0.6),
-                size: 45,
-              )),
+              Obx(
+                () => _buildControlButton(
+                  icon:
+                      controller.isFrontSide.value
+                          ? Icons.person
+                          : Icons.qr_code,
+                  onPressed: controller.switchCredentialSide,
+                  backgroundColor: Colors.black.withOpacity(0.6),
+                  size: 45,
+                ),
+              ),
             ],
           ),
         ),
@@ -435,26 +425,20 @@ class _CameraViewState extends State<CameraView> {
     double? size,
   }) {
     final buttonSize = size ?? 60.0;
-    final iconSize = (size ?? 60.0) * 0.47; // Proporción del icono respecto al botón
-    
+    final iconSize =
+        (size ?? 60.0) * 0.47; // Proporción del icono respecto al botón
+
     return Container(
       width: buttonSize,
       height: buttonSize,
       decoration: BoxDecoration(
         color: backgroundColor,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
       ),
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(
-          icon,
-          color: Colors.white,
-          size: iconSize,
-        ),
+        icon: Icon(icon, color: Colors.white, size: iconSize),
       ),
     );
   }
@@ -466,38 +450,45 @@ class _CameraViewState extends State<CameraView> {
       final isLandscape = orientation == Orientation.landscape;
       final buttonSize = isLandscape ? 55.0 : 80.0;
       final iconSize = isLandscape ? 24.0 : 32.0;
-      
+
       return GestureDetector(
-        onTap: controller.isCapturing.value ? null : () async {
-          await controller.captureImage();
-          // Regresar al home después de capturar con orientación vertical
-          await _exitToHome();
-        },
+        onTap:
+            controller.isCapturing.value
+                ? null
+                : () async {
+                  await controller.captureImage();
+                  // Regresar al home después de capturar con orientación vertical
+                  await _exitToHome();
+                },
         child: Container(
           width: buttonSize,
           height: buttonSize,
           decoration: BoxDecoration(
-            color: controller.isCapturing.value 
-                ? Colors.grey.withOpacity(0.6)
-                : (isLandscape ? Colors.white.withOpacity(0.8) : Colors.white.withOpacity(0.9)),
+            color:
+                controller.isCapturing.value
+                    ? Colors.grey.withOpacity(0.6)
+                    : (isLandscape
+                        ? Colors.white.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.9)),
             shape: BoxShape.circle,
             border: Border.all(
               color: Colors.white.withOpacity(isLandscape ? 0.5 : 1.0),
               width: isLandscape ? 2 : 4,
             ),
           ),
-          child: controller.isCapturing.value
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: isLandscape ? Colors.white : Colors.blue,
-                    strokeWidth: 2,
+          child:
+              controller.isCapturing.value
+                  ? Center(
+                    child: CircularProgressIndicator(
+                      color: isLandscape ? Colors.white : Colors.blue,
+                      strokeWidth: 2,
+                    ),
+                  )
+                  : Icon(
+                    Icons.camera_alt,
+                    color: isLandscape ? Colors.black87 : Colors.black,
+                    size: iconSize,
                   ),
-                )
-              : Icon(
-                  Icons.camera_alt,
-                  color: isLandscape ? Colors.black87 : Colors.black,
-                  size: iconSize,
-                ),
         ),
       );
     });
@@ -534,9 +525,7 @@ class _CameraViewState extends State<CameraView> {
         right: 60, // Terminar donde comienza el menú lateral
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
-          ),
+          decoration: BoxDecoration(color: Colors.black.withOpacity(0.4)),
           child: const Text(
             'Coloca la credencial dentro del marco y presiona el botón para capturar',
             style: TextStyle(
@@ -562,22 +551,21 @@ class _CameraViewState extends State<CameraView> {
     return Positioned(
       left: 20,
       top: MediaQuery.of(context).size.height * 0.4, // Centrar verticalmente
-      child: Obx(() => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withOpacity(0.3),
-            width: 2,
+      child: Obx(
+        () => Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          ),
+          child: Icon(
+            controller.isFrontSide.value ? Icons.person : Icons.qr_code,
+            color: Colors.white,
+            size: 32,
           ),
         ),
-        child: Icon(
-          controller.isFrontSide.value ? Icons.person : Icons.qr_code,
-          color: Colors.white,
-          size: 32,
-        ),
-      )),
+      ),
     );
   }
 }

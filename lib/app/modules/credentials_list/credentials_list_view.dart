@@ -52,7 +52,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
                   'Las credenciales que captures aparecerán aquí',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -111,7 +111,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
               'Capturada: ${credential['fechaCaptura'] ?? 'N/A'}',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
           ],

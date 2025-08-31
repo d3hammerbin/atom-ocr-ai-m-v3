@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../core/services/permission_service.dart';
+import '../../core/services/logger_service.dart';
 import '../../routes/app_pages.dart';
 
 class SplashController extends GetxController {
@@ -44,7 +45,7 @@ class SplashController extends GetxController {
       Get.offAllNamed(Routes.HOME);
       
     } catch (e) {
-      print('Error durante la inicialización: $e');
+      await Log.e('SplashController', 'Error durante la inicialización', e);
       statusMessage.value = 'Error durante la inicialización';
       hasError.value = true;
       isInitializing.value = false;
@@ -61,7 +62,7 @@ class SplashController extends GetxController {
     try {
       return await PermissionService.areAllPermissionsGranted();
     } catch (e) {
-      print('Error verificando permisos: $e');
+      await Log.e('SplashController', 'Error verificando permisos', e);
       return false;
     }
   }
@@ -72,7 +73,7 @@ class SplashController extends GetxController {
       statusMessage.value = 'Solicitando permisos necesarios...';
       return await PermissionService.requestAllPermissions();
     } catch (e) {
-      print('Error solicitando permisos: $e');
+      await Log.e('SplashController', 'Error solicitando permisos', e);
       return false;
     }
   }

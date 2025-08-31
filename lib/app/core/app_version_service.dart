@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'services/logger_service.dart';
 
 /// Servicio GetX para manejar la información de versión de la aplicación
 class AppVersionService extends GetxService {
@@ -45,7 +46,7 @@ class AppVersionService extends GetxService {
 
       _isLoading.value = false;
     } catch (e) {
-      print('Error al cargar información del paquete: $e');
+      await Log.e('AppVersionService', 'Error al cargar información del paquete', e);
       // Valores por defecto en caso de error
       _appName.value = 'Atom OCR AI';
       _version.value = '1.0.0';

@@ -4,13 +4,14 @@ import 'package:get_storage/get_storage.dart';
 import 'app/routes/app_pages.dart';
 import 'app/core/user_preferences_controller.dart';
 import 'app/core/app_version_service.dart';
-import 'app/core/services/permission_service.dart';
+import 'app/core/services/logger_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
   
   // Inicializar servicios
+  await LoggerService.instance.initialize();
   Get.put(UserPreferencesController());
   await Get.putAsync(() => AppVersionService().onInit().then((_) => AppVersionService()));
   
@@ -46,11 +47,9 @@ class MyApp extends StatelessWidget {
             primary: const Color(0xFF9E9E9E),
             secondary: const Color(0xFF757575),
             surface: const Color(0xFF121212),
-            background: const Color(0xFF121212),
             onPrimary: Colors.black,
             onSecondary: Colors.white,
             onSurface: Colors.white,
-            onBackground: Colors.white,
           ),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(

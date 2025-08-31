@@ -1,15 +1,14 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import '../../core/utils/secure_storage.dart';
 import '../../core/services/permission_service.dart';
+import '../../core/services/logger_service.dart';
 
 class CameraCaptureController extends GetxController with WidgetsBindingObserver {
   // Variables observables
@@ -62,27 +61,27 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   }
   
   /// Pausa la cámara de forma segura
-  void _pauseCamera() {
+  Future<void> _pauseCamera() async {
     try {
       if (_cameraController != null && _cameraController!.value.isInitialized) {
         // No hacer dispose, solo marcar como no inicializada temporalmente
-        print('Pausando cámara por cambio de estado de aplicación');
+        await Log.i('CameraController', 'Pausando cámara por cambio de estado de aplicación');
       }
     } catch (e) {
-      print('Error al pausar cámara: $e');
+      await Log.e('CameraController', 'Error al pausar cámara', e);
     }
   }
   
   /// Reanuda la cámara de forma segura
-  void _resumeCamera() {
+  Future<void> _resumeCamera() async {
     try {
       if (_cameraController != null && !_cameraController!.value.isInitialized) {
         // Reinicializar la cámara si es necesario
         _initializeCamera();
-        print('Reanudando cámara por cambio de estado de aplicación');
+        await Log.i('CameraController', 'Reanudando cámara por cambio de estado de aplicación');
       }
     } catch (e) {
-      print('Error al reanudar cámara: $e');
+      await Log.e('CameraController', 'Error al reanudar cámara', e);
     }
   }
   
@@ -97,7 +96,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
         _cameraController = null;
       }
     } catch (e) {
-      print('Error al limpiar recursos de cámara: $e');
+      await Log.e('CameraController', 'Error al limpiar recursos de cámara', e);
       // Forzar la limpieza del controlador incluso si hay error
       _cameraController = null;
     }
@@ -144,7 +143,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       
     } catch (e) {
       errorMessage.value = 'Error al inicializar cámara: $e';
-      print('Error inicializando cámara: $e');
+      await Log.e('CameraController', 'Error inicializando cámara', e);
     }
   }
   
@@ -252,7 +251,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       
       return croppedBytes;
     } catch (e) {
-      print('Error recortando imagen: $e');
+      await Log.e('CameraController', 'Error recortando imagen', e);
       // En caso de error, devolver la imagen original
       return imageBytes;
     }
@@ -365,7 +364,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
         'No se pudo capturar la imagen: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
-      print('Error capturando imagen: $e');
+      await Log.e('CameraController', 'Error capturando imagen', e);
     }
   }
   

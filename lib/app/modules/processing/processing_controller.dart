@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../core/utils/secure_storage.dart';
+import '../../core/services/logger_service.dart';
 
 class ProcessingController extends GetxController {
   // Observable para el estado de procesamiento
@@ -45,11 +46,11 @@ class ProcessingController extends GetxController {
   
   Future<void> _initializeProcessing() async {
     try {
-      print('ProcessingController: Iniciando procesamiento...');
+      await Log.i('ProcessingController', 'Iniciando procesamiento...');
       
       // Verificar que el directorio seguro esté listo
       final bool isSecureReady = await SecureStorage.isSecureDirectoryReady();
-      print('ProcessingController: Directorio seguro listo: $isSecureReady');
+      await Log.d('ProcessingController', 'Directorio seguro listo: $isSecureReady');
       if (!isSecureReady) {
         processingStatus.value = 'Error: Directorio seguro no disponible';
         return;
@@ -57,32 +58,32 @@ class ProcessingController extends GetxController {
       
       // Obtener la imagen del argumento de navegación
       final arguments = Get.arguments;
-      print('ProcessingController: Argumentos recibidos: $arguments');
+      await Log.d('ProcessingController', 'Argumentos recibidos: $arguments');
       
       if (arguments != null && arguments['imagePath'] != null) {
         final String imagePath = arguments['imagePath'] as String;
-        print('ProcessingController: Ruta de imagen: $imagePath');
+        await Log.d('ProcessingController', 'Ruta de imagen: $imagePath');
         final File imageFile = File(imagePath);
         
         // Verificar que la imagen existe en el directorio seguro
         final bool imageExists = await imageFile.exists();
-        print('ProcessingController: Imagen existe: $imageExists');
+        await Log.d('ProcessingController', 'Imagen existe: $imageExists');
         
         if (imageExists) {
           capturedImage.value = imageFile;
-          print('ProcessingController: Imagen asignada, iniciando procesamiento...');
+          await Log.i('ProcessingController', 'Imagen asignada, iniciando procesamiento...');
           startProcessing();
         } else {
           processingStatus.value = 'Error: Imagen no encontrada en directorio seguro';
-          print('ProcessingController: Error - Imagen no encontrada');
+          await Log.w('ProcessingController', 'Error - Imagen no encontrada');
         }
       } else {
         processingStatus.value = 'Error: No se proporcionó ruta de imagen';
-        print('ProcessingController: Error - No se proporcionó ruta de imagen');
+        await Log.w('ProcessingController', 'Error - No se proporcionó ruta de imagen');
       }
     } catch (e) {
       processingStatus.value = 'Error inicializando procesamiento: $e';
-      print('ProcessingController: Error en inicialización: $e');
+      await Log.e('ProcessingController', 'Error en inicialización', e);
     }
   }
   

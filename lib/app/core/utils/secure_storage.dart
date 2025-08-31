@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../services/logger_service.dart';
 
 class SecureStorage {
   static const String _hiddenDirName = '.atom_ocr_secure';
@@ -39,10 +39,10 @@ class SecureStorage {
       // 700 = rwx------ (solo el propietario puede leer, escribir y ejecutar)
       final result = await Process.run('chmod', ['700', directory.path]);
       if (result.exitCode != 0) {
-        print('Advertencia: No se pudieron establecer permisos restrictivos');
+        await Log.w('SecureStorage', 'No se pudieron establecer permisos restrictivos');
       }
     } catch (e) {
-      print('Error estableciendo permisos: $e');
+      await Log.e('SecureStorage', 'Error estableciendo permisos', e);
     }
   }
 
@@ -76,7 +76,7 @@ class SecureStorage {
       }
       return null;
     } catch (e) {
-      print('Error obteniendo imagen: $e');
+      await Log.e('SecureStorage', 'Error obteniendo imagen', e);
       return null;
     }
   }
@@ -94,7 +94,7 @@ class SecureStorage {
                          file.path.toLowerCase().endsWith('.jpeg'))
           .toList();
     } catch (e) {
-      print('Error listando imágenes: $e');
+      await Log.e('SecureStorage', 'Error listando imágenes', e);
       return [];
     }
   }
@@ -111,7 +111,7 @@ class SecureStorage {
       }
       return false;
     } catch (e) {
-      print('Error eliminando imagen: $e');
+      await Log.e('SecureStorage', 'Error eliminando imagen', e);
       return false;
     }
   }
@@ -124,7 +124,7 @@ class SecureStorage {
         await image.delete();
       }
     } catch (e) {
-      print('Error limpiando imágenes: $e');
+      await Log.e('SecureStorage', 'Error limpiando imágenes', e);
     }
   }
 

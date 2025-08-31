@@ -4,20 +4,7 @@ class OcrController extends GetxController {
   final isProcessing = false.obs;
   final extractedText = ''.obs;
   
-  @override
-  void onInit() {
-    super.onInit();
-  }
 
-  @override
-  void onReady() {
-    super.onReady();
-  }
-
-  @override
-  void onClose() {
-    super.onClose();
-  }
 
   void processImage() {
     // TODO: Implementar lógica de OCR

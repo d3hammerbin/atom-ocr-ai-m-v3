@@ -2,6 +2,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'logger_service.dart';
 
 class PermissionService {
   // Permisos básicos requeridos
@@ -15,11 +16,7 @@ class PermissionService {
     Permission.mediaLibrary, // Android básico
   ];
 
-  // Permisos de almacenamiento según la versión de Android
-  static const List<Permission> _androidStoragePermissions = [
-    Permission.manageExternalStorage, // Android 11+
-    Permission.storage, // Android 10 y anteriores
-  ];
+
 
   // Permisos para Android 13+ (API 33+)
   static const List<Permission> _android13Permissions = [
@@ -64,7 +61,7 @@ class PermissionService {
       
       return true;
     } catch (e) {
-      print('Error solicitando permisos: $e');
+      await Log.e('PermissionService', 'Error solicitando permisos', e);
       return false;
     }
   }
@@ -75,7 +72,7 @@ class PermissionService {
       final status = await Permission.camera.request();
       return status.isGranted;
     } catch (e) {
-      print('Error solicitando permiso de cámara: $e');
+      await Log.e('PermissionService', 'Error solicitando permiso de cámara', e);
       return false;
     }
   }
@@ -96,7 +93,7 @@ class PermissionService {
       }
       return true; // iOS no necesita permisos de almacenamiento explícitos
     } catch (e) {
-      print('Error solicitando permisos de almacenamiento: $e');
+      await Log.e('PermissionService', 'Error solicitando permisos de almacenamiento', e);
       return false;
     }
   }
@@ -114,7 +111,7 @@ class PermissionService {
       }
       return true;
     } catch (e) {
-      print('Error solicitando permisos de galería: $e');
+      await Log.e('PermissionService', 'Error solicitando permisos de galería', e);
       return false;
     }
   }
@@ -144,7 +141,7 @@ class PermissionService {
       
       return true;
     } catch (e) {
-      print('Error verificando permisos: $e');
+      await Log.e('PermissionService', 'Error verificando permisos', e);
       return false;
     }
   }
@@ -155,7 +152,7 @@ class PermissionService {
       final status = await permission.request();
       return status.isGranted;
     } catch (e) {
-      print('Error solicitando permiso específico: $e');
+      await Log.e('PermissionService', 'Error solicitando permiso específico', e);
       return false;
     }
   }
@@ -251,7 +248,7 @@ class PermissionService {
       }
       return true;
     } catch (e) {
-      print('Error verificando permisos de galería: $e');
+      await Log.e('PermissionService', 'Error verificando permisos de galería', e);
       return false;
     }
   }
@@ -303,7 +300,7 @@ class PermissionService {
       // Solicitar todos los permisos
       return await requestAllPermissions();
     } catch (e) {
-      print('Error inicializando servicio de permisos: $e');
+      await Log.e('PermissionService', 'Error inicializando servicio de permisos', e);
       return false;
     }
   }

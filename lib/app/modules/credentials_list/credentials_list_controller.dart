@@ -13,15 +13,7 @@ class CredentialsListController extends GetxController {
     loadCredentials();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-  }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
   
   /// Cargar credenciales desde almacenamiento local
   void loadCredentials() {

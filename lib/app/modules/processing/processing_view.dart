@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'processing_controller.dart';
@@ -39,35 +38,41 @@ class ProcessingView extends GetView<ProcessingController> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Obx(() => controller.capturedImage.value != null
-                        ? Image.file(
-                            controller.capturedImage.value!,
-                            fit: BoxFit.contain,
-                          )
-                        : const Center(
-                            child: Icon(
-                              Icons.image,
-                              color: Colors.white54,
-                              size: 64,
-                            ),
-                          )),
+                    child: Obx(
+                      () =>
+                          controller.capturedImage.value != null
+                              ? Image.file(
+                                controller.capturedImage.value!,
+                                fit: BoxFit.contain,
+                              )
+                              : const Center(
+                                child: Icon(
+                                  Icons.image,
+                                  color: Colors.white54,
+                                  size: 64,
+                                ),
+                              ),
+                    ),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Estado de procesamiento
-              Obx(() => controller.isProcessing.value
-                  ? _buildProcessingIndicator()
-                  : _buildResults()),
+              Obx(
+                () =>
+                    controller.isProcessing.value
+                        ? _buildProcessingIndicator()
+                        : _buildResults(),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-  
+
   Widget _buildProcessingIndicator() {
     return Column(
       children: [
@@ -75,17 +80,16 @@ class ProcessingView extends GetView<ProcessingController> {
           valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
         ),
         const SizedBox(height: 16),
-        Obx(() => Text(
-          controller.processingStatus.value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
+        Obx(
+          () => Text(
+            controller.processingStatus.value,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
-        )),
+        ),
       ],
     );
   }
-  
+
   Widget _buildResults() {
     return Expanded(
       flex: 3,
@@ -101,7 +105,7 @@ class ProcessingView extends GetView<ProcessingController> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Expanded(
             child: Container(
               width: double.infinity,
@@ -112,21 +116,26 @@ class ProcessingView extends GetView<ProcessingController> {
                 border: Border.all(color: Colors.white24),
               ),
               child: SingleChildScrollView(
-                child: Obx(() => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: controller.credentialData.entries
-                      .map((entry) => _buildDataRow(
-                            _formatLabel(entry.key),
-                            entry.value,
-                          ))
-                      .toList(),
-                )),
+                child: Obx(
+                  () => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children:
+                        controller.credentialData.entries
+                            .map(
+                              (entry) => _buildDataRow(
+                                _formatLabel(entry.key),
+                                entry.value,
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ),
               ),
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Botones de acción
           Row(
             children: [
@@ -157,7 +166,7 @@ class ProcessingView extends GetView<ProcessingController> {
       ),
     );
   }
-  
+
   Widget _buildDataRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -186,7 +195,7 @@ class ProcessingView extends GetView<ProcessingController> {
       ),
     );
   }
-  
+
   String _formatLabel(String key) {
     switch (key) {
       case 'timestamp':

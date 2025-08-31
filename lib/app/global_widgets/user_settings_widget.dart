@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/user_preferences_controller.dart';
 import '../core/app_version_service.dart';
+import '../core/services/logger_service.dart';
 
 class UserSettingsWidget extends StatelessWidget {
   const UserSettingsWidget({super.key});
@@ -152,6 +154,44 @@ class UserSettingsWidget extends StatelessWidget {
           
           const SizedBox(height: 16),
           
+          // Sección de Logs
+          _buildSectionHeader('Logs y Depuración'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.bug_report),
+                  title: const Text('Exportar logs'),
+                  subtitle: const Text('Compartir logs de errores y depuración'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    _showExportLogsDialog(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Ver estadísticas de logs'),
+                  subtitle: const Text('Información sobre los logs almacenados'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    _showLogStatsDialog(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever, color: Colors.red),
+                  title: const Text('Limpiar logs'),
+                  subtitle: const Text('Eliminar todos los logs almacenados'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    _showClearLogsDialog(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
           // Sección Sobre nosotros
           _buildSectionHeader('Sobre nosotros'),
           Card(
@@ -208,7 +248,6 @@ class UserSettingsWidget extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                final preferences = controller.exportPreferences();
                 // Aquí se implementaría la lógica para guardar el archivo
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -291,6 +330,187 @@ class UserSettingsWidget extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
               child: const Text('Restablecer'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _showExportLogsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Exportar Logs'),
+          content: const Text(
+            'Se exportarán todos los logs de errores y depuración. '
+            'Esto puede ser útil para reportar problemas o para soporte técnico.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                
+                navigator.pop();
+                
+                try {
+                  // Mostrar indicador de carga
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                  
+                  final exportedFile = await LoggerService.instance.exportLogs();
+                  
+                  // Cerrar indicador de carga
+                  navigator.pop();
+                  
+                  if (exportedFile != null) {
+                    // Compartir el archivo
+                    await Share.shareXFiles(
+                      [XFile(exportedFile.path)],
+                      text: 'Logs de Atom OCR AI - ${DateTime.now().toString().split(' ')[0]}',
+                    );
+                    
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Logs exportados exitosamente'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Error al exportar logs'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Cerrar indicador de carga si está abierto
+                  navigator.pop();
+                  
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error al exportar logs: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Exportar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _showLogStatsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Estadísticas de Logs'),
+          content: FutureBuilder<Map<String, dynamic>>(
+            future: LoggerService.instance.getLogStats(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 100,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              }
+              
+              final stats = snapshot.data!;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Archivos de log: ${stats['totalFiles']}'),
+                  const SizedBox(height: 8),
+                  Text('Total de líneas: ${stats['totalLines']}'),
+                  const SizedBox(height: 8),
+                  Text('Tamaño total: ${stats['totalSizeMB']} MB'),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Los logs se mantienen automáticamente por 7 días.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _showClearLogsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Limpiar Logs'),
+          content: const Text(
+            '¿Estás seguro de que quieres eliminar todos los logs? '
+            'Esta acción no se puede deshacer y puede dificultar la '
+            'resolución de problemas futuros.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                
+                navigator.pop();
+                
+                try {
+                  await LoggerService.instance.clearAllLogs();
+                  
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Logs eliminados exitosamente'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error al eliminar logs: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Eliminar'),
             ),
           ],
         );

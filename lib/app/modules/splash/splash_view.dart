@@ -43,7 +43,7 @@ class SplashView extends GetView<SplashController> {
             Text(
               'Escáner Inteligente de Credenciales',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 48),
@@ -58,7 +58,7 @@ class SplashView extends GetView<SplashController> {
                 Text(
                   controller.statusMessage.value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8),
+                    color: Theme.of(context).colorScheme.onBackground.withValues(alpha: 0.8),
                   ),
                   textAlign: TextAlign.center,
                 ),

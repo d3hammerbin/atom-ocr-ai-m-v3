@@ -35,66 +35,66 @@ class HomeView extends GetView<HomeController> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              const Text(
-                'Atom OCR AI',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withOpacity(0.5),
-                    width: 1,
-                  ),
+                const Text(
+                  'Atom OCR AI',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.lightbulb_outline,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+                const SizedBox(height: 20),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.5),
+                      width: 1,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Aplicación móvil para reconocimiento óptico de caracteres',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Aplicación móvil para reconocimiento óptico de caracteres',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton.icon(
-                onPressed: controller.navigateToCamera,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Capturar Credencial'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(200, 50),
+                const SizedBox(height: 40),
+                ElevatedButton.icon(
+                  onPressed: controller.navigateToCamera,
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Capturar Credencial'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 50),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: controller.navigateToCredentialsList,
-                icon: const Icon(Icons.list_alt),
-                label: const Text('Credenciales Procesadas'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(200, 50),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: controller.navigateToCredentialsList,
+                  icon: const Icon(Icons.list_alt),
+                  label: const Text('Credenciales Procesadas'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 50),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
+                const SizedBox(height: 40),
               ],
             ),
           ),

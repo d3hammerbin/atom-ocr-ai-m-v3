@@ -363,7 +363,7 @@ class _CameraViewState extends State<CameraView> {
             _buildControlButton(
               icon: Icons.close,
               onPressed: _exitToHome,
-              backgroundColor: Colors.red.withOpacity(0.8),
+              backgroundColor: Colors.red.withValues(alpha: 0.8),
             ),
             // Botón capturar
             _buildCaptureButton(),
@@ -373,7 +373,7 @@ class _CameraViewState extends State<CameraView> {
                 icon:
                     controller.isFrontSide.value ? Icons.person : Icons.qr_code,
                 onPressed: controller.switchCredentialSide,
-                backgroundColor: Colors.blue.withOpacity(0.8),
+                backgroundColor: Colors.blue.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -386,7 +386,7 @@ class _CameraViewState extends State<CameraView> {
         bottom: 0,
         width: 60,
         child: Container(
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -394,7 +394,7 @@ class _CameraViewState extends State<CameraView> {
               _buildControlButton(
                 icon: Icons.close,
                 onPressed: _exitToHome,
-                backgroundColor: Colors.black.withOpacity(0.6),
+                backgroundColor: Colors.black.withValues(alpha: 0.6),
                 size: 45,
               ),
               // Botón capturar
@@ -407,7 +407,7 @@ class _CameraViewState extends State<CameraView> {
                           ? Icons.person
                           : Icons.qr_code,
                   onPressed: controller.switchCredentialSide,
-                  backgroundColor: Colors.black.withOpacity(0.6),
+                  backgroundColor: Colors.black.withValues(alpha: 0.6),
                   size: 45,
                 ),
               ),
@@ -434,7 +434,7 @@ class _CameraViewState extends State<CameraView> {
       decoration: BoxDecoration(
         color: backgroundColor,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
       ),
       child: IconButton(
         onPressed: onPressed,
@@ -465,13 +465,13 @@ class _CameraViewState extends State<CameraView> {
           decoration: BoxDecoration(
             color:
                 controller.isCapturing.value
-                    ? Colors.grey.withOpacity(0.6)
+                    ? Colors.grey.withValues(alpha: 0.6)
                     : (isLandscape
-                        ? Colors.white.withOpacity(0.8)
-                        : Colors.white.withOpacity(0.9)),
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : Colors.white.withValues(alpha: 0.9)),
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withOpacity(isLandscape ? 0.5 : 1.0),
+              color: Colors.white.withValues(alpha: isLandscape ? 0.5 : 1.0),
               width: isLandscape ? 2 : 4,
             ),
           ),
@@ -502,7 +502,7 @@ class _CameraViewState extends State<CameraView> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Text(
@@ -524,7 +524,7 @@ class _CameraViewState extends State<CameraView> {
         right: 60, // Terminar donde comienza el menú lateral
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.4)),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
           child: const Text(
             'Coloca la credencial dentro del marco y presiona el botón para capturar',
             style: TextStyle(
@@ -554,9 +554,9 @@ class _CameraViewState extends State<CameraView> {
         () => Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
           ),
           child: Icon(
             controller.isFrontSide.value ? Icons.person : Icons.qr_code,

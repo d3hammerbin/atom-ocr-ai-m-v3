@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "mx.d3c.dev.atom_ocr_ai_m_v3"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {

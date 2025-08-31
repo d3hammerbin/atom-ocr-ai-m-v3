@@ -131,35 +131,23 @@ class ProcessingView extends GetView<ProcessingController> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: controller.reCaptureImage,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Repetir'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[700],
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Re Capturar',
-                    style: TextStyle(color: Colors.white),
+                    minimumSize: const Size(0, 50),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
                   onPressed: controller.saveCredential,
+                  icon: const Icon(Icons.save),
+                  label: const Text('Guardar'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Guardar',
-                    style: TextStyle(color: Colors.white),
+                    minimumSize: const Size(0, 50),
                   ),
                 ),
               ),

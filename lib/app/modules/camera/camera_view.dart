@@ -457,8 +457,7 @@ class _CameraViewState extends State<CameraView> {
                 ? null
                 : () async {
                   await controller.captureImage();
-                  // Regresar al home después de capturar con orientación vertical
-                  await _exitToHome();
+                  // La navegación a processing se maneja en el controlador
                 },
         child: Container(
           width: buttonSize,

@@ -2,14 +2,16 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:gal/gal.dart';
+import 'package:image/image.dart' as img;
 import '../../core/utils/secure_storage.dart';
 import '../../core/services/permission_service.dart';
 
-class CameraCaptureController extends GetxController {
+class CameraCaptureController extends GetxController with WidgetsBindingObserver {
   // Variables observables
   final isInitialized = false.obs;
   final isCapturing = false.obs;
@@ -30,18 +32,83 @@ class CameraCaptureController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
   }
 
   @override
   void onClose() {
-    _cameraController?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _disposeCameraController();
     super.onClose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final CameraController? cameraController = _cameraController;
+    
+    // Si no hay controlador de cámara, no hacer nada
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+    
+    if (state == AppLifecycleState.inactive) {
+      // Pausar la cámara cuando la app se vuelve inactiva
+      _pauseCamera();
+    } else if (state == AppLifecycleState.resumed) {
+      // Reanudar la cámara cuando la app se reanuda
+      _resumeCamera();
+    }
+  }
+  
+  /// Pausa la cámara de forma segura
+  void _pauseCamera() {
+    try {
+      if (_cameraController != null && _cameraController!.value.isInitialized) {
+        // No hacer dispose, solo marcar como no inicializada temporalmente
+        print('Pausando cámara por cambio de estado de aplicación');
+      }
+    } catch (e) {
+      print('Error al pausar cámara: $e');
+    }
+  }
+  
+  /// Reanuda la cámara de forma segura
+  void _resumeCamera() {
+    try {
+      if (_cameraController != null && !_cameraController!.value.isInitialized) {
+        // Reinicializar la cámara si es necesario
+        _initializeCamera();
+        print('Reanudando cámara por cambio de estado de aplicación');
+      }
+    } catch (e) {
+      print('Error al reanudar cámara: $e');
+    }
+  }
+  
+  /// Limpia los recursos de la cámara de forma segura
+  Future<void> _disposeCameraController() async {
+    try {
+      if (_cameraController != null) {
+        // Verificar si el controlador está inicializado antes de hacer dispose
+        if (_cameraController!.value.isInitialized) {
+          await _cameraController!.dispose();
+        }
+        _cameraController = null;
+      }
+    } catch (e) {
+      print('Error al limpiar recursos de cámara: $e');
+      // Forzar la limpieza del controlador incluso si hay error
+      _cameraController = null;
+    }
   }
   
   /// Inicializa la cámara y solicita permisos
   Future<void> _initializeCamera() async {
     try {
+      // Limpiar recursos previos si existen
+      await _disposeCameraController();
+      
       // Solicitar permisos de cámara
       await _requestCameraPermission();
       
@@ -85,6 +152,110 @@ class CameraCaptureController extends GetxController {
   Future<void> _requestCameraPermission() async {
     final status = await Permission.camera.request();
     hasPermission.value = status == PermissionStatus.granted;
+  }
+  
+  /// Calcula las coordenadas del marco de referencia para recorte
+  Map<String, double> _calculateFrameCoordinates(Size screenSize, Orientation orientation) {
+    // Aspect ratio de credencial: 790:490 ≈ 1.61:1
+    const double credentialAspectRatio = 790 / 490;
+    
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    double frameWidth, frameHeight;
+    
+    if (orientation == Orientation.portrait) {
+      // En portrait, usar 80% del ancho disponible
+      frameWidth = screenWidth * 0.8;
+      frameHeight = frameWidth / credentialAspectRatio;
+      
+      // Verificar que no exceda la altura disponible (dejando espacio para controles)
+      final maxHeight = screenHeight * 0.5;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    } else {
+      // En landscape, maximizar área de captura (85% ancho, dejando solo espacio para barra de botones)
+      frameWidth = screenWidth * 0.85;
+      frameHeight = frameWidth / credentialAspectRatio;
+      
+      // Verificar que no exceda la altura disponible (dejando espacio para tip superior)
+      final maxHeight = screenHeight * 0.85;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    }
+    
+    // Calcular posición del marco (centrado)
+    double frameX, frameY;
+    
+    if (orientation == Orientation.portrait) {
+      frameX = (screenWidth - frameWidth) / 2;
+      frameY = (screenHeight - frameHeight) / 2;
+    } else {
+      // En landscape, centrar verticalmente en el espacio disponible
+      const double tipHeight = 60;
+      final double availableHeight = screenHeight - tipHeight;
+      frameX = (screenWidth - frameWidth) / 2;
+      frameY = tipHeight + (availableHeight - frameHeight) / 2 - 20;
+    }
+    
+    return {
+      'x': frameX,
+      'y': frameY,
+      'width': frameWidth,
+      'height': frameHeight,
+    };
+  }
+  
+  /// Recorta la imagen según las coordenadas del marco de referencia
+  Future<Uint8List> _cropImageToFrame(Uint8List imageBytes, Size screenSize, Orientation orientation) async {
+    try {
+      // Decodificar la imagen
+      final img.Image? originalImage = img.decodeImage(imageBytes);
+      if (originalImage == null) {
+        throw Exception('No se pudo decodificar la imagen');
+      }
+      
+      // Obtener coordenadas del marco
+      final frameCoords = _calculateFrameCoordinates(screenSize, orientation);
+      
+      // Calcular la escala entre la imagen capturada y la pantalla
+      final double scaleX = originalImage.width / screenSize.width;
+      final double scaleY = originalImage.height / screenSize.height;
+      
+      // Convertir coordenadas de pantalla a coordenadas de imagen
+      final int cropX = (frameCoords['x']! * scaleX).round();
+      final int cropY = (frameCoords['y']! * scaleY).round();
+      final int cropWidth = (frameCoords['width']! * scaleX).round();
+      final int cropHeight = (frameCoords['height']! * scaleY).round();
+      
+      // Validar que las coordenadas estén dentro de los límites de la imagen
+      final int validX = cropX.clamp(0, originalImage.width - 1);
+      final int validY = cropY.clamp(0, originalImage.height - 1);
+      final int validWidth = cropWidth.clamp(1, originalImage.width - validX);
+      final int validHeight = cropHeight.clamp(1, originalImage.height - validY);
+      
+      // Recortar la imagen
+      final img.Image croppedImage = img.copyCrop(
+        originalImage,
+        x: validX,
+        y: validY,
+        width: validWidth,
+        height: validHeight,
+      );
+      
+      // Codificar la imagen recortada a JPEG
+      final Uint8List croppedBytes = Uint8List.fromList(img.encodeJpg(croppedImage, quality: 90));
+      
+      return croppedBytes;
+    } catch (e) {
+      print('Error recortando imagen: $e');
+      // En caso de error, devolver la imagen original
+      return imageBytes;
+    }
   }
   
   /// Captura una imagen
@@ -132,24 +303,35 @@ class CameraCaptureController extends GetxController {
       }
       
       // Leer los bytes de la imagen
-      final Uint8List imageBytes = await image.readAsBytes();
-      if (imageBytes.isEmpty) {
+      final Uint8List originalImageBytes = await image.readAsBytes();
+      if (originalImageBytes.isEmpty) {
         throw Exception('La imagen capturada está vacía');
       }
       
-      // Guardar imagen en la galería
+      // Obtener tamaño de pantalla y orientación actual
+      final Size screenSize = Get.size;
+      final Orientation orientation = Get.width > Get.height ? Orientation.landscape : Orientation.portrait;
+      
+      // Recortar la imagen al área del marco de referencia
+      final Uint8List croppedImageBytes = await _cropImageToFrame(
+        originalImageBytes,
+        screenSize,
+        orientation,
+      );
+      
+      // Guardar imagen recortada en la galería
        await Gal.putImageBytes(
-         imageBytes,
-         name: "atom_ocr_${DateTime.now().millisecondsSinceEpoch}.jpg",
+         croppedImageBytes,
+         name: "atom_ocr_cropped_${DateTime.now().millisecondsSinceEpoch}.jpg",
        );
        
-       // Guardar imagen en directorio seguro y oculto
+       // Guardar imagen recortada en directorio seguro y oculto
        final String secureFileName = SecureStorage.generateSecureFileName(
          prefix: 'credential',
          extension: 'jpg',
        );
        final File secureFile = await SecureStorage.saveImageBytes(
-         imageBytes,
+         croppedImageBytes,
          fileName: secureFileName,
        );
        final String filePath = secureFile.path;
@@ -159,11 +341,15 @@ class CameraCaptureController extends GetxController {
       
       Get.snackbar(
         'Éxito',
-        'Imagen guardada en la galería',
+        'Imagen recortada y guardada en la galería',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+      
+      // Restaurar orientación portrait antes de navegar
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      await Future.delayed(const Duration(milliseconds: 300));
       
       // Navegar a la pantalla de procesamiento con la imagen capturada
       Get.toNamed('/processing', arguments: {

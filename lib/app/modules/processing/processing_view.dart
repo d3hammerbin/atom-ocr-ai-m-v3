@@ -39,9 +39,9 @@ class ProcessingView extends GetView<ProcessingController> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: controller.capturedImage != null
+                    child: Obx(() => controller.capturedImage.value != null
                         ? Image.file(
-                            controller.capturedImage!,
+                            controller.capturedImage.value!,
                             fit: BoxFit.contain,
                           )
                         : const Center(
@@ -50,7 +50,7 @@ class ProcessingView extends GetView<ProcessingController> {
                               color: Colors.white54,
                               size: 64,
                             ),
-                          ),
+                          )),
                   ),
                 ),
               ),
@@ -132,7 +132,7 @@ class ProcessingView extends GetView<ProcessingController> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: controller.retryProcessing,
+                  onPressed: controller.reCaptureImage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[700],
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -141,7 +141,7 @@ class ProcessingView extends GetView<ProcessingController> {
                     ),
                   ),
                   child: const Text(
-                    'Reprocesar',
+                    'Re Capturar',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -201,24 +201,26 @@ class ProcessingView extends GetView<ProcessingController> {
   
   String _formatLabel(String key) {
     switch (key) {
+      case 'timestamp':
+        return 'FECHA Y HORA DE CAPTURA';
       case 'nombre':
         return 'NOMBRE COMPLETO';
+      case 'sexo':
+        return 'SEXO';
+      case 'domicilio':
+        return 'DOMICILIO';
+      case 'clave_de_elector':
+        return 'CLAVE DE ELECTOR';
       case 'curp':
         return 'CURP';
-      case 'clave_elector':
-        return 'CLAVE DE ELECTOR';
+      case 'anio_registro':
+        return 'AÑO DE REGISTRO';
+      case 'fecha_nacimiento':
+        return 'FECHA DE NACIMIENTO';
       case 'seccion':
         return 'SECCIÓN';
-      case 'localidad':
-        return 'LOCALIDAD';
-      case 'municipio':
-        return 'MUNICIPIO';
-      case 'estado':
-        return 'ESTADO';
       case 'vigencia':
         return 'VIGENCIA';
-      case 'emision':
-        return 'EMISIÓN';
       default:
         return key.toUpperCase();
     }

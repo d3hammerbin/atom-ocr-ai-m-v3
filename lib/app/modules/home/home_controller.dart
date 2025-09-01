@@ -17,4 +17,8 @@ class HomeController extends GetxController {
   void navigateToCredentialsList() {
     Get.toNamed('/credentials-list');
   }
+  
+  void navigateToLocalProcess() {
+    Get.toNamed('/local-process');
+  }
 }

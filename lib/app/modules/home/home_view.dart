@@ -94,6 +94,15 @@ class HomeView extends GetView<HomeController> {
                     minimumSize: const Size(200, 50),
                   ),
                 ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: controller.navigateToLocalProcess,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Procesar Local'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 50),
+                  ),
+                ),
                 const SizedBox(height: 40),
               ],
             ),

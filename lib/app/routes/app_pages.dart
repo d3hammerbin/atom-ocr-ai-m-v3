@@ -11,6 +11,8 @@ import '../modules/processing/processing_binding.dart';
 import '../modules/processing/processing_view.dart';
 import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
+import '../modules/local_process/local_process_binding.dart';
+import '../modules/local_process/local_process_view.dart';
 
 part 'app_routes.dart';
 
@@ -49,6 +51,11 @@ class AppPages {
       name: _Paths.PROCESSING,
       page: () => const ProcessingView(),
       binding: ProcessingBinding(),
+    ),
+    GetPage(
+      name: _Paths.LOCAL_PROCESS,
+      page: () => const LocalProcessView(),
+      binding: LocalProcessBinding(),
     ),
   ];
 }

@@ -365,6 +365,16 @@ class _CameraViewState extends State<CameraView> {
               onPressed: _exitToHome,
               backgroundColor: Colors.red.withValues(alpha: 0.8),
             ),
+            // Botón flash
+            Obx(
+              () => _buildControlButton(
+                icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
+                onPressed: controller.toggleFlash,
+                backgroundColor: controller.isFlashOn.value 
+                    ? Colors.yellow.withValues(alpha: 0.8)
+                    : Colors.grey.withValues(alpha: 0.8),
+              ),
+            ),
             // Botón capturar
             _buildCaptureButton(),
             // Botón lado de credencial
@@ -396,6 +406,17 @@ class _CameraViewState extends State<CameraView> {
                 onPressed: _exitToHome,
                 backgroundColor: Colors.black.withValues(alpha: 0.6),
                 size: 45,
+              ),
+              // Botón flash
+              Obx(
+                () => _buildControlButton(
+                  icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
+                  onPressed: controller.toggleFlash,
+                  backgroundColor: controller.isFlashOn.value 
+                      ? Colors.yellow.withValues(alpha: 0.8)
+                      : Colors.black.withValues(alpha: 0.6),
+                  size: 45,
+                ),
               ),
               // Botón capturar
               _buildCaptureButton(),

@@ -18,6 +18,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   final hasPermission = false.obs;
   final errorMessage = ''.obs;
   final isFrontSide = true.obs; // true = frontal (persona), false = reverso (QR)
+  final isFlashOn = false.obs; // Estado del flash
   
   // Controlador de cámara
   CameraController? _cameraController;
@@ -379,6 +380,29 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 2),
     );
+  }
+  
+  /// Alterna el estado del flash de la cámara
+  Future<void> toggleFlash() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    
+    try {
+      final FlashMode newFlashMode = isFlashOn.value ? FlashMode.off : FlashMode.torch;
+      await _cameraController!.setFlashMode(newFlashMode);
+      isFlashOn.value = !isFlashOn.value;
+      
+      // Mostrar mensaje informativo sobre el estado del flash
+      Get.snackbar(
+        'Flash',
+        isFlashOn.value ? 'Flash activado' : 'Flash desactivado',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 1),
+      );
+    } catch (e) {
+      await Log.e('CameraController', 'Error al cambiar estado del flash', e);
+    }
   }
   
   /// Reinicia la cámara

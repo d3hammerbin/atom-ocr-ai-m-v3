@@ -22,6 +22,19 @@ class ProcessingView extends GetView<ProcessingController> {
         ),
         centerTitle: true,
       ),
+      floatingActionButton: Obx(
+        () => !controller.isProcessing.value && controller.capturedImage.value != null
+            ? FloatingActionButton(
+                onPressed: controller.shareImage,
+                backgroundColor: const Color(0xFF424242), // Gris grafito
+                child: const Icon(
+                  Icons.share,
+                  color: Colors.white,
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -197,29 +210,6 @@ class ProcessingView extends GetView<ProcessingController> {
   }
 
   String _formatLabel(String key) {
-    switch (key) {
-      case 'timestamp':
-        return 'FECHA Y HORA DE CAPTURA';
-      case 'nombre':
-        return 'NOMBRE COMPLETO';
-      case 'sexo':
-        return 'SEXO';
-      case 'domicilio':
-        return 'DOMICILIO';
-      case 'clave_de_elector':
-        return 'CLAVE DE ELECTOR';
-      case 'curp':
-        return 'CURP';
-      case 'anio_registro':
-        return 'AÑO DE REGISTRO';
-      case 'fecha_nacimiento':
-        return 'FECHA DE NACIMIENTO';
-      case 'seccion':
-        return 'SECCIÓN';
-      case 'vigencia':
-        return 'VIGENCIA';
-      default:
-        return key.toUpperCase();
-    }
+    return controller.formatLabel(key);
   }
 }

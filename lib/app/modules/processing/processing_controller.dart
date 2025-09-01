@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/utils/secure_storage.dart';
 import '../../core/services/logger_service.dart';
 
@@ -140,7 +141,7 @@ class ProcessingController extends GetxController {
       'Éxito',
       'Credencial guardada correctamente',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
+      backgroundColor: const Color(0xFF424242), // Gris grafito
       colorText: Colors.white,
     );
     
@@ -148,7 +149,77 @@ class ProcessingController extends GetxController {
     Get.offAllNamed('/home');
   }
   
-
+  Future<void> shareImage() async {
+    try {
+      if (capturedImage.value != null) {
+        await Log.i('ProcessingController', 'Compartiendo imagen...');
+        
+        // Crear un texto con los datos extraídos
+        final StringBuffer dataText = StringBuffer();
+        dataText.writeln('Datos extraídos de la credencial:');
+        dataText.writeln('');
+        
+        credentialData.forEach((key, value) {
+           final label = formatLabel(key);
+           dataText.writeln('$label: $value');
+         });
+        
+        // Compartir la imagen junto con los datos
+        await Share.shareXFiles(
+          [XFile(capturedImage.value!.path)],
+          text: dataText.toString(),
+          subject: 'Credencial procesada - Atom OCR AI',
+        );
+        
+        await Log.i('ProcessingController', 'Imagen compartida exitosamente');
+      } else {
+        Get.snackbar(
+          'Error',
+          'No hay imagen para compartir',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        await Log.w('ProcessingController', 'Error - No hay imagen para compartir');
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Error al compartir imagen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      await Log.e('ProcessingController', 'Error al compartir imagen', e);
+    }
+  }
+  
+  String formatLabel(String key) {
+    switch (key) {
+      case 'timestamp':
+        return 'FECHA Y HORA DE CAPTURA';
+      case 'nombre':
+        return 'NOMBRE COMPLETO';
+      case 'sexo':
+        return 'SEXO';
+      case 'domicilio':
+        return 'DOMICILIO';
+      case 'clave_de_elector':
+        return 'CLAVE DE ELECTOR';
+      case 'curp':
+        return 'CURP';
+      case 'anio_registro':
+        return 'AÑO DE REGISTRO';
+      case 'fecha_nacimiento':
+        return 'FECHA DE NACIMIENTO';
+      case 'seccion':
+        return 'SECCIÓN';
+      case 'vigencia':
+        return 'VIGENCIA';
+      default:
+        return key.toUpperCase();
+    }
+  }
 
   @override
   void onClose() {

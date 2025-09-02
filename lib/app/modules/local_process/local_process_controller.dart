@@ -178,8 +178,11 @@ class LocalProcessController extends GetxController {
         return;
       }
 
-      // Procesar la credencial
-      final credential = IneCredentialProcessorService.processCredentialText(extractedText.value);
+      // Procesar la credencial con detección de lado si hay imagen seleccionada
+      final credential = selectedImagePath.value.isNotEmpty
+          ? await IneCredentialProcessorService.processCredentialWithSideDetection(
+              extractedText.value, selectedImagePath.value)
+          : IneCredentialProcessorService.processCredentialText(extractedText.value);
 
       if (IneCredentialProcessorService.validateExtractedData(credential)) {
         processedCredential.value = credential;

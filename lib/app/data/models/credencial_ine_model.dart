@@ -11,6 +11,7 @@ class CredencialIneModel {
   final String seccion;
   final String vigencia;
   final String tipo; // "t1", "t2" o "t3"
+  final String lado; // "frontal" o "reverso" - Solo para t2 y t3
   final String estado; // Solo para t2
   final String municipio; // Solo para t2
   final String localidad; // Solo para t2
@@ -26,6 +27,7 @@ class CredencialIneModel {
     required this.seccion,
     required this.vigencia,
     required this.tipo,
+    required this.lado,
     required this.estado,
     required this.municipio,
     required this.localidad,
@@ -43,6 +45,7 @@ class CredencialIneModel {
       seccion = '',
       vigencia = '',
       tipo = '',
+      lado = '',
       estado = '',
       municipio = '',
       localidad = '';
@@ -60,6 +63,7 @@ class CredencialIneModel {
       seccion: json['seccion'] ?? '',
       vigencia: json['vigencia'] ?? '',
       tipo: json['tipo'] ?? '',
+      lado: json['lado'] ?? '',
       estado: json['estado'] ?? '',
       municipio: json['municipio'] ?? '',
       localidad: json['localidad'] ?? '',
@@ -79,6 +83,7 @@ class CredencialIneModel {
       'seccion': seccion,
       'vigencia': vigencia,
       'tipo': tipo,
+      'lado': lado,
       'estado': estado,
       'municipio': municipio,
       'localidad': localidad,
@@ -97,6 +102,7 @@ class CredencialIneModel {
     String? seccion,
     String? vigencia,
     String? tipo,
+    String? lado,
     String? estado,
     String? municipio,
     String? localidad,
@@ -112,6 +118,7 @@ class CredencialIneModel {
       seccion: seccion ?? this.seccion,
       vigencia: vigencia ?? this.vigencia,
       tipo: tipo ?? this.tipo,
+      lado: lado ?? this.lado,
       estado: estado ?? this.estado,
       municipio: municipio ?? this.municipio,
       localidad: localidad ?? this.localidad,
@@ -162,7 +169,7 @@ class CredencialIneModel {
 
   @override
   String toString() {
-    return 'CredencialIneModel(nombre: $nombre, domicilio: $domicilio, claveElector: $claveElector, curp: $curp, fechaNacimiento: $fechaNacimiento, sexo: $sexo, anoRegistro: $anoRegistro, seccion: $seccion, vigencia: $vigencia, tipo: $tipo, estado: $estado, municipio: $municipio, localidad: $localidad)';
+    return 'CredencialIneModel(nombre: $nombre, domicilio: $domicilio, claveElector: $claveElector, curp: $curp, fechaNacimiento: $fechaNacimiento, sexo: $sexo, anoRegistro: $anoRegistro, seccion: $seccion, vigencia: $vigencia, tipo: $tipo, lado: $lado, estado: $estado, municipio: $municipio, localidad: $localidad)';
   }
 
   @override
@@ -179,6 +186,7 @@ class CredencialIneModel {
         other.seccion == seccion &&
         other.vigencia == vigencia &&
         other.tipo == tipo &&
+        other.lado == lado &&
         other.estado == estado &&
         other.municipio == municipio &&
         other.localidad == localidad;
@@ -197,6 +205,7 @@ class CredencialIneModel {
       seccion,
       vigencia,
       tipo,
+      lado,
       estado,
       municipio,
       localidad,

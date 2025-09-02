@@ -252,8 +252,65 @@ class ValidationUtils {
         .trim(); // Eliminar espacios al inicio y final después de limpiar
   }
 
+  /// Limpia un nombre que ya ha sido normalizado con OCR (no elimina números convertidos a letras)
+  static String cleanNormalizedName(String name) {
+    return name.trim()
+        .toUpperCase()
+        .replaceAll(RegExp(r'\s+'), ' ') // Solo normalizar espacios
+        .trim(); // Eliminar espacios al inicio y final
+  }
+
   /// Limpia código numérico removiendo caracteres no numéricos
   static String cleanNumericCode(String code) {
     return code.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  /// Valida si el lado de la credencial es válido
+  static bool isValidSide(String side) {
+    return side == 'frontal' || side == 'reverso';
+  }
+
+  /// Valida si el lado es consistente con el tipo de credencial
+  /// T1: típicamente solo frontal (no tienen QR)
+  /// T2 y T3: pueden ser frontal o reverso
+  static bool isSideConsistentWithType(String side, String type) {
+    if (side.isEmpty) return true; // Lado vacío es válido durante procesamiento
+    
+    if (!isValidSide(side)) return false;
+    
+    // T1 típicamente no tiene QR, por lo que debería ser frontal
+    if (type == 't1') {
+      return side == 'frontal';
+    }
+    
+    // T2 y T3 pueden ser frontal o reverso
+    if (type == 't2' || type == 't3') {
+      return true; // Ambos lados son válidos
+    }
+    
+    // Para tipos desconocidos, aceptar cualquier lado válido
+    return isValidSide(side);
+  }
+
+  /// Valida si una credencial con lado específico contiene los datos esperados
+  /// Frontal: típicamente contiene datos personales (nombre, domicilio, etc.)
+  /// Reverso: típicamente contiene códigos QR y datos adicionales
+  static bool hasExpectedDataForSide(String side, Map<String, String> credentialData) {
+    if (side.isEmpty || !isValidSide(side)) return true; // No validar si lado no está definido
+    
+    if (side == 'frontal') {
+      // El lado frontal debería tener datos personales básicos
+      return credentialData['nombre']?.isNotEmpty == true ||
+             credentialData['domicilio']?.isNotEmpty == true ||
+             credentialData['claveElector']?.isNotEmpty == true;
+    }
+    
+    if (side == 'reverso') {
+      // El lado reverso puede tener menos datos de texto (más QRs)
+      // Esta validación es más flexible ya que el reverso puede tener pocos datos de texto
+      return true;
+    }
+    
+    return true;
   }
 }

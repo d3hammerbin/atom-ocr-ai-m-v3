@@ -389,6 +389,7 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                 _buildCredentialField('Vigencia', credential.vigencia,
                                   isValid: credential.vigencia.isNotEmpty ? ValidationUtils.isValidVigencia(credential.vigencia) : null),
                                 _buildCredentialField('Tipo', credential.tipo),
+                                _buildCredentialField('Lado', credential.lado.isNotEmpty ? credential.lado : 'No detectado'),
                                 // Campos específicos para credenciales t2 y t3
                                 if (credential.tipo == 't2') ...[
                                   _buildCredentialField('Estado', credential.estado,

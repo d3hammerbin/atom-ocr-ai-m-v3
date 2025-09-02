@@ -1,6 +1,7 @@
 import '../../../app/data/models/credencial_ine_model.dart';
 import '../utils/validation_utils.dart';
 import '../utils/string_similarity_utils.dart';
+import '../utils/credential_side_detector.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -106,6 +107,23 @@ class IneCredentialProcessorService {
 
     if (typeConfig == null) return false;
 
+    // Validar consistencia del lado con el tipo de credencial
+    if (!ValidationUtils.isSideConsistentWithType(credential.lado, credential.tipo)) {
+      return false;
+    }
+
+    // Validar que los datos sean consistentes con el lado detectado
+    final credentialDataMap = {
+      'nombre': credential.nombre,
+      'domicilio': credential.domicilio,
+      'claveElector': credential.claveElector,
+      'curp': credential.curp,
+    };
+    
+    if (!ValidationUtils.hasExpectedDataForSide(credential.lado, credentialDataMap)) {
+      return false;
+    }
+
     final requiredFields = typeConfig['requiredFields'] as List<String>;
 
     // Verificar cada campo requerido con validaciones específicas
@@ -205,6 +223,25 @@ class IneCredentialProcessorService {
     return true; // Todos los campos requeridos están presentes y válidos
   }
 
+  /// Procesa credencial con detección de lado basada en texto
+  static Future<CredencialIneModel> processCredentialWithSideDetection(
+      String extractedText, String imagePath) async {
+    // Procesar el texto primero
+    final credential = processCredentialText(extractedText);
+    
+    // Detectar lado para todos los tipos de credencial usando el texto extraído
+    try {
+      final sideResult = CredentialSideDetector.detectSide(extractedText);
+      final detectedSide = sideResult['lado'] as String;
+      
+      // Actualizar la credencial con el lado detectado
+      return credential.copyWith(lado: detectedSide);
+    } catch (e) {
+      // En caso de error, mantener lado como frontal por defecto
+      return credential.copyWith(lado: 'frontal');
+    }
+  }
+
   /// Procesa el texto extraído y devuelve un modelo estructurado
   static CredencialIneModel processCredentialText(String extractedText) {
     if (!isIneCredential(extractedText)) {
@@ -236,6 +273,7 @@ class IneCredentialProcessorService {
         seccion: '',
         vigencia: '',
         tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente si es T2 o T3
         estado: '',
         municipio: '',
         localidad: '',
@@ -263,11 +301,14 @@ class IneCredentialProcessorService {
       final municipio = _extractMunicipioT2(filteredLines);
       final localidad = _extractLocalidadT2(filteredLines);
 
+      // Aplicar normalización OCR al nombre antes de validación
+      final nombreNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombre);
+      
       return CredencialIneModel(
         nombre:
-            ValidationUtils.isValidName(nombre)
-                ? ValidationUtils.cleanName(nombre)
-                : nombre,
+            ValidationUtils.isValidName(nombreNormalizado)
+                ? ValidationUtils.cleanNormalizedName(nombreNormalizado)
+                : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector:
             ValidationUtils.isValidClaveElector(claveElector)
@@ -286,6 +327,7 @@ class IneCredentialProcessorService {
                 : seccion,
         vigencia: vigencia,
         tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente con QR detection
         estado:
             ValidationUtils.isValidState(estado)
                 ? ValidationUtils.cleanNumericCode(estado)
@@ -304,11 +346,14 @@ class IneCredentialProcessorService {
     // Para t3, usar métodos optimizados específicos
     if (tipoCredencial == 't3') {
       final nombre = _extractNombre(filteredLines);
+      // Aplicar normalización OCR al nombre antes de validación
+      final nombreNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombre);
+      
       return CredencialIneModel(
         nombre:
-            ValidationUtils.isValidName(nombre)
-                ? ValidationUtils.cleanName(nombre)
-                : nombre,
+            ValidationUtils.isValidName(nombreNormalizado)
+                ? ValidationUtils.cleanNormalizedName(nombreNormalizado)
+                : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector: _extractClaveElector(filteredLines),
         curp: _extractCurpT3(filteredLines),
@@ -318,6 +363,7 @@ class IneCredentialProcessorService {
         seccion: _extractSeccionT3(filteredLines),
         vigencia: _extractVigenciaT3(filteredLines),
         tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente con QR detection
         estado: '',
         municipio: '',
         localidad: '',
@@ -326,11 +372,14 @@ class IneCredentialProcessorService {
 
     // Para otros tipos, usar métodos estándar
     final nombreStandard = _extractNombre(filteredLines);
+    // Aplicar normalización OCR al nombre antes de validación
+    final nombreStandardNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombreStandard);
+    
     return CredencialIneModel(
       nombre:
-          ValidationUtils.isValidName(nombreStandard)
-              ? ValidationUtils.cleanName(nombreStandard)
-              : nombreStandard,
+          ValidationUtils.isValidName(nombreStandardNormalizado)
+              ? ValidationUtils.cleanNormalizedName(nombreStandardNormalizado)
+              : nombreStandardNormalizado,
       domicilio: _extractDomicilio(filteredLines),
       claveElector: _extractClaveElector(filteredLines),
       curp: _extractCurp(filteredLines),
@@ -341,6 +390,7 @@ class IneCredentialProcessorService {
       seccion: _extractSeccion(filteredLines),
       vigencia: additionalInfo['vigencia'] ?? _extractVigencia(filteredLines),
       tipo: tipoCredencial,
+      lado: '', // Se detectará posteriormente si es necesario
       estado: tipoCredencial == 't2' ? _extractEstado(filteredLines) : '',
       municipio: tipoCredencial == 't2' ? _extractMunicipio(filteredLines) : '',
       localidad: tipoCredencial == 't2' ? _extractLocalidad(filteredLines) : '',

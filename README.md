@@ -56,10 +56,35 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Limpieza de datos**: Eliminación automática de espacios y caracteres no válidos en campos de vigencia
 - **Métodos de extracción optimizados**: Algoritmos específicos para el procesamiento eficiente de credenciales T3
 
+### Detección de Lado de Credencial
+- **Detección automática**: Sistema que determina si la imagen corresponde al lado frontal o reverso de la credencial
+- **Basado en etiquetas de texto**: Utiliza la presencia de etiquetas específicas en el texto extraído para la clasificación
+- **Etiquetas frontales identificadoras**:
+  - "INSTITUTO NACIONAL ELECTORAL"
+  - "CREDENCIAL PARA VOTAR"
+  - "CLAVE DE ELECTOR"
+  - "CURP"
+- **Reglas de detección**:
+  - **Lado frontal**: Si contiene una o más etiquetas frontales identificadoras
+  - **Lado reverso**: Si no contiene ninguna etiqueta frontal identificadora
+- **Características del sistema**:
+  - Búsqueda insensible a mayúsculas y minúsculas
+  - Nivel de confianza proporcional al número de etiquetas encontradas
+  - Aplicable a todos los tipos de credencial (T1, T2, T3, T4)
+- **Validación de consistencia**: Verifica que el lado detectado contenga los datos esperados según el tipo de credencial
+
+### Migración del Sistema de Detección de Lado
+- **Cambio de arquitectura**: Migración completa de detección basada en códigos QR a detección basada en texto
+- **Eliminación de dependencias**: Removida la dependencia `google_mlkit_barcode_scanning` para optimizar el tamaño de la aplicación
+- **Mejora en precisión**: Mayor precisión en la detección al basarse en contenido textual específico de cada lado
+- **Simplificación del código**: Eliminación del servicio `QrDetectionService` y métodos relacionados con procesamiento de códigos QR
+- **Compatibilidad universal**: Sistema aplicable a todos los tipos de credencial sin restricciones específicas por tipo
+
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)
 - **Nombres limpios**: Validación que asegura que los nombres contengan solo letras y espacios
 - **Consistencia de datos**: Aplicación uniforme de reglas de limpieza y validación
+- **Validación de lado**: Verificación de que el lado detectado sea consistente con el tipo y contenga los datos esperados
 
 ## Estructura del Proyecto
 
@@ -131,6 +156,8 @@ El proyecto sigue una arquitectura limpia con separación de responsabilidades:
 ## Dependencias Principales
 
 - `get`: Manejo de estados y navegación
+- `google_mlkit_text_recognition`: Reconocimiento óptico de caracteres (OCR)
+- `image_picker`: Captura y selección de imágenes
 - `flutter`: Framework de desarrollo
 
 ## Contribución

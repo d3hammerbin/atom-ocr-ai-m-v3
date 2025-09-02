@@ -49,6 +49,23 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 
 ## Mejoras Recientes
 
+### Sistema de Extracción de Firmas para Credenciales T3
+- **Extracción automática de firmas**: Implementación de sistema especializado para extraer firmas de credenciales T3 frontales
+- **Detección basada en OCR**: Utiliza reconocimiento de texto para localizar referencias específicas y calcular la región de la firma
+- **Referencias de posicionamiento**: Sistema que busca etiquetas clave como "CLAVE DE ELECTOR", "CURP" y "FECHA DE NACIMIENTO" para determinar la ubicación exacta de la firma
+- **Algoritmo de cálculo de región**: Calcula automáticamente las coordenadas de la firma basándose en las posiciones de las etiquetas de referencia detectadas
+- **Procesamiento de imagen avanzado**: Mejora la calidad de la imagen de la firma extraída mediante técnicas de procesamiento digital
+- **Integración con detección facial**: La extracción de firma se activa únicamente cuando se ha detectado y extraído exitosamente la fotografía del rostro
+- **Almacenamiento seguro**: Las firmas extraídas se guardan en el directorio de documentos de la aplicación con nombres únicos
+- **Visualización en interfaz**: Contenedor especializado en la vista para mostrar la firma extraída junto con los demás datos de la credencial
+
+### Optimizaciones del Sistema OCR
+- **Inicialización lazy mejorada**: Corrección del error de inicialización múltiple en `MLKitTextRecognitionService` mediante implementación de patrón lazy
+- **Búsqueda de texto flexible**: Sistema de detección de referencias con múltiples niveles de flexibilidad para mejorar la precisión
+- **Logs de diagnóstico avanzados**: Implementación de sistema de logging detallado con emojis para facilitar la depuración del proceso OCR
+- **Búsqueda alternativa amplia**: Mecanismo de fallback que utiliza patrones de texto más amplios cuando la búsqueda exacta no encuentra resultados
+- **Manejo robusto de errores**: Sistema de manejo de excepciones mejorado con mensajes descriptivos y recuperación automática
+
 ### Optimizaciones para Credenciales T3
 - **Normalización de nombres**: Implementación de limpieza automática que elimina números y caracteres especiales de los nombres extraídos
 - **Formato de vigencia mejorado**: Soporte completo para el formato YYYY-YYYY específico de credenciales T3

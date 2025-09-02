@@ -36,6 +36,9 @@ La aplicación soporta el procesamiento de tres tipos de credenciales del Instit
 - **Identificadores**: No contienen ninguna de las etiquetas específicas de Tipo 1 o Tipo 2
 - **Características**: Formato más moderno y simplificado
 - **Detección**: Se identifica por exclusión cuando no cumple criterios de tipos anteriores
+- **Formato de vigencia**: YYYY-YYYY (rango de años)
+- **Validación de nombres**: Normalización automática eliminando números y caracteres especiales
+- **Procesamiento especializado**: Métodos optimizados para extracción de datos específicos del formato T3
 
 ### Lógica de Detección
 1. **Prioridad Tipo 1**: Si contiene "EDAD" o "FOLIO" → Tipo 1
@@ -43,6 +46,20 @@ La aplicación soporta el procesamiento de tres tipos de credenciales del Instit
 3. **Por defecto Tipo 3**: Si no contiene ninguna etiqueta específica → Tipo 3
 
 La aplicación extrae automáticamente los campos específicos según el tipo detectado y valida la completitud de los datos de acuerdo a las características de cada tipo de credencial.
+
+## Mejoras Recientes
+
+### Optimizaciones para Credenciales T3
+- **Normalización de nombres**: Implementación de limpieza automática que elimina números y caracteres especiales de los nombres extraídos
+- **Formato de vigencia mejorado**: Soporte completo para el formato YYYY-YYYY específico de credenciales T3
+- **Validación especializada**: Sistema de validación que reconoce y acepta el formato de rango de años para vigencia
+- **Limpieza de datos**: Eliminación automática de espacios y caracteres no válidos en campos de vigencia
+- **Métodos de extracción optimizados**: Algoritmos específicos para el procesamiento eficiente de credenciales T3
+
+### Validaciones Mejoradas
+- **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)
+- **Nombres limpios**: Validación que asegura que los nombres contengan solo letras y espacios
+- **Consistencia de datos**: Aplicación uniforme de reglas de limpieza y validación
 
 ## Estructura del Proyecto
 

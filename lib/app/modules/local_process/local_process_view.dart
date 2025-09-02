@@ -2,11 +2,34 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'local_process_controller.dart';
+import '../../core/utils/validation_utils.dart';
 
 class LocalProcessView extends GetView<LocalProcessController> {
   const LocalProcessView({super.key});
 
-  Widget _buildCredentialField(String label, String? value) {
+  Widget _buildCredentialField(String label, String? value, {bool? isValid}) {
+    // Determinar el icono y color basado en la validación
+    Widget? validationIcon;
+    Color? textColor;
+    
+    if (value?.isNotEmpty == true && isValid != null) {
+      if (isValid) {
+        validationIcon = Icon(
+          Icons.check_circle,
+          color: Colors.green,
+          size: 16,
+        );
+        textColor = Colors.green.shade700;
+      } else {
+        validationIcon = Icon(
+          Icons.cancel,
+          color: Colors.red,
+          size: 16,
+        );
+        textColor = Colors.red.shade700;
+      }
+    }
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
@@ -23,17 +46,27 @@ class LocalProcessView extends GetView<LocalProcessController> {
             ),
           ),
           Expanded(
-            child: SelectableText(
-              value?.isNotEmpty == true ? value! : 'No disponible',
-              style: TextStyle(
-                fontSize: 14,
-                color: value?.isNotEmpty == true 
-                    ? null 
-                    : Theme.of(Get.context!).colorScheme.onSurface.withOpacity(0.6),
-                fontStyle: value?.isNotEmpty == true 
-                    ? FontStyle.normal 
-                    : FontStyle.italic,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    value?.isNotEmpty == true ? value! : 'No disponible',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: textColor ?? (value?.isNotEmpty == true 
+                          ? null 
+                          : Theme.of(Get.context!).colorScheme.onSurface.withOpacity(0.6)),
+                      fontStyle: value?.isNotEmpty == true 
+                          ? FontStyle.normal 
+                          : FontStyle.italic,
+                    ),
+                  ),
+                ),
+                if (validationIcon != null) ...[
+                  const SizedBox(width: 8),
+                  validationIcon,
+                ],
+              ],
             ),
           ),
         ],
@@ -293,21 +326,77 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                _buildCredentialField('Nombre', credential.nombre),
-                                _buildCredentialField('CURP', credential.curp),
-                                _buildCredentialField('Clave de Elector', credential.claveElector),
-                                _buildCredentialField('Fecha de Nacimiento', credential.fechaNacimiento),
-                                _buildCredentialField('Sexo', credential.sexo),
+                                // Indicador de estado de aceptabilidad
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12.0),
+                                  margin: const EdgeInsets.only(bottom: 16.0),
+                                  decoration: BoxDecoration(
+                                    color: credential.isAcceptable 
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: credential.isAcceptable 
+                                          ? Colors.green
+                                          : Colors.orange,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        credential.isAcceptable 
+                                            ? Icons.check_circle
+                                            : Icons.warning,
+                                        color: credential.isAcceptable 
+                                            ? Colors.green
+                                            : Colors.orange,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          credential.isAcceptable
+                                              ? 'Credencial aceptable - Todos los campos requeridos están presentes'
+                                              : 'Credencial incompleta - Faltan campos requeridos o se necesita nueva foto',
+                                          style: TextStyle(
+                                            color: credential.isAcceptable 
+                                                ? Colors.green.shade700
+                                                : Colors.orange.shade700,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _buildCredentialField('Nombre', credential.nombre, 
+                                  isValid: credential.nombre.isNotEmpty ? ValidationUtils.isValidName(credential.nombre) : null),
+                                _buildCredentialField('CURP', credential.curp,
+                                  isValid: credential.curp.isNotEmpty ? ValidationUtils.isValidCurpFormat(credential.curp) : null),
+                                _buildCredentialField('Clave de Elector', credential.claveElector, isValid: ValidationUtils.isValidClaveElector(credential.claveElector)),
+                                _buildCredentialField('Fecha de Nacimiento', credential.fechaNacimiento,
+                                  isValid: credential.fechaNacimiento.isNotEmpty ? ValidationUtils.isValidBirthDate(credential.fechaNacimiento) : null),
+                                _buildCredentialField('Sexo', credential.sexo,
+                                  isValid: credential.sexo.isNotEmpty ? ValidationUtils.isValidSex(credential.sexo) : null),
                                 _buildCredentialField('Domicilio', credential.domicilio),
-                                _buildCredentialField('Año de Registro', credential.anoRegistro),
-                                _buildCredentialField('Sección', credential.seccion),
-                                _buildCredentialField('Vigencia', credential.vigencia),
+                                _buildCredentialField('Año de Registro', credential.anoRegistro,
+                                  isValid: credential.anoRegistro.isNotEmpty ? ValidationUtils.isValidRegistrationYear(credential.anoRegistro) : null),
+                                _buildCredentialField('Sección', credential.seccion,
+                                  isValid: credential.seccion.isNotEmpty ? ValidationUtils.isValidSection(credential.seccion) : null),
+                                _buildCredentialField('Vigencia', credential.vigencia,
+                                  isValid: credential.vigencia.isNotEmpty ? ValidationUtils.isValidVigencia(credential.vigencia) : null),
                                 _buildCredentialField('Tipo', credential.tipo),
-                                // Campos específicos para credenciales Tipo 2
-                                if (credential.tipo == 'Tipo 2') ...[
-                                  _buildCredentialField('Estado', credential.estado),
-                                  _buildCredentialField('Municipio', credential.municipio),
-                                  _buildCredentialField('Localidad', credential.localidad),
+                                // Campos específicos para credenciales t2 y t3
+                                if (credential.tipo == 't2') ...[
+                                  _buildCredentialField('Estado', credential.estado,
+                                    isValid: credential.estado.isNotEmpty ? ValidationUtils.isValidState(credential.estado) : null),
+                                  _buildCredentialField('Municipio', credential.municipio,
+                                    isValid: credential.municipio.isNotEmpty ? ValidationUtils.isValidMunicipality(credential.municipio) : null),
+                                  _buildCredentialField('Localidad', credential.localidad,
+                                    isValid: credential.localidad.isNotEmpty ? ValidationUtils.isValidLocality(credential.localidad) : null),
                                 ],
                               ],
                             ),

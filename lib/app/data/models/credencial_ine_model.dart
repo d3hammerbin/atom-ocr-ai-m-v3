@@ -1,3 +1,5 @@
+import '../../core/services/ine_credential_processor_service.dart';
+
 class CredencialIneModel {
   final String nombre;
   final String domicilio;
@@ -8,10 +10,10 @@ class CredencialIneModel {
   final String anoRegistro;
   final String seccion;
   final String vigencia;
-  final String tipo; // "Tipo 1" o "Tipo 2"
-  final String estado; // Solo para Tipo 2
-  final String municipio; // Solo para Tipo 2
-  final String localidad; // Solo para Tipo 2
+  final String tipo; // "t1", "t2" o "t3"
+  final String estado; // Solo para t2
+  final String municipio; // Solo para t2
+  final String localidad; // Solo para t2
 
   CredencialIneModel({
     required this.nombre,
@@ -123,6 +125,11 @@ class CredencialIneModel {
 
   /// Verifica si la credencial está completamente llena
   bool get isComplete {
+    // Solo validar credenciales procesables (t2 y t3)
+    if (tipo != 't2' && tipo != 't3') {
+      return false; // Credenciales t1 no se procesan completamente
+    }
+    
     final baseFieldsComplete = nombre.isNotEmpty &&
            domicilio.isNotEmpty &&
            claveElector.isNotEmpty &&
@@ -134,15 +141,23 @@ class CredencialIneModel {
            vigencia.isNotEmpty &&
            tipo.isNotEmpty;
     
-    // Para credenciales Tipo 2, también verificar campos específicos
-    if (tipo == 'Tipo 2') {
+    // Para credenciales t2, también verificar campos específicos
+    if (tipo == 't2') {
       return baseFieldsComplete &&
              estado.isNotEmpty &&
              municipio.isNotEmpty &&
              localidad.isNotEmpty;
     }
     
+    // Para credenciales t3, solo campos base
     return baseFieldsComplete;
+  }
+
+  /// Verifica si la credencial cumple con los requisitos mínimos para ser aceptable
+  /// Utiliza la configuración de campos requeridos del servicio de procesamiento
+  bool get isAcceptable {
+    // Importar el servicio para usar la validación
+    return IneCredentialProcessorService.isCredentialAcceptable(this);
   }
 
   @override

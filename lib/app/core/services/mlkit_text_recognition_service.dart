@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:get/get.dart';
 import 'logger_service.dart';
 
 /// Servicio independiente para reconocimiento de texto usando Google ML Kit

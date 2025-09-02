@@ -111,6 +111,22 @@ class StringSimilarityUtils {
     return jaroSim + (prefixLength * prefixScale * (1 - jaroSim));
   }
 
+  /// Normaliza caracteres comunes que el OCR confunde
+  /// Convierte variaciones como i/1/I/l a un carácter estándar
+  static String normalizeOcrCharacters(String text) {
+    String normalized = text.toUpperCase();
+    
+    // Manejar casos específicos de palabras antes de normalización general
+    // Caso específico: 'vGENCIA' -> 'VIGENCIA'
+    normalized = normalized.replaceAll('vGENCIA', 'VIGENCIA');
+    
+    return normalized
+        .replaceAll(RegExp(r'[1Il|]'), 'I')  // Normalizar i, 1, l, | a I
+        .replaceAll(RegExp(r'[0O]'), 'O')    // Normalizar 0 a O
+        .replaceAll(RegExp(r'[5S]'), 'S')    // Normalizar 5 a S
+        .replaceAll(RegExp(r'[8B]'), 'B');   // Normalizar 8 a B
+  }
+
   /// Encuentra la mejor coincidencia de una cadena objetivo en una lista de candidatos
   /// Retorna un mapa con la mejor coincidencia y su puntuación de similitud
   static Map<String, dynamic> findBestMatch(
@@ -118,14 +134,25 @@ class StringSimilarityUtils {
     List<String> candidates, {
     double threshold = 0.6,
     bool useJaroWinkler = true,
+    bool normalizeOcr = false,
   }) {
     String? bestMatch;
     double bestScore = 0.0;
 
+    // Aplicar normalización OCR al target si está habilitada
+    final processedTarget = normalizeOcr 
+        ? normalizeOcrCharacters(target)  // Ya incluye toUpperCase()
+        : target.toUpperCase();
+
     for (final candidate in candidates) {
+      // Aplicar normalización OCR también a los candidates si está habilitada
+      final processedCandidate = normalizeOcr
+          ? normalizeOcrCharacters(candidate)  // Ya incluye toUpperCase()
+          : candidate.toUpperCase();
+
       final score = useJaroWinkler
-          ? jaroWinklerSimilarity(target.toUpperCase(), candidate.toUpperCase())
-          : levenshteinSimilarity(target.toUpperCase(), candidate.toUpperCase());
+          ? jaroWinklerSimilarity(processedTarget, processedCandidate)
+          : levenshteinSimilarity(processedTarget, processedCandidate);
 
       if (score > bestScore && score >= threshold) {
         bestScore = score;
@@ -146,13 +173,23 @@ class StringSimilarityUtils {
     List<String> candidates, {
     double threshold = 0.6,
     bool useJaroWinkler = true,
+    bool normalizeOcr = false,
   }) {
     final matches = <Map<String, dynamic>>[];
 
+    // Aplicar normalización OCR solo al target (etiqueta de referencia) si está habilitada
+    // Uppercase siempre se aplica a ambos
+    final processedTarget = normalizeOcr 
+        ? normalizeOcrCharacters(target)  // Ya incluye toUpperCase()
+        : target.toUpperCase();
+
     for (final candidate in candidates) {
+      // Solo uppercase para candidates (contenido), no normalización OCR
+      final processedCandidate = candidate.toUpperCase();
+
       final score = useJaroWinkler
-          ? jaroWinklerSimilarity(target.toUpperCase(), candidate.toUpperCase())
-          : levenshteinSimilarity(target.toUpperCase(), candidate.toUpperCase());
+          ? jaroWinklerSimilarity(processedTarget, processedCandidate)
+          : levenshteinSimilarity(processedTarget, processedCandidate);
 
       if (score >= threshold) {
         matches.add({

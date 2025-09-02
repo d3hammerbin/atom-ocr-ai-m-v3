@@ -65,6 +65,9 @@ dependencies:
   # Google ML Kit para reconocimiento de texto
   google_mlkit_text_recognition: ^0.13.0
   
+  # Google ML Kit para detección facial
+  google_mlkit_face_detection: ^0.10.0
+  
   # Intl para formateo de fechas
   intl: ^0.19.0
   

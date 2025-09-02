@@ -2,6 +2,8 @@ import '../../../app/data/models/credencial_ine_model.dart';
 import '../utils/validation_utils.dart';
 import '../utils/string_similarity_utils.dart';
 import '../utils/credential_side_detector.dart';
+import 'face_detection_service.dart';
+import 'signature_extraction_service.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -228,18 +230,65 @@ class IneCredentialProcessorService {
       String extractedText, String imagePath) async {
     // Procesar el texto primero
     final credential = processCredentialText(extractedText);
+    print('🔍 Tipo de credencial detectado: ${credential.tipo}');
     
     // Detectar lado para todos los tipos de credencial usando el texto extraído
+    String detectedSide = 'frontal';
     try {
       final sideResult = CredentialSideDetector.detectSide(extractedText);
-      final detectedSide = sideResult['lado'] as String;
-      
-      // Actualizar la credencial con el lado detectado
-      return credential.copyWith(lado: detectedSide);
+      detectedSide = sideResult['lado'] as String;
+      print('📍 Lado detectado: $detectedSide');
     } catch (e) {
       // En caso de error, mantener lado como frontal por defecto
-      return credential.copyWith(lado: 'frontal');
+      detectedSide = 'frontal';
+      print('⚠️ Error detectando lado, usando frontal por defecto: $e');
     }
+    
+    // Detectar y extraer fotografía del rostro si es credencial T1, T2 o T3 y es lado frontal
+    String photoPath = '';
+    print('🎯 Verificando condiciones para detección facial: tipo=${credential.tipo}, lado=$detectedSide');
+    if ((credential.tipo == 't1' || credential.tipo == 't2' || credential.tipo == 't3') && detectedSide == 'frontal') {
+      print('✅ Iniciando detección facial...');
+      try {
+        photoPath = await FaceDetectionService.extractFaceFromCredential(imagePath);
+        print('📸 Foto extraída exitosamente: $photoPath');
+      } catch (e) {
+        // En caso de error en la detección facial, continuar sin la foto
+        print('❌ Error en detección facial: $e');
+      }
+    } else {
+      print('❌ No se cumplieron las condiciones para detección facial');
+    }
+    
+    // Extraer firma solo para credenciales T3 frontales
+    String signaturePath = '';
+    if (credential.tipo == 't3' && detectedSide == 'frontal' && photoPath.isNotEmpty) {
+      print('🖋️ Iniciando extracción de firma para credencial T3...');
+      try {
+        // Generar ID único para la credencial
+        final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+        signaturePath = await SignatureExtractionService.extractSignatureFromT3Credential(
+          imagePath: imagePath,
+          facePhotoPath: photoPath,
+          credentialId: credentialId,
+        );
+        print('🖋️ Firma extraída exitosamente: $signaturePath');
+      } catch (e) {
+        // En caso de error en la extracción de firma, continuar sin la firma
+        print('❌ Error en extracción de firma: $e');
+      }
+    } else if (credential.tipo == 't3' && detectedSide == 'frontal') {
+      print('⚠️ No se puede extraer firma: falta la fotografía del rostro');
+    }
+    
+    // Actualizar la credencial con el lado detectado, la ruta de la foto y la firma
+    final updatedCredential = credential.copyWith(
+      lado: detectedSide, 
+      photoPath: photoPath,
+      signaturePath: signaturePath,
+    );
+    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}');
+    return updatedCredential;
   }
 
   /// Procesa el texto extraído y devuelve un modelo estructurado
@@ -277,6 +326,8 @@ class IneCredentialProcessorService {
         estado: '',
         municipio: '',
         localidad: '',
+        photoPath: '', // No procesado
+        signaturePath: '', // No procesado
       );
     }
 
@@ -340,6 +391,8 @@ class IneCredentialProcessorService {
             ValidationUtils.isValidLocality(localidad)
                 ? ValidationUtils.cleanNumericCode(localidad)
                 : localidad,
+        photoPath: '', // Se establecerá en processCredentialWithSideDetection
+        signaturePath: '', // Se establecerá para T3 en processCredentialWithSideDetection
       );
     }
 
@@ -367,6 +420,8 @@ class IneCredentialProcessorService {
         estado: '',
         municipio: '',
         localidad: '',
+        photoPath: '', // Se establecerá en processCredentialWithSideDetection
+        signaturePath: '', // Se establecerá en processCredentialWithSideDetection
       );
     }
 
@@ -394,6 +449,8 @@ class IneCredentialProcessorService {
       estado: tipoCredencial == 't2' ? _extractEstado(filteredLines) : '',
       municipio: tipoCredencial == 't2' ? _extractMunicipio(filteredLines) : '',
       localidad: tipoCredencial == 't2' ? _extractLocalidad(filteredLines) : '',
+      photoPath: '', // Se establecerá en processCredentialWithSideDetection
+      signaturePath: '', // No procesado
     );
   }
 

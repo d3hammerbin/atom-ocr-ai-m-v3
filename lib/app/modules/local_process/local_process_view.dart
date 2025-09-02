@@ -399,6 +399,194 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   _buildCredentialField('Localidad', credential.localidad,
                                     isValid: credential.localidad.isNotEmpty ? ValidationUtils.isValidLocality(credential.localidad) : null),
                                 ],
+                                
+                                // Sección de fotografía del rostro extraída
+                                if (credential.photoPath.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.blue.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.face,
+                                              color: Colors.blue.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Fotografía del Rostro Extraída',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Center(
+                                          child: Container(
+                                            width: 150,
+                                            height: 150,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Image.file(
+                                                File(credential.photoPath),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Container(
+                                                    alignment: Alignment.center,
+                                                    child: Column(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.broken_image,
+                                                          size: 32,
+                                                          color: Colors.grey,
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        const Text(
+                                                          'Error al cargar',
+                                                          style: TextStyle(
+                                                            color: Colors.grey,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Center(
+                                          child: Text(
+                                            'Rostro detectado y extraído automáticamente',
+                                            style: TextStyle(
+                                              color: Colors.blue.shade700,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
+                                // Sección de firma extraída (solo para credenciales T3)
+                                if (credential.tipo == 't3' && credential.signaturePath.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.green.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.draw,
+                                              color: Colors.green.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Firma Extraída (T3)',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Center(
+                                          child: Container(
+                                            width: 200,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Image.file(
+                                                File(credential.signaturePath),
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Container(
+                                                    alignment: Alignment.center,
+                                                    child: Column(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.broken_image,
+                                                          size: 32,
+                                                          color: Colors.grey,
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        const Text(
+                                                          'Error al cargar',
+                                                          style: TextStyle(
+                                                            color: Colors.grey,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Center(
+                                          child: Text(
+                                            'Firma detectada y extraída automáticamente',
+                                            style: TextStyle(
+                                              color: Colors.green.shade700,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           );

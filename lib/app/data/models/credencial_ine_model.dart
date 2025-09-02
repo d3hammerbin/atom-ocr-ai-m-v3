@@ -15,6 +15,8 @@ class CredencialIneModel {
   final String estado; // Solo para t2
   final String municipio; // Solo para t2
   final String localidad; // Solo para t2
+  final String photoPath; // Ruta de la imagen del rostro extraída
+  final String signaturePath; // Ruta de la imagen de la firma extraída (solo T3)
 
   CredencialIneModel({
     required this.nombre,
@@ -31,6 +33,8 @@ class CredencialIneModel {
     required this.estado,
     required this.municipio,
     required this.localidad,
+    required this.photoPath,
+    required this.signaturePath,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
@@ -48,7 +52,9 @@ class CredencialIneModel {
       lado = '',
       estado = '',
       municipio = '',
-      localidad = '';
+      localidad = '',
+      photoPath = '',
+      signaturePath = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -67,6 +73,8 @@ class CredencialIneModel {
       estado: json['estado'] ?? '',
       municipio: json['municipio'] ?? '',
       localidad: json['localidad'] ?? '',
+      photoPath: json['photoPath'] ?? '',
+      signaturePath: json['signaturePath'] ?? '',
     );
   }
 
@@ -87,6 +95,8 @@ class CredencialIneModel {
       'estado': estado,
       'municipio': municipio,
       'localidad': localidad,
+      'photoPath': photoPath,
+      'signaturePath': signaturePath,
     };
   }
 
@@ -106,6 +116,8 @@ class CredencialIneModel {
     String? estado,
     String? municipio,
     String? localidad,
+    String? photoPath,
+    String? signaturePath,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -122,6 +134,8 @@ class CredencialIneModel {
       estado: estado ?? this.estado,
       municipio: municipio ?? this.municipio,
       localidad: localidad ?? this.localidad,
+      photoPath: photoPath ?? this.photoPath,
+      signaturePath: signaturePath ?? this.signaturePath,
     );
   }
 
@@ -189,7 +203,9 @@ class CredencialIneModel {
         other.lado == lado &&
         other.estado == estado &&
         other.municipio == municipio &&
-        other.localidad == localidad;
+        other.localidad == localidad &&
+        other.photoPath == photoPath &&
+        other.signaturePath == signaturePath;
   }
 
   @override
@@ -209,6 +225,8 @@ class CredencialIneModel {
       estado,
       municipio,
       localidad,
+      photoPath,
+      signaturePath,
     );
   }
 }

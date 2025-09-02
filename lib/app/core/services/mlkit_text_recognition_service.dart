@@ -9,15 +9,22 @@ class MLKitTextRecognitionService {
   MLKitTextRecognitionService._internal();
 
   // Instancia del reconocedor de texto
-  late final TextRecognizer _textRecognizer;
+  TextRecognizer? _textRecognizer;
   
   // Logger service para registrar eventos
   final LoggerService _logger = LoggerService.instance;
 
+  /// Obtiene la instancia del reconocedor de texto, inicializándola si es necesario
+  TextRecognizer get _recognizer {
+    _textRecognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
+    return _textRecognizer!;
+  }
+
   /// Inicializa el servicio ML Kit
   Future<void> initialize() async {
     try {
-      _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      // Forzar la inicialización del reconocedor
+      _recognizer;
       _logger.info('MLKitTextRecognitionService', 'Servicio inicializado correctamente');
     } catch (e) {
       _logger.error('MLKitTextRecognitionService', 'Error al inicializar servicio: $e');
@@ -44,7 +51,7 @@ class MLKitTextRecognitionService {
       final inputImage = InputImage.fromFilePath(imagePath);
       
       // Procesar la imagen con ML Kit
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+      final RecognizedText recognizedText = await _recognizer.processImage(inputImage);
       
       // Extraer el texto completo
       final String extractedText = recognizedText.text;
@@ -79,7 +86,7 @@ class MLKitTextRecognitionService {
       final inputImage = InputImage.fromFilePath(imagePath);
       
       // Procesar la imagen con ML Kit
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+      final RecognizedText recognizedText = await _recognizer.processImage(inputImage);
       
       // Construir información detallada
       final Map<String, dynamic> detailedResult = {
@@ -148,7 +155,10 @@ class MLKitTextRecognitionService {
   /// Libera los recursos del servicio
   Future<void> dispose() async {
     try {
-      await _textRecognizer.close();
+      if (_textRecognizer != null) {
+        await _textRecognizer!.close();
+        _textRecognizer = null;
+      }
       _logger.info('MLKitTextRecognitionService', 'Recursos liberados correctamente');
     } catch (e) {
       _logger.error('MLKitTextRecognitionService', 'Error al liberar recursos: $e');

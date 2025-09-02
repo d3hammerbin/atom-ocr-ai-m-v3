@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../core/services/mlkit_text_recognition_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
+import '../../core/services/logger_service.dart';
+import '../../core/services/mlkit_text_recognition_service.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../data/models/credencial_ine_model.dart';
 
 class LocalProcessController extends GetxController {
@@ -52,22 +54,16 @@ class LocalProcessController extends GetxController {
       
       if (image != null) {
         selectedImagePath.value = image.path;
-        Get.snackbar(
-          'Éxito',
-          'Imagen seleccionada correctamente',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showSuccess(
+          title: 'Éxito',
+          message: 'Imagen seleccionada correctamente',
         );
       }
     } catch (e) {
       errorMessage.value = 'Error al seleccionar imagen: $e';
-      Get.snackbar(
-        'Error',
-        'No se pudo seleccionar la imagen',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'No se pudo seleccionar la imagen',
       );
     } finally {
       isLoading.value = false;
@@ -86,12 +82,9 @@ class LocalProcessController extends GetxController {
   /// Extrae texto de la imagen seleccionada usando ML Kit
   Future<void> extractTextFromSelectedImage() async {
     if (!hasSelectedImage) {
-      Get.snackbar(
-        'Error',
-        'Primero selecciona una imagen',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.8),
-        colorText: Colors.white,
+      SnackbarUtils.showWarning(
+        title: 'Error',
+        message: 'Primero selecciona una imagen',
       );
       return;
     }
@@ -105,31 +98,22 @@ class LocalProcessController extends GetxController {
       
       if (text != null && text.isNotEmpty) {
         extractedText.value = text;
-        Get.snackbar(
-          'Éxito',
-          'Texto extraído correctamente',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showSuccess(
+          title: 'Éxito',
+          message: 'Texto extraído correctamente',
         );
       } else {
         extractedText.value = 'No se encontró texto en la imagen';
-        Get.snackbar(
-          'Información',
-          'No se detectó texto en la imagen seleccionada',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.blue.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showInfo(
+          title: 'Información',
+          message: 'No se detectó texto en la imagen seleccionada',
         );
       }
     } catch (e) {
       errorMessage.value = 'Error al extraer texto: $e';
-      Get.snackbar(
-        'Error',
-        'No se pudo extraer el texto de la imagen',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'No se pudo extraer el texto de la imagen',
       );
     } finally {
       isExtractingText.value = false;
@@ -152,12 +136,9 @@ class LocalProcessController extends GetxController {
   /// Procesa credencial INE desde el texto extraído
   Future<void> processIneCredential() async {
     if (!hasExtractedText) {
-      Get.snackbar(
-        'Error',
-        'Primero extrae texto de una imagen',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.8),
-        colorText: Colors.white,
+      SnackbarUtils.showWarning(
+        title: 'Error',
+        message: 'Primero extrae texto de una imagen',
       );
       return;
     }
@@ -168,12 +149,9 @@ class LocalProcessController extends GetxController {
 
       // Verificar si es una credencial INE
       if (!IneCredentialProcessorService.isIneCredential(extractedText.value)) {
-        Get.snackbar(
-          'Información',
-          'La imagen no parece ser una credencial INE válida',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showWarning(
+          title: 'Información',
+          message: 'La imagen no parece ser una credencial INE válida',
         );
         return;
       }
@@ -186,31 +164,22 @@ class LocalProcessController extends GetxController {
 
       if (IneCredentialProcessorService.validateExtractedData(credential)) {
         processedCredential.value = credential;
-        Get.snackbar(
-          'Éxito',
-          'Credencial INE procesada correctamente',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showSuccess(
+          title: 'Éxito',
+          message: 'Credencial INE procesada correctamente',
         );
       } else {
-        Get.snackbar(
-          'Advertencia',
-          'Se procesó la credencial pero faltan algunos datos',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
+        SnackbarUtils.showWarning(
+          title: 'Advertencia',
+          message: 'Se procesó la credencial pero faltan algunos datos',
         );
         processedCredential.value = credential;
       }
     } catch (e) {
       errorMessage.value = 'Error al procesar credencial: $e';
-      Get.snackbar(
-        'Error',
-        'No se pudo procesar la credencial INE',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'No se pudo procesar la credencial INE',
       );
     } finally {
       isProcessingCredential.value = false;

@@ -302,6 +302,13 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                 _buildCredentialField('Año de Registro', credential.anoRegistro),
                                 _buildCredentialField('Sección', credential.seccion),
                                 _buildCredentialField('Vigencia', credential.vigencia),
+                                _buildCredentialField('Tipo', credential.tipo),
+                                // Campos específicos para credenciales Tipo 2
+                                if (credential.tipo == 'Tipo 2') ...[
+                                  _buildCredentialField('Estado', credential.estado),
+                                  _buildCredentialField('Municipio', credential.municipio),
+                                  _buildCredentialField('Localidad', credential.localidad),
+                                ],
                               ],
                             ),
                           );

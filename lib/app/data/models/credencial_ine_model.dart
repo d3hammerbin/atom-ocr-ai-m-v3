@@ -8,6 +8,10 @@ class CredencialIneModel {
   final String anoRegistro;
   final String seccion;
   final String vigencia;
+  final String tipo; // "Tipo 1" o "Tipo 2"
+  final String estado; // Solo para Tipo 2
+  final String municipio; // Solo para Tipo 2
+  final String localidad; // Solo para Tipo 2
 
   CredencialIneModel({
     required this.nombre,
@@ -19,19 +23,27 @@ class CredencialIneModel {
     required this.anoRegistro,
     required this.seccion,
     required this.vigencia,
+    required this.tipo,
+    required this.estado,
+    required this.municipio,
+    required this.localidad,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
   CredencialIneModel.empty()
-      : nombre = '',
-        domicilio = '',
-        claveElector = '',
-        curp = '',
-        fechaNacimiento = '',
-        sexo = '',
-        anoRegistro = '',
-        seccion = '',
-        vigencia = '';
+    : nombre = '',
+      domicilio = '',
+      claveElector = '',
+      curp = '',
+      fechaNacimiento = '',
+      sexo = '',
+      anoRegistro = '',
+      seccion = '',
+      vigencia = '',
+      tipo = '',
+      estado = '',
+      municipio = '',
+      localidad = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +57,10 @@ class CredencialIneModel {
       anoRegistro: json['anoRegistro'] ?? '',
       seccion: json['seccion'] ?? '',
       vigencia: json['vigencia'] ?? '',
+      tipo: json['tipo'] ?? '',
+      estado: json['estado'] ?? '',
+      municipio: json['municipio'] ?? '',
+      localidad: json['localidad'] ?? '',
     );
   }
 
@@ -60,6 +76,10 @@ class CredencialIneModel {
       'anoRegistro': anoRegistro,
       'seccion': seccion,
       'vigencia': vigencia,
+      'tipo': tipo,
+      'estado': estado,
+      'municipio': municipio,
+      'localidad': localidad,
     };
   }
 
@@ -74,6 +94,10 @@ class CredencialIneModel {
     String? anoRegistro,
     String? seccion,
     String? vigencia,
+    String? tipo,
+    String? estado,
+    String? municipio,
+    String? localidad,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -85,19 +109,21 @@ class CredencialIneModel {
       anoRegistro: anoRegistro ?? this.anoRegistro,
       seccion: seccion ?? this.seccion,
       vigencia: vigencia ?? this.vigencia,
+      tipo: tipo ?? this.tipo,
+      estado: estado ?? this.estado,
+      municipio: municipio ?? this.municipio,
+      localidad: localidad ?? this.localidad,
     );
   }
 
   /// Verifica si la credencial tiene datos válidos
   bool get isValid {
-    return nombre.isNotEmpty && 
-           curp.isNotEmpty && 
-           fechaNacimiento.isNotEmpty;
+    return nombre.isNotEmpty && curp.isNotEmpty && fechaNacimiento.isNotEmpty;
   }
 
   /// Verifica si la credencial está completamente llena
   bool get isComplete {
-    return nombre.isNotEmpty &&
+    final baseFieldsComplete = nombre.isNotEmpty &&
            domicilio.isNotEmpty &&
            claveElector.isNotEmpty &&
            curp.isNotEmpty &&
@@ -105,12 +131,23 @@ class CredencialIneModel {
            sexo.isNotEmpty &&
            anoRegistro.isNotEmpty &&
            seccion.isNotEmpty &&
-           vigencia.isNotEmpty;
+           vigencia.isNotEmpty &&
+           tipo.isNotEmpty;
+    
+    // Para credenciales Tipo 2, también verificar campos específicos
+    if (tipo == 'Tipo 2') {
+      return baseFieldsComplete &&
+             estado.isNotEmpty &&
+             municipio.isNotEmpty &&
+             localidad.isNotEmpty;
+    }
+    
+    return baseFieldsComplete;
   }
 
   @override
   String toString() {
-    return 'CredencialIneModel(nombre: $nombre, domicilio: $domicilio, claveElector: $claveElector, curp: $curp, fechaNacimiento: $fechaNacimiento, sexo: $sexo, anoRegistro: $anoRegistro, seccion: $seccion, vigencia: $vigencia)';
+    return 'CredencialIneModel(nombre: $nombre, domicilio: $domicilio, claveElector: $claveElector, curp: $curp, fechaNacimiento: $fechaNacimiento, sexo: $sexo, anoRegistro: $anoRegistro, seccion: $seccion, vigencia: $vigencia, tipo: $tipo, estado: $estado, municipio: $municipio, localidad: $localidad)';
   }
 
   @override
@@ -125,7 +162,11 @@ class CredencialIneModel {
         other.sexo == sexo &&
         other.anoRegistro == anoRegistro &&
         other.seccion == seccion &&
-        other.vigencia == vigencia;
+        other.vigencia == vigencia &&
+        other.tipo == tipo &&
+        other.estado == estado &&
+        other.municipio == municipio &&
+        other.localidad == localidad;
   }
 
   @override
@@ -140,6 +181,10 @@ class CredencialIneModel {
       anoRegistro,
       seccion,
       vigencia,
+      tipo,
+      estado,
+      municipio,
+      localidad,
     );
   }
 }

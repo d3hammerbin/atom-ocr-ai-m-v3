@@ -35,6 +35,22 @@ class IneCredentialProcessorService {
     'CLAVE DE ELECTOR',
     'COL',
     'COLONIA',
+    'ESTADO',
+    'MUNICIPIO',
+    'LOCALIDAD',
+  ];
+
+  /// Etiquetas específicas para credenciales Tipo 1 (más antiguas)
+  static const List<String> _tipo1Labels = [
+    'EDAD',
+    'FOLIO',
+  ];
+
+  /// Etiquetas específicas para credenciales Tipo 2
+  static const List<String> _tipo2Labels = [
+    'ESTADO',
+    'MUNICIPIO',
+    'LOCALIDAD',
   ];
 
   /// Verifica si el texto extraído corresponde a una credencial INE
@@ -63,6 +79,9 @@ class IneCredentialProcessorService {
     // Extraer información adicional usando similitud de cadenas
     final additionalInfo = extractAdditionalInfoWithSimilarity(lines);
 
+    // Detectar tipo de credencial
+    final tipoCredencial = _detectCredentialType(lines);
+
     // Extraer campos específicos
     return CredencialIneModel(
       nombre: _extractNombre(filteredLines),
@@ -75,6 +94,10 @@ class IneCredentialProcessorService {
           additionalInfo['año_registro'] ?? _extractAnoRegistro(filteredLines),
       seccion: _extractSeccion(filteredLines),
       vigencia: additionalInfo['vigencia'] ?? _extractVigencia(filteredLines),
+      tipo: tipoCredencial,
+      estado: tipoCredencial == 'Tipo 2' ? _extractEstado(filteredLines) : '',
+      municipio: tipoCredencial == 'Tipo 2' ? _extractMunicipio(filteredLines) : '',
+      localidad: tipoCredencial == 'Tipo 2' ? _extractLocalidad(filteredLines) : '',
     );
   }
 
@@ -733,5 +756,88 @@ class IneCredentialProcessorService {
     }
 
     return info;
+  }
+
+  /// Detecta el tipo de credencial basado en la presencia de campos específicos
+  static String _detectCredentialType(List<String> lines) {
+    final upperLines = lines.map((line) => line.toUpperCase()).toList();
+    
+    // Contar cuántas etiquetas de Tipo 1 están presentes
+    int tipo1FieldsFound = 0;
+    for (final label in _tipo1Labels) {
+      if (upperLines.any((line) => line.contains(label))) {
+        tipo1FieldsFound++;
+      }
+    }
+    
+    // Contar cuántas etiquetas de Tipo 2 están presentes
+    int tipo2FieldsFound = 0;
+    for (final label in _tipo2Labels) {
+      if (upperLines.any((line) => line.contains(label))) {
+        tipo2FieldsFound++;
+      }
+    }
+    
+    // Lógica de detección:
+    // Tipo 1: tiene EDAD o FOLIO
+    // Tipo 2: tiene ESTADO, MUNICIPIO o LOCALIDAD (pero no EDAD/FOLIO)
+    // Tipo 3: no tiene ninguna de las etiquetas anteriores
+    if (tipo1FieldsFound > 0) {
+      return 'Tipo 1';
+    } else if (tipo2FieldsFound > 0) {
+      return 'Tipo 2';
+    } else {
+      return 'Tipo 3';
+    }
+  }
+
+  /// Extrae el estado de la credencial (solo para Tipo 2)
+  static String _extractEstado(List<String> lines) {
+    return _extractFieldAfterLabel(lines, ['ESTADO']);
+  }
+
+  /// Extrae el municipio de la credencial (solo para Tipo 2)
+  static String _extractMunicipio(List<String> lines) {
+    return _extractFieldAfterLabel(lines, ['MUNICIPIO']);
+  }
+
+  /// Extrae la localidad de la credencial (solo para Tipo 2)
+  static String _extractLocalidad(List<String> lines) {
+    return _extractFieldAfterLabel(lines, ['LOCALIDAD']);
+  }
+
+  /// Método auxiliar para extraer un campo después de encontrar su etiqueta
+  static String _extractFieldAfterLabel(List<String> lines, List<String> labels) {
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].toUpperCase();
+      
+      for (final label in labels) {
+        if (line.contains(label)) {
+          // Buscar el valor en la misma línea después de la etiqueta
+          final parts = line.split(label);
+          if (parts.length > 1) {
+            final value = parts[1].trim();
+            if (value.isNotEmpty) {
+              return _filterReferenceLabels([value]).isNotEmpty 
+                  ? _filterReferenceLabels([value]).first 
+                  : value;
+            }
+          }
+          
+          // Si no hay valor en la misma línea, buscar en la siguiente
+          if (i + 1 < lines.length) {
+            final nextLine = lines[i + 1].trim();
+            if (nextLine.isNotEmpty) {
+              final filteredData = _filterReferenceLabels([nextLine]);
+              if (filteredData.isNotEmpty) {
+                return filteredData.first;
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    return '';
   }
 }

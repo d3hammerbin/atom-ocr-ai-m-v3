@@ -1,0 +1,92 @@
+buildscript {
+  ext.safeExtGet = {prop, fallback ->
+    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+  }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+  compileSdkVersion safeExtGet('compileSdkVersion', 34)
+
+  defaultConfig {
+    minSdkVersion safeExtGet('minSdkVersion', 21)
+    targetSdkVersion safeExtGet('targetSdkVersion', 34)
+    versionCode 1
+    versionName "1.0.0"
+    
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  kotlinOptions {
+    jvmTarget = '1.8'
+  }
+
+  lintOptions {
+    disable 'GradleCompatible'
+  }
+
+  packagingOptions {
+    pickFirst '**/libc++_shared.so'
+    pickFirst '**/libjsc.so'
+  }
+}
+
+repositories {
+  // ref: https://www.baeldung.com/maven-local-repository
+  mavenLocal()
+  maven {
+    // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+    url "$rootDir/../node_modules/react-native/android"
+  }
+  maven {
+    // Android JSC is installed from npm
+    url "$rootDir/../node_modules/jsc-android/dist"
+  }
+  google()
+  gradlePluginPortal()
+  mavenCentral()
+}
+
+dependencies {
+  // For < 0.60, you will get the following dependency via your app's dependencies
+  //noinspection GradleDynamicVersion
+  implementation 'com.facebook.react:react-native:+'
+  
+  // Dependencia del Android Service INE
+  implementation project(':android_ine_service')
+  
+  // AndroidX dependencies
+  implementation 'androidx.core:core:1.12.0'
+  implementation 'androidx.annotation:annotation:1.7.1'
+  
+  // JSON processing
+  implementation 'org.json:json:20231013'
+  
+  // Testing
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.mockito:mockito-core:5.8.0'
+  
+  androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+  androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// Configuración para encontrar el servicio INE
+android.libraryVariants.all { variant ->
+  variant.javaCompileProvider.configure {
+    it.dependsOn(':android_ine_service:generateAidlInterfaces')
+  }
+}

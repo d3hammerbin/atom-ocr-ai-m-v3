@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.ineprocessor">
+
+    <!-- Permisos necesarios para conectar con el servicio INE -->
+    <uses-permission android:name="android.permission.BIND_SERVICE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- Queries para permitir la conexión con el servicio INE (Android 11+) -->
+    <queries>
+        <package android:name="mx.d3c.dev.ine" />
+        <intent>
+            <action android:name="mx.d3c.dev.ine.INE_PROCESSOR_SERVICE" />
+        </intent>
+    </queries>
+
+</manifest>

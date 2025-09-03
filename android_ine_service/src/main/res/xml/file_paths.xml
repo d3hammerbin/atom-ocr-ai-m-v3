@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Directorio de archivos internos de la aplicación -->
+    <files-path name="internal_files" path="." />
+    
+    <!-- Directorio de caché interno -->
+    <cache-path name="internal_cache" path="." />
+    
+    <!-- Directorio de archivos externos privados -->
+    <external-files-path name="external_files" path="." />
+    
+    <!-- Directorio de caché externo -->
+    <external-cache-path name="external_cache" path="." />
+    
+    <!-- Directorio específico para imágenes de credenciales INE -->
+    <external-files-path name="ine_images" path="ine_credentials/" />
+    
+    <!-- Directorio para archivos temporales de procesamiento -->
+    <external-cache-path name="temp_processing" path="temp/" />
+    
+    <!-- Directorio para resultados de procesamiento -->
+    <external-files-path name="processing_results" path="results/" />
+    
+</paths>

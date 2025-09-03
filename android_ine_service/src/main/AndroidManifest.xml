@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="mx.d3c.dev.ine">
+
+    <!-- Permisos necesarios para el procesamiento de credenciales INE -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- Permisos para Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Características requeridas -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:extractNativeLibs="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true">
+
+        <!-- Servicio principal de procesamiento de credenciales INE -->
+        <service
+            android:name=".IneProcessorService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="dataProcessing"
+            android:process=":ine_processor">
+            
+            <!-- Intent filter para permitir binding desde otras aplicaciones -->
+            <intent-filter>
+                <action android:name="mx.d3c.dev.ine.INE_PROCESSOR_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            
+            <!-- Metadatos del servicio -->
+            <meta-data
+                android:name="service.version"
+                android:value="1.0.0" />
+            <meta-data
+                android:name="service.description"
+                android:value="Servicio de procesamiento de credenciales INE mexicanas" />
+        </service>
+
+        <!-- Provider para compartir archivos de forma segura -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.ine.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Receiver para manejar resultados de WorkManager -->
+        <receiver
+            android:name=".IneProcessingResultReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

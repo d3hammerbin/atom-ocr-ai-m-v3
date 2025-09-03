@@ -287,12 +287,19 @@ class LocalProcessView extends GetView<LocalProcessController> {
                         if (controller.hasProcessedCredential) {
                           final credential = controller.processedCredential.value!;
                           
-                          // Debug: Verificar valores del QR
+                          // Debug: Verificar valores del QR y MRZ
                           print('DEBUG LocalProcessView - QR Info:');
                           print('  tipo: ${credential.tipo}');
                           print('  lado: ${credential.lado}');
                           print('  qrImagePath: ${credential.qrImagePath}');
                           print('  qrContent: ${credential.qrContent}');
+                          print('DEBUG LocalProcessView - MRZ Info:');
+                          print('  mrzContent: "${credential.mrzContent}" (${credential.mrzContent.length} chars)');
+                          print('  mrzImagePath: ${credential.mrzImagePath}');
+                          print('  mrzContent.isNotEmpty: ${credential.mrzContent.isNotEmpty}');
+                          print('  mrzContent.trim().isNotEmpty: ${credential.mrzContent.trim().isNotEmpty}');
+                          print('  mrzContent bytes: ${credential.mrzContent.codeUnits}');
+                          print('  Condición MRZ: tipo=${credential.tipo} && mrzNotEmpty=${credential.mrzContent.isNotEmpty}');
                           
                           return Container(
                             width: double.infinity,

@@ -116,6 +116,32 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Logging detallado**: Sistema de trazabilidad completo para diagnóstico del proceso de detección de códigos de barras
 - **Manejo robusto de errores**: Sistema de recuperación que garantiza la continuidad del procesamiento aunque falle la detección
 
+### Sistema de Detección MRZ (Machine Readable Zone) para Credenciales T2
+- **Arquitectura híbrida de tres niveles**: Implementación robusta con múltiples métodos de fallback para detección de códigos MRZ
+- **Detección por patrones OACI**: Algoritmo principal que busca patrones MRZ estándar (3 líneas x 30 caracteres) según especificaciones OACI
+- **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit Text Recognition para detección en imagen completa
+- **Región fija optimizada**: Tercer nivel de fallback que utiliza región predefinida en la parte inferior de la credencial
+- **Validación de formato**: Sistema que verifica que el MRZ detectado cumpla con el estándar de 90 caracteres (3x30)
+- **Formateo automático**: Limpieza y normalización de la cadena MRZ eliminando espacios y saltos de línea
+- **Parsing de datos OACI**: Extracción e interpretación de datos según estándares internacionales de documentos de viaje
+- **Integración con modelo de datos**: Campos MRZ añadidos al modelo CredencialIneModel para almacenamiento estructurado
+- **Procesamiento condicional**: Sistema que procesa MRZ únicamente en credenciales T2 y T3 según el tipo detectado
+- **Visualización en interfaz**: Contenedor especializado que muestra la cadena MRZ formateada y sus datos interpretados
+- **Almacenamiento seguro**: Los datos MRZ se almacenan de forma estructurada junto con los demás campos de la credencial
+- **Logging detallado**: Sistema de trazabilidad completo para diagnóstico del proceso de detección MRZ
+- **Manejo robusto de errores**: Sistema de recuperación que garantiza la continuidad del procesamiento aunque falle la detección MRZ
+
+### Sistema de Diagnóstico Avanzado para Detección de Tipos de Credencial
+- **Logs de depuración detallados**: Implementación de sistema de logging exhaustivo en el método de detección de tipos
+- **Análisis de texto completo**: Registro del texto completo extraído por OCR para diagnóstico de problemas de reconocimiento
+- **Detección de etiquetas específicas**: Logging de todas las etiquetas T1 y T2 encontradas durante el análisis
+- **Patrones de reverso T2**: Registro detallado de patrones específicos detectados en el lado reverso de credenciales T2
+- **Resumen de detección**: Logging del proceso completo de clasificación con justificación del tipo asignado
+- **Patrones mejorados para T2**: Implementación de patrones adicionales para detectar credenciales T2 con texto corto o mal reconocido
+- **Optimización de compatibilidad**: Eliminación de caracteres especiales en logs para garantizar compatibilidad con sistemas de logging
+- **Diagnóstico de OCR**: Herramientas para identificar problemas de reconocimiento de texto que afecten la clasificación
+- **Validación de consistencia**: Sistema que verifica la coherencia entre el tipo detectado y el contenido de la credencial
+
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)
 - **Nombres limpios**: Validación que asegura que los nombres contengan solo letras y espacios

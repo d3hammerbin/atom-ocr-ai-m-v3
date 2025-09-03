@@ -289,9 +289,18 @@ class IneCredentialProcessorService {
 
     // Formatear cadena MRZ si está presente (eliminar espacios y saltos de línea)
     String formattedMrzContent = '';
+    print('🔍 DEBUG: reversoData[mrzContent] = "${reversoData['mrzContent']}"');
+    print('🔍 DEBUG: reversoData[mrzContent]?.isNotEmpty = ${reversoData['mrzContent']?.isNotEmpty}');
+    
     if (reversoData['mrzContent']?.isNotEmpty == true) {
+      print('🔍 MRZ original detectada: "${reversoData['mrzContent']}"');
+      print('🔍 MRZ original length: ${reversoData['mrzContent']!.length}');
       formattedMrzContent = _formatMrzContent(reversoData['mrzContent']!);
-      print('📝 MRZ formateada: ${formattedMrzContent.length} caracteres');
+      print('📝 MRZ formateada: "$formattedMrzContent" (${formattedMrzContent.length} caracteres)');
+      print('🔍 DEBUG: formattedMrzContent.isEmpty = ${formattedMrzContent.isEmpty}');
+    } else {
+      print('⚠️ No se detectó contenido MRZ o está vacío');
+      print('🔍 DEBUG: reversoData keys = ${reversoData.keys.toList()}');
     }
 
     // Actualizar el modelo con todos los datos detectados
@@ -316,6 +325,7 @@ class IneCredentialProcessorService {
 
     print('✅ Procesamiento completado para credencial ${updatedCredential.tipo} lado ${updatedCredential.lado}');
     print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
+    print('🔤 MRZ final en modelo: "${updatedCredential.mrzContent}" (${updatedCredential.mrzContent.length} caracteres)');
     return updatedCredential;
   }
 
@@ -368,28 +378,78 @@ class IneCredentialProcessorService {
   static String _formatMrzContent(String mrzContent) {
     if (mrzContent.isEmpty) return '';
     
-    // Eliminar espacios en blanco, saltos de línea y caracteres de control
-    String cleanedMrz = mrzContent
-        .replaceAll(RegExp(r'\s+'), '') // Eliminar espacios, tabs, saltos de línea
-        .replaceAll(RegExp(r'[\r\n\t]'), '') // Eliminar caracteres de control específicos
-        .trim();
+    print('🧹 MRZ original recibida: "$mrzContent"');
+    print('🧹 MRZ original longitud: ${mrzContent.length} caracteres');
     
-    print('🧹 MRZ original: ${mrzContent.length} caracteres');
-    print('🧹 MRZ limpia: ${cleanedMrz.length} caracteres');
+    // Dividir en líneas y limpiar cada una
+    final lines = mrzContent.split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
     
-    // Validar que tenga exactamente 90 caracteres
-    if (cleanedMrz.length == 90) {
-      print('✅ MRZ formateada correctamente: 90 caracteres');
-      return cleanedMrz;
-    } else if (cleanedMrz.length > 90) {
-      // Si tiene más de 90, tomar solo los primeros 90
-      print('⚠️ MRZ demasiado larga (${cleanedMrz.length}), truncando a 90 caracteres');
-      return cleanedMrz.substring(0, 90);
-    } else {
-      // Si tiene menos de 90, rellenar con '<' hasta completar 90
-      print('⚠️ MRZ demasiado corta (${cleanedMrz.length}), rellenando hasta 90 caracteres');
-      return cleanedMrz.padRight(90, '<');
+    print('🧹 Líneas detectadas: ${lines.length}');
+    for (int i = 0; i < lines.length; i++) {
+      print('🧹 Línea ${i + 1}: "${lines[i]}" (${lines[i].length} chars)');
     }
+    
+    // Validar que tengamos exactamente 3 líneas
+    if (lines.length != 3) {
+      print('⚠️ MRZ no tiene 3 líneas (tiene ${lines.length}), intentando formateo directo');
+      // Intentar formateo directo eliminando espacios
+      String cleanedMrz = mrzContent
+          .replaceAll(RegExp(r'\s+'), '') // Eliminar espacios, tabs, saltos de línea
+          .replaceAll(RegExp(r'[\r\n\t]'), '') // Eliminar caracteres de control específicos
+          .trim();
+      
+      if (cleanedMrz.length == 90) {
+        print('✅ MRZ formateada directamente: 90 caracteres');
+        return cleanedMrz;
+      } else {
+        print('⚠️ MRZ formateo directo falló: ${cleanedMrz.length} caracteres');
+        return cleanedMrz.length > 90 ? cleanedMrz.substring(0, 90) : cleanedMrz.padRight(90, '<');
+      }
+    }
+    
+    // Concatenar las 3 líneas (cada una debe tener 30 caracteres)
+    String formattedMrz = '';
+    for (int i = 0; i < 3; i++) {
+      String line = lines[i];
+      // Limpiar caracteres especiales y espacios invisibles
+      line = line.replaceAll(RegExp(r'[^A-Z0-9<]'), '<');
+      
+      // Normalizar la línea a exactamente 30 caracteres
+      if (line.length > 30) {
+        line = line.substring(0, 30);
+        print('⚠️ Línea ${i + 1} truncada a 30 caracteres');
+      } else if (line.length < 30) {
+        line = line.padRight(30, '<');
+        print('⚠️ Línea ${i + 1} rellenada a 30 caracteres');
+      }
+      formattedMrz += line;
+    }
+    
+    // Validación final: asegurar que solo contiene caracteres válidos
+    formattedMrz = formattedMrz.replaceAll(RegExp(r'[^A-Z0-9<]'), '<');
+    
+    // Asegurar exactamente 90 caracteres
+    if (formattedMrz.length != 90) {
+      if (formattedMrz.length > 90) {
+        formattedMrz = formattedMrz.substring(0, 90);
+      } else {
+        formattedMrz = formattedMrz.padRight(90, '<');
+      }
+    }
+    
+    print('🧹 MRZ final concatenada: ${formattedMrz.length} caracteres');
+    print('✅ MRZ formateada correctamente: "$formattedMrz"');
+    
+    // Verificación adicional de caracteres
+    print('🔍 MRZ bytes: ${formattedMrz.codeUnits}');
+    print('🔍 MRZ isEmpty: ${formattedMrz.isEmpty}');
+    print('🔍 MRZ isNotEmpty: ${formattedMrz.isNotEmpty}');
+    print('🔍 MRZ válida: ${formattedMrz.isNotEmpty && formattedMrz.length == 90}');
+    
+    return formattedMrz;
   }
 
   /// Procesa el lado reverso de una credencial (T2, T3)
@@ -459,8 +519,11 @@ class IneCredentialProcessorService {
         print('❌ Error en detección de código de barras: $e');
       }
 
-      // Detectar y extraer código MRZ para credenciales T2
-      print('🔍 Iniciando detección de código MRZ para credencial T2...');
+    }
+
+    // Detectar y extraer código MRZ para credenciales T2 y T3
+    if (credential.tipo == 't2' || credential.tipo == 't3') {
+      print('🔍 Iniciando detección de código MRZ para credencial ${credential.tipo.toUpperCase()}...');
       try {
         final mrzResult = await MrzDetectionService.detectMrzFromCredential(
           imagePath,
@@ -2270,11 +2333,14 @@ class IneCredentialProcessorService {
     final upperLines = lines.map((line) => line.toUpperCase()).toList();
     final fullText = upperLines.join(' ');
 
+    print('DEBUG: Texto completo para detección de tipo: ${fullText.length > 200 ? fullText.substring(0, 200) + '...' : fullText}');
+
     // Contar cuántas etiquetas de t1 están presentes
     int tipo1FieldsFound = 0;
     for (final label in _tipo1Labels) {
       if (upperLines.any((line) => line.contains(label))) {
         tipo1FieldsFound++;
+        print('DEBUG: Etiqueta T1 encontrada: $label');
       }
     }
 
@@ -2283,6 +2349,7 @@ class IneCredentialProcessorService {
     for (final label in _tipo2Labels) {
       if (upperLines.any((line) => line.contains(label))) {
         tipo2FieldsFound++;
+        print('DEBUG: Etiqueta T2 encontrada: $label');
       }
     }
 
@@ -2292,34 +2359,62 @@ class IneCredentialProcessorService {
     // Patrón 1: Códigos específicos de T2 (formato EC seguido de números y letras)
     if (RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText)) {
       hasT2ReversePatterns = true;
+      print('DEBUG: Patrón T2 reverso detectado - EC código');
     }
     
     // Patrón 2: Estructura típica del reverso T2 con códigos MRZ
     if (RegExp(r'IDMEX\d+<<\d+').hasMatch(fullText)) {
       hasT2ReversePatterns = true;
+      print('DEBUG: Patrón T2 reverso detectado - IDMEX MRZ');
     }
     
     // Patrón 3: Líneas con formato específico de T2 reverso (números y letras específicos)
     if (RegExp(r'\d{7}M\d{7}MEX<\d+<<\d+<\d+').hasMatch(fullText)) {
       hasT2ReversePatterns = true;
+      print('DEBUG: Patrón T2 reverso detectado - Formato MRZ completo');
     }
     
     // Patrón 4: Presencia de "SECRETARIO EJECUTIVO" típico del reverso T2
     if (fullText.contains('SECRETARIO EJECUTIVO') || fullText.contains('SECRETARIO EJEC')) {
       hasT2ReversePatterns = true;
+      print('DEBUG: Patrón T2 reverso detectado - SECRETARIO EJECUTIVO');
     }
+    
+    // Patrón 5: Detectar texto muy corto o mal reconocido que podría ser T2 reverso
+    // Si el texto es muy corto (menos de 300 caracteres) y no contiene etiquetas frontales,
+    // es probable que sea un reverso T2 con OCR deficiente
+    if (fullText.length < 300 && tipo1FieldsFound == 0 && tipo2FieldsFound == 0) {
+      // Verificar si contiene algunos caracteres típicos de MRZ mal reconocidos
+      if (fullText.contains('MEX') || fullText.contains('<<') || 
+          RegExp(r'\d{6,}').hasMatch(fullText) || fullText.contains('&')) {
+        hasT2ReversePatterns = true;
+        print('DEBUG: Patrón T2 reverso detectado - Texto corto con indicios de MRZ');
+      }
+    }
+    
+    // Patrón 6: Detectar patrones de texto mal reconocido típicos del reverso T2
+    if (RegExp(r'[A-Z]{2,}[&<>]{1,}[A-Z0-9]{2,}').hasMatch(fullText)) {
+      hasT2ReversePatterns = true;
+      print('DEBUG: Patrón T2 reverso detectado - Patrón de texto mal reconocido');
+    }
+
+    print('DEBUG: Resumen detección - T1: $tipo1FieldsFound, T2: $tipo2FieldsFound, T2 Reverso: $hasT2ReversePatterns');
 
     // Lógica de detección:
     // t1: tiene EDAD o FOLIO -> retorna 't1'
     // t2: tiene ESTADO, MUNICIPIO o LOCALIDAD (frontal) O patrones de reverso T2 (pero no EDAD/FOLIO) -> retorna 't2'
     // t3: no tiene ninguna de las etiquetas anteriores -> retorna 't3'
+    String detectedType;
     if (tipo1FieldsFound > 0) {
-      return _credentialTypeConfig['Tipo 1']!['code'];
+      detectedType = _credentialTypeConfig['Tipo 1']!['code'];
     } else if (tipo2FieldsFound > 0 || hasT2ReversePatterns) {
-      return _credentialTypeConfig['Tipo 2']!['code'];
+      detectedType = _credentialTypeConfig['Tipo 2']!['code'];
     } else {
-      return _credentialTypeConfig['Tipo 3']!['code'];
+      detectedType = _credentialTypeConfig['Tipo 3']!['code'];
     }
+
+    print('DEBUG: Tipo de credencial detectado: $detectedType');
+    return detectedType;
   }
 
   /// Extrae el estado de la credencial (solo para t2)

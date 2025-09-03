@@ -28,6 +28,7 @@ class CredencialIneModel {
   final String mrzBirthDate; // Fecha de nacimiento extraída del MRZ (solo T2)
   final String mrzExpiryDate; // Fecha de expiración extraída del MRZ (solo T2)
   final String mrzSex; // Sexo extraído del MRZ (solo T2)
+  final String signatureHuellaImagePath; // Ruta de la imagen combinada firma-huella (solo T2 reverso)
 
   CredencialIneModel({
     required this.nombre,
@@ -57,6 +58,7 @@ class CredencialIneModel {
     required this.mrzBirthDate,
     required this.mrzExpiryDate,
     required this.mrzSex,
+    required this.signatureHuellaImagePath,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
@@ -87,7 +89,8 @@ class CredencialIneModel {
       mrzNationality = '',
       mrzBirthDate = '',
       mrzExpiryDate = '',
-      mrzSex = '';
+      mrzSex = '',
+      signatureHuellaImagePath = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -119,6 +122,7 @@ class CredencialIneModel {
       mrzBirthDate: json['mrzBirthDate'] ?? '',
       mrzExpiryDate: json['mrzExpiryDate'] ?? '',
       mrzSex: json['mrzSex'] ?? '',
+      signatureHuellaImagePath: json['signatureHuellaImagePath'] ?? '',
     );
   }
 
@@ -152,6 +156,7 @@ class CredencialIneModel {
       'mrzBirthDate': mrzBirthDate,
       'mrzExpiryDate': mrzExpiryDate,
       'mrzSex': mrzSex,
+      'signatureHuellaImagePath': signatureHuellaImagePath,
     };
   }
 
@@ -184,6 +189,7 @@ class CredencialIneModel {
     String? mrzBirthDate,
     String? mrzExpiryDate,
     String? mrzSex,
+    String? signatureHuellaImagePath,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -213,6 +219,7 @@ class CredencialIneModel {
       mrzBirthDate: mrzBirthDate ?? this.mrzBirthDate,
       mrzExpiryDate: mrzExpiryDate ?? this.mrzExpiryDate,
       mrzSex: mrzSex ?? this.mrzSex,
+      signatureHuellaImagePath: signatureHuellaImagePath ?? this.signatureHuellaImagePath,
     );
   }
 
@@ -293,7 +300,8 @@ class CredencialIneModel {
         other.mrzNationality == mrzNationality &&
         other.mrzBirthDate == mrzBirthDate &&
         other.mrzExpiryDate == mrzExpiryDate &&
-        other.mrzSex == mrzSex;
+        other.mrzSex == mrzSex &&
+        other.signatureHuellaImagePath == signatureHuellaImagePath;
   }
 
   @override
@@ -327,6 +335,7 @@ class CredencialIneModel {
         mrzBirthDate,
         mrzExpiryDate,
         mrzSex,
+        signatureHuellaImagePath,
       ),
     );
   }

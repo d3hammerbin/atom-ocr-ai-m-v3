@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'package:image/image.dart' as img;
 import '../../../app/data/models/credencial_ine_model.dart';
 import '../utils/validation_utils.dart';
 import '../utils/string_similarity_utils.dart';
@@ -284,6 +287,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '',
         mrzExpiryDate: '',
         mrzSex: '',
+        signatureHuellaImagePath: '',
       );
     } else {
       // Para lado frontal: usar lógica original basada en texto
@@ -366,6 +370,8 @@ class IneCredentialProcessorService {
       mrzBirthDate: reversoData['mrzBirthDate']?.isNotEmpty == true ? reversoData['mrzBirthDate'] : credential.mrzBirthDate,
       mrzExpiryDate: reversoData['mrzExpiryDate']?.isNotEmpty == true ? reversoData['mrzExpiryDate'] : credential.mrzExpiryDate,
       mrzSex: reversoData['mrzSex']?.isNotEmpty == true ? reversoData['mrzSex'] : credential.mrzSex,
+      // Datos de firma-huella para T2 reverso
+      signatureHuellaImagePath: reversoData['signatureHuellaImagePath']?.isNotEmpty == true ? reversoData['signatureHuellaImagePath'] : credential.signatureHuellaImagePath,
     );
 
     print('✅ Procesamiento completado para credencial ${updatedCredential.tipo} lado ${updatedCredential.lado}');
@@ -516,6 +522,7 @@ class IneCredentialProcessorService {
       'mrzBirthDate': '',
       'mrzExpiryDate': '',
       'mrzSex': '',
+      'signatureHuellaImagePath': '',
     };
 
     print('🎯 Procesando lado reverso - tipo: ${credential.tipo}');
@@ -605,6 +612,37 @@ class IneCredentialProcessorService {
       }
     }
 
+    // Extraer región de firma y huella digital para credenciales T2 del lado reverso
+    if (processingType == 't2') {
+      print('🔍 Iniciando extracción de firma y huella digital para credencial T2 reverso...');
+      try {
+        // Cargar la imagen original
+        final imageFile = File(imagePath);
+        if (await imageFile.exists()) {
+          final imageBytes = await imageFile.readAsBytes();
+          final originalImage = img.decodeImage(imageBytes);
+          
+          if (originalImage != null) {
+            final signatureHuellaResult = _extractSignatureHuellaT2(originalImage, imagePath);
+            
+            reversoData['signatureHuellaImagePath'] = signatureHuellaResult['imagePath'] ?? '';
+            
+            if (reversoData['signatureHuellaImagePath']!.isNotEmpty) {
+              print('✅ Región firma-huella extraída exitosamente: ${reversoData['signatureHuellaImagePath']}');
+            } else {
+              print('⚠️ No se pudo extraer la región firma-huella');
+            }
+          } else {
+            print('❌ No se pudo decodificar la imagen para extracción firma-huella');
+          }
+        } else {
+          print('❌ Archivo de imagen no encontrado: $imagePath');
+        }
+      } catch (e) {
+        print('❌ Error en extracción de firma-huella: $e');
+      }
+    }
+
     return {
       'reversoData': reversoData,
       'updatedCredential': updatedCredential,
@@ -660,6 +698,7 @@ class IneCredentialProcessorService {
         mrzSex: '', // No procesado
         mrzBirthDate: '', // No procesado
         mrzExpiryDate: '', // No procesado
+        signatureHuellaImagePath: '', // No procesado
       );
     }
 
@@ -736,6 +775,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
         mrzExpiryDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
         mrzSex: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        signatureHuellaImagePath: '', // Se establecerá para T2 reverso en processCredentialWithSideDetection
       );
     }
 
@@ -777,6 +817,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '', // No aplicable para T3
         mrzExpiryDate: '', // No aplicable para T3
         mrzSex: '', // No aplicable para T3
+        signatureHuellaImagePath: '', // No aplicable para T3
       );
     }
 
@@ -817,6 +858,7 @@ class IneCredentialProcessorService {
       mrzBirthDate: '', // Se establecerá para T2
       mrzExpiryDate: '', // Se establecerá para T2
       mrzSex: '', // Se establecerá para T2
+      signatureHuellaImagePath: '', // Se establecerá para T2 reverso
     );
   }
 
@@ -868,6 +910,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '', // No procesado
         mrzExpiryDate: '', // No procesado
         mrzSex: '', // No procesado
+        signatureHuellaImagePath: '', // No procesado
       );
     }
 
@@ -944,6 +987,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
         mrzExpiryDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
         mrzSex: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        signatureHuellaImagePath: '', // Se establecerá para T2 reverso en processCredentialWithSideDetection
       );
     }
 
@@ -984,6 +1028,7 @@ class IneCredentialProcessorService {
         mrzBirthDate: '', // No aplicable para T3
         mrzExpiryDate: '', // No aplicable para T3
         mrzSex: '', // No aplicable para T3
+        signatureHuellaImagePath: '', // No aplicable para T3
       );
     }
 
@@ -1024,6 +1069,7 @@ class IneCredentialProcessorService {
       mrzBirthDate: '', // Se establecerá para T2
       mrzExpiryDate: '', // Se establecerá para T2
       mrzSex: '', // Se establecerá para T2
+      signatureHuellaImagePath: '', // Se establecerá para T2 reverso
     );
   }
 
@@ -2902,5 +2948,73 @@ class IneCredentialProcessorService {
       }
     }
     return '';
+  }
+
+  /// Extrae la región de firma y huella digital para credenciales T2 del lado reverso
+  /// Utiliza una región estimada basada en las dimensiones de la credencial
+  static Map<String, dynamic> _extractSignatureHuellaT2(img.Image originalImage, String imagePath) {
+    try {
+      print('🔍 Iniciando extracción de región firma-huella T2...');
+      
+      // Dimensiones de la imagen
+      final int imageWidth = originalImage.width;
+      final int imageHeight = originalImage.height;
+      
+      print('📏 Dimensiones de imagen: ${imageWidth}x$imageHeight');
+      
+      // Para credenciales T2 reverso, la región de firma-huella está típicamente:
+      // - En la parte central-inferior de la credencial
+      // - Por encima del MRZ (que está en la parte más inferior)
+      // - Por debajo del QR (que está en la parte superior)
+      
+      // Calcular región estimada basada en proporciones típicas de credencial INE
+      final int startX = (imageWidth * 0.175).round(); // 17.5% desde el borde izquierdo
+      final int endX = (imageWidth * 0.825).round(); // 82.5% del ancho total
+      final int startY = (imageHeight * 0.32).round(); // 32% desde arriba
+      final int endY = (imageHeight * 0.62).round(); // 62% desde arriba
+      
+      // Validar que la región sea válida
+      if (startY >= endY || endY > imageHeight || startX >= endX || endX > imageWidth) {
+        print('⚠️ Región firma-huella inválida: startX=$startX, endX=$endX, startY=$startY, endY=$endY');
+        return {'imagePath': ''};
+      }
+      
+      // Calcular dimensiones de la región
+      final int regionWidth = endX - startX;
+      final int regionHeight = endY - startY;
+      
+      print('📍 Región calculada: ($startX, $startY) - ($endX, $endY)');
+      print('📏 Dimensiones región: ${regionWidth}x$regionHeight');
+      
+      // Extraer la región de firma y huella
+      final signatureHuellaRegion = img.copyCrop(
+        originalImage,
+        x: startX,
+        y: startY,
+        width: regionWidth,
+        height: regionHeight,
+      );
+
+      // Generar nombre único para la imagen
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'signature_huella_t2_$timestamp.png';
+      final directory = path.dirname(imagePath);
+      final signatureHuellaPath = path.join(directory, fileName);
+
+      // Guardar la imagen extraída
+      final pngBytes = img.encodePng(signatureHuellaRegion);
+      File(signatureHuellaPath).writeAsBytesSync(pngBytes);
+
+      print('✅ Región firma-huella T2 extraída: $signatureHuellaPath');
+      print('📏 Dimensiones finales: ${regionWidth}x$regionHeight');
+      print('📍 Posición final: ($startX, $startY) - ($endX, $endY)');
+
+      return {
+        'imagePath': signatureHuellaPath,
+      };
+    } catch (e) {
+      print('❌ Error extrayendo región firma-huella T2: $e');
+      return {'imagePath': ''};
+    }
   }
 }

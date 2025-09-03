@@ -884,6 +884,114 @@ class LocalProcessView extends GetView<LocalProcessController> {
                         return const SizedBox.shrink();
                       }),
                       
+                      // Sección de Firma-Huella para T2
+                      Obx(() {
+                        final credential = controller.processedCredential.value;
+                        if (credential != null && 
+                            credential.signatureHuellaImagePath.isNotEmpty &&
+                            credential.tipo == 't2') {
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(top: 16),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.fingerprint,
+                                            color: Colors.blue.shade700,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'Firma y Huella Digital (T2)',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Center(
+                                        child: Container(
+                                          width: 300,
+                                          height: 150,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: Colors.grey.shade300,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Image.file(
+                                              File(credential.signatureHuellaImagePath),
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  alignment: Alignment.center,
+                                                  child: Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.broken_image,
+                                                        size: 32,
+                                                        color: Colors.grey,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      const Text(
+                                                        'Error al cargar',
+                                                        style: TextStyle(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Center(
+                                        child: Text(
+                                          'Región de firma y huella digital extraída del reverso',
+                                          style: TextStyle(
+                                            color: Colors.blue.shade700,
+                                            fontSize: 12,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                      
                       // Área de texto extraído (colapsible)
                       Obx(() {
                         if (controller.extractedText.value.isNotEmpty) {

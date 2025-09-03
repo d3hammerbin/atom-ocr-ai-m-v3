@@ -66,6 +66,17 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Almacenamiento seguro**: Las firmas extraídas se guardan en el directorio de documentos de la aplicación con nombres únicos
 - **Visualización en interfaz**: Contenedor especializado en la vista para mostrar la firma extraída junto con los demás datos de la credencial
 
+### Sistema de Extracción de Firma y Huella Digital para Credenciales T2
+- **Extracción automática especializada**: Implementación de sistema dedicado para extraer la región de firma y huella digital de credenciales T2
+- **Región de extracción optimizada**: Configuración precisa de coordenadas para capturar la zona específica donde se ubican la firma y huella digital
+- **Coordenadas calibradas**: Región definida entre 32%-62% de altura y 17.5%-82.5% de ancho para máxima precisión
+- **Ajustes de posicionamiento**: Sistema de coordenadas ajustable que permite optimización fina de la región de extracción
+- **Procesamiento de imagen especializado**: Técnicas específicas para mejorar la calidad y claridad de la imagen extraída
+- **Integración con visualización**: La imagen extraída se muestra automáticamente en la interfaz cuando se detecta una credencial T2
+- **Almacenamiento estructurado**: Las imágenes de firma y huella se guardan con nomenclatura específica en el directorio de documentos
+- **Validación de tipo**: El sistema se activa únicamente para credenciales identificadas como tipo T2
+- **Optimización continua**: Coordenadas ajustables para adaptarse a variaciones en el diseño de credenciales T2
+
 ### Optimizaciones del Sistema OCR
 - **Inicialización lazy mejorada**: Corrección del error de inicialización múltiple en `MLKitTextRecognitionService` mediante implementación de patrón lazy
 - **Búsqueda de texto flexible**: Sistema de detección de referencias con múltiples niveles de flexibilidad para mejorar la precisión

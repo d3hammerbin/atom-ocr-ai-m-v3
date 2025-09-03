@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 import '../../core/utils/secure_storage.dart';
 import '../../core/services/permission_service.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/utils/snackbar_utils.dart';
 
 class CameraCaptureController extends GetxController with WidgetsBindingObserver {
   // Variables observables
@@ -339,12 +340,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       capturedImagePath.value = filePath;
       isCapturing.value = false;
       
-      Get.snackbar(
-        'Éxito',
-        'Imagen recortada y guardada en la galería',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+      SnackbarUtils.showSuccess(
+        title: 'Éxito',
+        message: 'Imagen recortada y guardada en la galería',
       );
       
       // Restaurar orientación portrait antes de navegar
@@ -360,10 +358,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     } catch (e) {
       isCapturing.value = false;
       errorMessage.value = 'Error al capturar imagen: $e';
-      Get.snackbar(
-        'Error',
-        'No se pudo capturar la imagen: $e',
-        snackPosition: SnackPosition.BOTTOM,
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'No se pudo capturar la imagen: $e',
       );
       await Log.e('CameraController', 'Error capturando imagen', e);
     }
@@ -374,10 +371,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     isFrontSide.value = !isFrontSide.value;
     
     // Mostrar mensaje informativo sobre el lado seleccionado
-    Get.snackbar(
-      'Lado de credencial',
-      isFrontSide.value ? 'Capturando lado frontal' : 'Capturando lado reverso',
-      snackPosition: SnackPosition.TOP,
+    SnackbarUtils.showInfo(
+      title: 'Lado de credencial',
+      message: isFrontSide.value ? 'Capturando lado frontal' : 'Capturando lado reverso',
       duration: const Duration(seconds: 2),
     );
   }
@@ -394,10 +390,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       isFlashOn.value = !isFlashOn.value;
       
       // Mostrar mensaje informativo sobre el estado del flash
-      Get.snackbar(
-        'Flash',
-        isFlashOn.value ? 'Flash activado' : 'Flash desactivado',
-        snackPosition: SnackPosition.TOP,
+      SnackbarUtils.showInfo(
+        title: 'Flash',
+        message: isFlashOn.value ? 'Flash activado' : 'Flash desactivado',
         duration: const Duration(seconds: 1),
       );
     } catch (e) {

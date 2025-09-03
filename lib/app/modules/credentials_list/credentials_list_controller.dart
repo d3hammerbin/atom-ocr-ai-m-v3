@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../core/utils/snackbar_utils.dart';
 
 class CredentialsListController extends GetxController {
   // Lista observable de credenciales procesadas
@@ -45,10 +46,9 @@ class CredentialsListController extends GetxController {
   /// Eliminar una credencial de la lista
   void deleteCredential(String id) {
     credentialsList.removeWhere((credential) => credential['id'] == id);
-    Get.snackbar(
-      'Eliminado',
-      'Credencial eliminada exitosamente',
-      snackPosition: SnackPosition.BOTTOM,
+    SnackbarUtils.showSuccess(
+      title: 'Eliminado',
+      message: 'Credencial eliminada exitosamente',
     );
   }
   
@@ -60,10 +60,9 @@ class CredentialsListController extends GetxController {
   /// Navegar a los detalles de una credencial
   void viewCredentialDetails(Map<String, dynamic> credential) {
     // TODO: Implementar navegación a detalles
-    Get.snackbar(
-      'Detalles',
-      'Mostrando detalles de ${credential['nombre']}',
-      snackPosition: SnackPosition.BOTTOM,
+    SnackbarUtils.showInfo(
+      title: 'Detalles',
+      message: 'Mostrando detalles de ${credential['nombre']}',
     );
   }
 }

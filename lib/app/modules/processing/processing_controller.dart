@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/utils/secure_storage.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/utils/snackbar_utils.dart';
 
 class ProcessingController extends GetxController {
   // Observable para el estado de procesamiento
@@ -137,12 +138,9 @@ class ProcessingController extends GetxController {
   
   void saveCredential() {
     // Aquí se implementaría la lógica para guardar la credencial
-    Get.snackbar(
-      'Éxito',
-      'Credencial guardada correctamente',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF424242), // Gris grafito
-      colorText: Colors.white,
+    SnackbarUtils.showSuccess(
+      title: 'Éxito',
+      message: 'Credencial guardada correctamente',
     );
     
     // Navegar directamente al home
@@ -173,22 +171,16 @@ class ProcessingController extends GetxController {
         
         await Log.i('ProcessingController', 'Imagen compartida exitosamente');
       } else {
-        Get.snackbar(
-          'Error',
-          'No hay imagen para compartir',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+        SnackbarUtils.showError(
+          title: 'Error',
+          message: 'No hay imagen para compartir',
         );
         await Log.w('ProcessingController', 'Error - No hay imagen para compartir');
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Error al compartir imagen: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'Error al compartir imagen: $e',
       );
       await Log.e('ProcessingController', 'Error al compartir imagen', e);
     }

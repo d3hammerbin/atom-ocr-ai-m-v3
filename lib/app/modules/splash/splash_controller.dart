@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
-import '../../core/services/permission_service.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/services/permission_service.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../routes/app_pages.dart';
 
 class SplashController extends GetxController {
@@ -83,10 +84,9 @@ class SplashController extends GetxController {
     statusMessage.value = 'Permisos necesarios para continuar';
     hasError.value = true;
     
-    Get.snackbar(
-      'Permisos Requeridos',
-      'La aplicación necesita permisos para funcionar correctamente. Por favor, concede los permisos en la configuración.',
-      snackPosition: SnackPosition.BOTTOM,
+    SnackbarUtils.showWarning(
+      title: 'Permisos Requeridos',
+      message: 'La aplicación necesita permisos para funcionar correctamente. Por favor, concede los permisos en la configuración.',
       duration: const Duration(seconds: 5),
     );
   }

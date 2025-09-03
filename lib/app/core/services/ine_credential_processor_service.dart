@@ -5,6 +5,7 @@ import '../utils/credential_side_detector.dart';
 import 'face_detection_service.dart';
 import 'signature_extraction_service.dart';
 import 'qr_detection_service.dart';
+import 'barcode_detection_service.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -313,13 +314,43 @@ class IneCredentialProcessorService {
       print('ℹ️ Credencial T2 frontal - QR no aplicable');
     }
     
-    // Actualizar la credencial con el lado detectado, la ruta de la foto, la firma y el QR
+    // Detectar y extraer código de barras para credenciales T2
+    String barcodeContent = '';
+    String barcodeImagePath = '';
+    if (credential.tipo == 't2') {
+      print('🔍 Iniciando detección de código de barras para credencial T2...');
+      try {
+        final barcodeResult = await BarcodeDetectionService.detectBarcodeFromCredential(
+          imagePath,
+          credential.tipo,
+        );
+        
+        // Asignar siempre barcodeImagePath si está disponible (imagen guardada)
+        barcodeImagePath = barcodeResult['imagePath'] ?? '';
+        
+        if (barcodeResult['success'] == true) {
+          barcodeContent = barcodeResult['content'] ?? '';
+          print('📊 Código de barras detectado exitosamente: ${barcodeContent.length > 30 ? barcodeContent.substring(0, 30) + '...' : barcodeContent}');
+          print('🎯 Método usado: ${barcodeResult['method']}, Confianza: ${barcodeResult['confidence']}');
+        } else {
+          print('⚠️ No se pudo detectar código de barras: ${barcodeResult['error']}');
+          print('📷 Imagen de código de barras guardada para revisión: $barcodeImagePath');
+        }
+      } catch (e) {
+        // En caso de error en la detección de código de barras, continuar sin el código de barras
+        print('❌ Error en detección de código de barras: $e');
+      }
+    }
+    
+    // Actualizar la credencial con el lado detectado, la ruta de la foto, la firma, el QR y el código de barras
     final updatedCredential = credential.copyWith(
       lado: detectedSide, 
       photoPath: photoPath,
       signaturePath: signaturePath,
       qrContent: qrContent,
       qrImagePath: qrImagePath,
+      barcodeContent: barcodeContent,
+      barcodeImagePath: barcodeImagePath,
     );
     print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
     return updatedCredential;
@@ -364,6 +395,8 @@ class IneCredentialProcessorService {
         signaturePath: '', // No procesado
         qrContent: '', // No procesado
         qrImagePath: '', // No procesado
+        barcodeContent: '', // No procesado
+        barcodeImagePath: '', // No procesado
       );
     }
 
@@ -431,6 +464,8 @@ class IneCredentialProcessorService {
         signaturePath: '', // Se establecerá para T3 en processCredentialWithSideDetection
         qrContent: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
         qrImagePath: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
+        barcodeContent: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        barcodeImagePath: '', // Se establecerá para T2 en processCredentialWithSideDetection
       );
     }
 
@@ -462,6 +497,8 @@ class IneCredentialProcessorService {
         signaturePath: '', // Se establecerá en processCredentialWithSideDetection
         qrContent: '', // No aplicable para T3
         qrImagePath: '', // No aplicable para T3
+        barcodeContent: '', // No aplicable para T3
+        barcodeImagePath: '', // No aplicable para T3
       );
     }
 
@@ -493,6 +530,8 @@ class IneCredentialProcessorService {
       signaturePath: '', // No procesado
       qrContent: '', // Se establecerá para T2 trasero
       qrImagePath: '', // Se establecerá para T2 trasero
+      barcodeContent: '', // Se establecerá para T2
+      barcodeImagePath: '', // Se establecerá para T2
     );
   }
 

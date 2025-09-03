@@ -19,6 +19,8 @@ class CredencialIneModel {
   final String signaturePath; // Ruta de la imagen de la firma extraída (solo T3)
   final String qrContent; // Contenido del código QR (solo T2 trasero)
   final String qrImagePath; // Ruta de la imagen del código QR extraído (solo T2 trasero)
+  final String barcodeContent; // Contenido del código de barras (solo T2)
+  final String barcodeImagePath; // Ruta de la imagen del código de barras extraído (solo T2)
 
   CredencialIneModel({
     required this.nombre,
@@ -39,6 +41,8 @@ class CredencialIneModel {
     required this.signaturePath,
     required this.qrContent,
     required this.qrImagePath,
+    required this.barcodeContent,
+    required this.barcodeImagePath,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
@@ -60,7 +64,9 @@ class CredencialIneModel {
       photoPath = '',
       signaturePath = '',
       qrContent = '',
-      qrImagePath = '';
+      qrImagePath = '',
+      barcodeContent = '',
+      barcodeImagePath = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +89,8 @@ class CredencialIneModel {
       signaturePath: json['signaturePath'] ?? '',
       qrContent: json['qrContent'] ?? '',
       qrImagePath: json['qrImagePath'] ?? '',
+      barcodeContent: json['barcodeContent'] ?? '',
+      barcodeImagePath: json['barcodeImagePath'] ?? '',
     );
   }
 
@@ -107,6 +115,8 @@ class CredencialIneModel {
       'signaturePath': signaturePath,
       'qrContent': qrContent,
       'qrImagePath': qrImagePath,
+      'barcodeContent': barcodeContent,
+      'barcodeImagePath': barcodeImagePath,
     };
   }
 
@@ -130,6 +140,8 @@ class CredencialIneModel {
     String? signaturePath,
     String? qrContent,
     String? qrImagePath,
+    String? barcodeContent,
+    String? barcodeImagePath,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -150,6 +162,8 @@ class CredencialIneModel {
       signaturePath: signaturePath ?? this.signaturePath,
       qrContent: qrContent ?? this.qrContent,
       qrImagePath: qrImagePath ?? this.qrImagePath,
+      barcodeContent: barcodeContent ?? this.barcodeContent,
+      barcodeImagePath: barcodeImagePath ?? this.barcodeImagePath,
     );
   }
 

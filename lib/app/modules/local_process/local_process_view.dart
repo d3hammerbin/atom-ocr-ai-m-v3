@@ -646,6 +646,150 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ),
                                 ],
                                 
+                                // Sección de código de barras extraído (para credenciales T2)
+                                if (credential.tipo == 't2' && credential.barcodeImagePath.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.orange.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.view_stream,
+                                              color: Colors.orange.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Código de Barras Extraído (T2)',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Imagen del código de barras
+                                            Container(
+                                              width: 120,
+                                              height: 80,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.grey.shade300,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Image.file(
+                                                  File(credential.barcodeImagePath),
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      alignment: Alignment.center,
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.broken_image,
+                                                            size: 24,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          const SizedBox(height: 4),
+                                                          const Text(
+                                                            'Error al cargar',
+                                                            style: TextStyle(
+                                                              color: Colors.grey,
+                                                              fontSize: 10,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            // Contenido del código de barras
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Contenido del Código de Barras:',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: Colors.orange.shade700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Container(
+                                                    width: double.infinity,
+                                                    padding: const EdgeInsets.all(12.0),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey.shade50,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(
+                                                        color: Colors.grey.shade300,
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      credential.barcodeContent.isNotEmpty 
+                                                          ? credential.barcodeContent
+                                                          : 'No se pudo decodificar el contenido',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontFamily: 'monospace',
+                                                        color: credential.barcodeContent.isNotEmpty 
+                                                            ? Colors.black87
+                                                            : Colors.grey.shade600,
+                                                      ),
+                                                      maxLines: 3,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Center(
+                                          child: Text(
+                                            credential.barcodeContent.isNotEmpty 
+                                                ? 'Código de barras detectado y extraído automáticamente de la esquina superior izquierda'
+                                                : 'Región de código de barras extraída de la esquina superior izquierda (sin contenido decodificado)',
+                                            style: TextStyle(
+                                              color: Colors.orange.shade700,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
                                 // Sección de firma extraída (solo para credenciales T3)
                                 if (credential.tipo == 't3' && credential.signaturePath.isNotEmpty) ...[
                                   const SizedBox(height: 16),

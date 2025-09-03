@@ -102,6 +102,20 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Logging detallado**: Sistema de trazabilidad completo para diagnóstico y depuración del proceso de detección
 - **Rendimiento optimizado**: Especificación de formato QR para acelerar el procesamiento con ML Kit
 
+### Sistema Híbrido de Detección de Códigos de Barras para Credenciales T2
+- **Arquitectura de tres niveles**: Implementación de sistema robusto con múltiples métodos de fallback para detección de códigos de barras
+- **Detección por patrones específicos**: Algoritmo principal que busca patrones característicos de códigos de barras en la región superior izquierda
+- **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit para detección de códigos de barras en imagen completa
+- **Región fija optimizada**: Tercer nivel de fallback que utiliza región predefinida específica para códigos de barras T2
+- **Compatibilidad mejorada**: Uso de archivos temporales para evitar errores de MethodChannel en Android
+- **Gestión de memoria optimizada**: Limpieza automática de archivos temporales y cierre de recursos ML Kit
+- **Detección inteligente de tamaño**: Algoritmos que detectan tanto códigos de barras grandes como pequeños
+- **Integración automática**: Sistema que se activa automáticamente durante el procesamiento de credenciales T2
+- **Visualización en interfaz**: Contenedor especializado que muestra la imagen del código de barras extraído y su contenido decodificado
+- **Almacenamiento seguro**: Los códigos de barras extraídos se guardan en el directorio de documentos con nombres únicos
+- **Logging detallado**: Sistema de trazabilidad completo para diagnóstico del proceso de detección de códigos de barras
+- **Manejo robusto de errores**: Sistema de recuperación que garantiza la continuidad del procesamiento aunque falle la detección
+
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)
 - **Nombres limpios**: Validación que asegura que los nombres contengan solo letras y espacios

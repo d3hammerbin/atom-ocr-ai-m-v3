@@ -4,6 +4,7 @@ import '../utils/string_similarity_utils.dart';
 import '../utils/credential_side_detector.dart';
 import 'face_detection_service.dart';
 import 'signature_extraction_service.dart';
+import 'qr_detection_service.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -281,13 +282,46 @@ class IneCredentialProcessorService {
       print('⚠️ No se puede extraer firma: falta la fotografía del rostro');
     }
     
-    // Actualizar la credencial con el lado detectado, la ruta de la foto y la firma
+    // Detectar y extraer código QR solo para credenciales T2 traseras
+    String qrContent = '';
+    String qrImagePath = '';
+    if (credential.tipo == 't2' && detectedSide == 'reverso') {
+      print('🔍 Iniciando detección de código QR para credencial T2 trasera...');
+      try {
+        // Generar ID único para la credencial
+        final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+        final qrResult = await QrDetectionService.detectQrFromT2Credential(
+          imagePath: imagePath,
+          credentialId: credentialId,
+        );
+        
+        // Asignar siempre qrImagePath si está disponible (imagen guardada)
+        qrImagePath = qrResult['qrImagePath'] ?? '';
+        
+        if (qrResult['success'] == true) {
+          qrContent = qrResult['qrContent'] ?? '';
+          print('📱 QR detectado exitosamente: ${qrContent.length > 50 ? qrContent.substring(0, 50) + '...' : qrContent}');
+        } else {
+          print('⚠️ No se pudo detectar código QR: ${qrResult['error']}');
+          print('📷 Imagen QR guardada para revisión: $qrImagePath');
+        }
+      } catch (e) {
+        // En caso de error en la detección de QR, continuar sin el QR
+        print('❌ Error en detección de QR: $e');
+      }
+    } else if (credential.tipo == 't2' && detectedSide == 'frontal') {
+      print('ℹ️ Credencial T2 frontal - QR no aplicable');
+    }
+    
+    // Actualizar la credencial con el lado detectado, la ruta de la foto, la firma y el QR
     final updatedCredential = credential.copyWith(
       lado: detectedSide, 
       photoPath: photoPath,
       signaturePath: signaturePath,
+      qrContent: qrContent,
+      qrImagePath: qrImagePath,
     );
-    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}');
+    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
     return updatedCredential;
   }
 
@@ -328,6 +362,8 @@ class IneCredentialProcessorService {
         localidad: '',
         photoPath: '', // No procesado
         signaturePath: '', // No procesado
+        qrContent: '', // No procesado
+        qrImagePath: '', // No procesado
       );
     }
 
@@ -393,6 +429,8 @@ class IneCredentialProcessorService {
                 : localidad,
         photoPath: '', // Se establecerá en processCredentialWithSideDetection
         signaturePath: '', // Se establecerá para T3 en processCredentialWithSideDetection
+        qrContent: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
+        qrImagePath: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
       );
     }
 
@@ -422,6 +460,8 @@ class IneCredentialProcessorService {
         localidad: '',
         photoPath: '', // Se establecerá en processCredentialWithSideDetection
         signaturePath: '', // Se establecerá en processCredentialWithSideDetection
+        qrContent: '', // No aplicable para T3
+        qrImagePath: '', // No aplicable para T3
       );
     }
 
@@ -451,6 +491,8 @@ class IneCredentialProcessorService {
       localidad: tipoCredencial == 't2' ? _extractLocalidad(filteredLines) : '',
       photoPath: '', // Se establecerá en processCredentialWithSideDetection
       signaturePath: '', // No procesado
+      qrContent: '', // Se establecerá para T2 trasero
+      qrImagePath: '', // Se establecerá para T2 trasero
     );
   }
 
@@ -1987,6 +2029,7 @@ class IneCredentialProcessorService {
   /// Detecta el tipo de credencial basado en la presencia de campos específicos
   static String _detectCredentialType(List<String> lines) {
     final upperLines = lines.map((line) => line.toUpperCase()).toList();
+    final fullText = upperLines.join(' ');
 
     // Contar cuántas etiquetas de t1 están presentes
     int tipo1FieldsFound = 0;
@@ -2004,13 +2047,36 @@ class IneCredentialProcessorService {
       }
     }
 
+    // Patrones adicionales para detectar T2 en el reverso
+    bool hasT2ReversePatterns = false;
+    
+    // Patrón 1: Códigos específicos de T2 (formato EC seguido de números y letras)
+    if (RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText)) {
+      hasT2ReversePatterns = true;
+    }
+    
+    // Patrón 2: Estructura típica del reverso T2 con códigos MRZ
+    if (RegExp(r'IDMEX\d+<<\d+').hasMatch(fullText)) {
+      hasT2ReversePatterns = true;
+    }
+    
+    // Patrón 3: Líneas con formato específico de T2 reverso (números y letras específicos)
+    if (RegExp(r'\d{7}M\d{7}MEX<\d+<<\d+<\d+').hasMatch(fullText)) {
+      hasT2ReversePatterns = true;
+    }
+    
+    // Patrón 4: Presencia de "SECRETARIO EJECUTIVO" típico del reverso T2
+    if (fullText.contains('SECRETARIO EJECUTIVO') || fullText.contains('SECRETARIO EJEC')) {
+      hasT2ReversePatterns = true;
+    }
+
     // Lógica de detección:
     // t1: tiene EDAD o FOLIO -> retorna 't1'
-    // t2: tiene ESTADO, MUNICIPIO o LOCALIDAD (pero no EDAD/FOLIO) -> retorna 't2'
+    // t2: tiene ESTADO, MUNICIPIO o LOCALIDAD (frontal) O patrones de reverso T2 (pero no EDAD/FOLIO) -> retorna 't2'
     // t3: no tiene ninguna de las etiquetas anteriores -> retorna 't3'
     if (tipo1FieldsFound > 0) {
       return _credentialTypeConfig['Tipo 1']!['code'];
-    } else if (tipo2FieldsFound > 0) {
+    } else if (tipo2FieldsFound > 0 || hasT2ReversePatterns) {
       return _credentialTypeConfig['Tipo 2']!['code'];
     } else {
       return _credentialTypeConfig['Tipo 3']!['code'];

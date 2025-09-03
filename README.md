@@ -90,12 +90,17 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
   - Aplicable a todos los tipos de credencial (T1, T2, T3, T4)
 - **Validación de consistencia**: Verifica que el lado detectado contenga los datos esperados según el tipo de credencial
 
-### Migración del Sistema de Detección de Lado
-- **Cambio de arquitectura**: Migración completa de detección basada en códigos QR a detección basada en texto
-- **Eliminación de dependencias**: Removida la dependencia `google_mlkit_barcode_scanning` para optimizar el tamaño de la aplicación
-- **Mejora en precisión**: Mayor precisión en la detección al basarse en contenido textual específico de cada lado
-- **Simplificación del código**: Eliminación del servicio `QrDetectionService` y métodos relacionados con procesamiento de códigos QR
-- **Compatibilidad universal**: Sistema aplicable a todos los tipos de credencial sin restricciones específicas por tipo
+### Sistema Híbrido de Detección de Códigos QR
+- **Arquitectura de tres niveles**: Implementación de sistema robusto con múltiples métodos de fallback para detección de códigos QR
+- **Detección por Finder Patterns**: Algoritmo principal que detecta patrones de búsqueda QR (1:1:3:1:1) según especificación QR Model 2
+- **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit para detección en imagen completa cuando falla el método principal
+- **Región fija optimizada**: Tercer nivel de fallback que utiliza región predefinida como último recurso
+- **Compatibilidad Android mejorada**: Corrección de errores de MethodChannel mediante uso de archivos temporales en lugar de InputImageMetadata
+- **Gestión de memoria optimizada**: Limpieza automática de archivos temporales y cierre de recursos ML Kit
+- **Detección inteligente**: Algoritmos que buscan automáticamente patrones característicos del QR Model 2
+- **Manejo robusto de errores**: Sistema de recuperación que garantiza extracción exitosa del código QR
+- **Logging detallado**: Sistema de trazabilidad completo para diagnóstico y depuración del proceso de detección
+- **Rendimiento optimizado**: Especificación de formato QR para acelerar el procesamiento con ML Kit
 
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)

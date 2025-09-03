@@ -286,6 +286,14 @@ class LocalProcessView extends GetView<LocalProcessController> {
                       Obx(() {
                         if (controller.hasProcessedCredential) {
                           final credential = controller.processedCredential.value!;
+                          
+                          // Debug: Verificar valores del QR
+                          print('DEBUG LocalProcessView - QR Info:');
+                          print('  tipo: ${credential.tipo}');
+                          print('  lado: ${credential.lado}');
+                          print('  qrImagePath: ${credential.qrImagePath}');
+                          print('  qrContent: ${credential.qrContent}');
+                          
                           return Container(
                             width: double.infinity,
                             margin: const EdgeInsets.only(top: 16),
@@ -484,6 +492,150 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                             'Rostro detectado y extraído automáticamente',
                                             style: TextStyle(
                                               color: Colors.blue.shade700,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
+                                // Sección de código QR extraído (para credenciales T2 traseras - mostrar imagen aunque no tenga contenido)
+                                if (credential.tipo == 't2' && credential.lado == 'reverso' && credential.qrImagePath.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.purple.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.qr_code,
+                                              color: Colors.purple.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Código QR Extraído (T2 Trasero)',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Imagen del QR
+                                            Container(
+                                              width: 120,
+                                              height: 120,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.grey.shade300,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Image.file(
+                                                  File(credential.qrImagePath),
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      alignment: Alignment.center,
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.broken_image,
+                                                            size: 24,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          const SizedBox(height: 4),
+                                                          const Text(
+                                                            'Error al cargar',
+                                                            style: TextStyle(
+                                                              color: Colors.grey,
+                                                              fontSize: 10,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            // Contenido del QR
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Contenido del QR:',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: Colors.purple.shade700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Container(
+                                                    width: double.infinity,
+                                                    padding: const EdgeInsets.all(12.0),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey.shade50,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(
+                                                        color: Colors.grey.shade300,
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      credential.qrContent.isNotEmpty 
+                                                          ? credential.qrContent
+                                                          : 'No se pudo decodificar el contenido',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontFamily: 'monospace',
+                                                        color: credential.qrContent.isNotEmpty 
+                                                            ? Colors.black87
+                                                            : Colors.grey.shade600,
+                                                      ),
+                                                      maxLines: 6,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Center(
+                                          child: Text(
+                                            credential.qrContent.isNotEmpty 
+                                                ? 'QR detectado y extraído automáticamente del lado trasero'
+                                                : 'Región QR extraída del lado trasero (sin contenido decodificado)',
+                                            style: TextStyle(
+                                              color: Colors.purple.shade700,
                                               fontSize: 12,
                                               fontStyle: FontStyle.italic,
                                             ),

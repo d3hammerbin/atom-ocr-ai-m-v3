@@ -17,6 +17,8 @@ class CredencialIneModel {
   final String localidad; // Solo para t2
   final String photoPath; // Ruta de la imagen del rostro extraída
   final String signaturePath; // Ruta de la imagen de la firma extraída (solo T3)
+  final String qrContent; // Contenido del código QR (solo T2 trasero)
+  final String qrImagePath; // Ruta de la imagen del código QR extraído (solo T2 trasero)
 
   CredencialIneModel({
     required this.nombre,
@@ -35,6 +37,8 @@ class CredencialIneModel {
     required this.localidad,
     required this.photoPath,
     required this.signaturePath,
+    required this.qrContent,
+    required this.qrImagePath,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
@@ -54,7 +58,9 @@ class CredencialIneModel {
       municipio = '',
       localidad = '',
       photoPath = '',
-      signaturePath = '';
+      signaturePath = '',
+      qrContent = '',
+      qrImagePath = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -75,10 +81,12 @@ class CredencialIneModel {
       localidad: json['localidad'] ?? '',
       photoPath: json['photoPath'] ?? '',
       signaturePath: json['signaturePath'] ?? '',
+      qrContent: json['qrContent'] ?? '',
+      qrImagePath: json['qrImagePath'] ?? '',
     );
   }
 
-  /// Convierte la instancia a Map
+  /// Convierte la instancia a un Map
   Map<String, dynamic> toJson() {
     return {
       'nombre': nombre,
@@ -97,6 +105,8 @@ class CredencialIneModel {
       'localidad': localidad,
       'photoPath': photoPath,
       'signaturePath': signaturePath,
+      'qrContent': qrContent,
+      'qrImagePath': qrImagePath,
     };
   }
 
@@ -118,6 +128,8 @@ class CredencialIneModel {
     String? localidad,
     String? photoPath,
     String? signaturePath,
+    String? qrContent,
+    String? qrImagePath,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -136,6 +148,8 @@ class CredencialIneModel {
       localidad: localidad ?? this.localidad,
       photoPath: photoPath ?? this.photoPath,
       signaturePath: signaturePath ?? this.signaturePath,
+      qrContent: qrContent ?? this.qrContent,
+      qrImagePath: qrImagePath ?? this.qrImagePath,
     );
   }
 
@@ -205,7 +219,9 @@ class CredencialIneModel {
         other.municipio == municipio &&
         other.localidad == localidad &&
         other.photoPath == photoPath &&
-        other.signaturePath == signaturePath;
+        other.signaturePath == signaturePath &&
+        other.qrContent == qrContent &&
+        other.qrImagePath == qrImagePath;
   }
 
   @override
@@ -227,6 +243,8 @@ class CredencialIneModel {
       localidad,
       photoPath,
       signaturePath,
+      qrContent,
+      qrImagePath,
     );
   }
 }

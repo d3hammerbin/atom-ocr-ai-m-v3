@@ -73,6 +73,9 @@ dependencies:
   
   # Share plus para compartir archivos
   share_plus: ^7.2.2
+  
+  # Google ML Kit para detección de códigos QR
+  google_mlkit_barcode_scanning: ^0.11.0
 
 dev_dependencies:
   flutter_test:

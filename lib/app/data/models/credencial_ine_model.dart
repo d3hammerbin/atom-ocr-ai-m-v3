@@ -10,7 +10,7 @@ class CredencialIneModel {
   final String anoRegistro;
   final String seccion;
   final String vigencia;
-  final String tipo; // "t1", "t2" o "t3"
+  final String tipo; // "t2" o "t3" (T1 deshabilitado)
   final String lado; // "frontal" o "reverso" - Solo para t2 y t3
   final String estado; // Solo para t2
   final String municipio; // Solo para t2
@@ -225,7 +225,7 @@ class CredencialIneModel {
   bool get isComplete {
     // Solo validar credenciales procesables (t2 y t3)
     if (tipo != 't2' && tipo != 't3') {
-      return false; // Credenciales t1 no se procesan completamente
+      return false; // Solo se procesan credenciales T2 y T3
     }
     
     final baseFieldsComplete = nombre.isNotEmpty &&

@@ -17,6 +17,64 @@ class QrDetectionService {
    static const int finderPatternMinSize = 7;
    static const int patternThreshold = 128;
   
+  /// Cuenta todos los códigos QR presentes en la imagen completa
+  /// 
+  /// [imagePath] - Ruta de la imagen de la credencial
+  /// 
+  /// Retorna un Map con:
+  /// - 'qrCount': número total de códigos QR detectados (int)
+  /// - 'success': si la detección fue exitosa (bool)
+  /// - 'error': mensaje de error si falló (String?)
+  /// - 'qrContents': lista con el contenido de todos los QRs detectados (List<String>)
+  static Future<Map<String, dynamic>> countAllQrCodesInImage(String imagePath) async {
+    try {
+      _logger.info('QrDetectionService', 'Contando todos los códigos QR en imagen: $imagePath');
+      
+      // Verificar que el archivo existe
+      final imageFile = File(imagePath);
+      if (!await imageFile.exists()) {
+        throw Exception('El archivo de imagen no existe: $imagePath');
+      }
+      
+      // Crear InputImage para ML Kit
+      final inputImage = InputImage.fromFilePath(imagePath);
+      
+      // Usar ML Kit para detectar todos los códigos QR
+      final barcodeScanner = BarcodeScanner(formats: [BarcodeFormat.qrCode]);
+      final barcodes = await barcodeScanner.processImage(inputImage);
+      
+      // Extraer contenidos de todos los QRs detectados
+      final qrContents = <String>[];
+      for (final barcode in barcodes) {
+        final content = barcode.displayValue ?? '';
+        if (content.isNotEmpty) {
+          qrContents.add(content);
+        }
+      }
+      
+      await barcodeScanner.close();
+      
+      final qrCount = qrContents.length;
+      _logger.info('QrDetectionService', 'Total de códigos QR detectados: $qrCount');
+      
+      return {
+        'qrCount': qrCount,
+        'success': true,
+        'error': null,
+        'qrContents': qrContents,
+      };
+      
+    } catch (e) {
+      _logger.error('QrDetectionService', 'Error contando códigos QR: $e');
+      return {
+        'qrCount': 0,
+        'success': false,
+        'error': e.toString(),
+        'qrContents': <String>[],
+      };
+    }
+  }
+
   /// Detecta y extrae el código QR usando detección inteligente con múltiples métodos
   /// 
   /// [imagePath] - Ruta de la imagen de la credencial

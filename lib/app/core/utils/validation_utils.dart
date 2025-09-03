@@ -271,16 +271,16 @@ class ValidationUtils {
   }
 
   /// Valida si el lado es consistente con el tipo de credencial
-  /// T1: típicamente solo frontal (no tienen QR)
   /// T2 y T3: pueden ser frontal o reverso
+  /// (T1 deshabilitado completamente)
   static bool isSideConsistentWithType(String side, String type) {
     if (side.isEmpty) return true; // Lado vacío es válido durante procesamiento
     
     if (!isValidSide(side)) return false;
     
-    // T1 típicamente no tiene QR, por lo que debería ser frontal
+    // T1 deshabilitado - solo se procesan T2 y T3
     if (type == 't1') {
-      return side == 'frontal';
+      return false;
     }
     
     // T2 y T3 pueden ser frontal o reverso

@@ -406,7 +406,7 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                 _buildCredentialField('Tipo', credential.tipo),
                                 _buildCredentialField('Lado', credential.lado.isNotEmpty ? credential.lado : 'No detectado'),
                                 // Campos específicos para credenciales t2 y t3
-                                if (credential.tipo == 't2') ...[
+                                if (credential.tipo == 't2' || credential.tipo == 't3') ...[
                                   _buildCredentialField('Estado', credential.estado,
                                     isValid: credential.estado.isNotEmpty ? ValidationUtils.isValidState(credential.estado) : null),
                                   _buildCredentialField('Municipio', credential.municipio,
@@ -414,11 +414,11 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   _buildCredentialField('Localidad', credential.localidad,
                                     isValid: credential.localidad.isNotEmpty ? ValidationUtils.isValidLocality(credential.localidad) : null),
                                   
-                                  // Contenido del QR (para credenciales T2)
+                                  // Contenido del QR (para credenciales T2 y T3)
                                   if (credential.qrContent.isNotEmpty)
                                     _buildCredentialField('Contenido QR', credential.qrContent),
                                   
-                                  // Contenido del código de barras (para credenciales T2)
+                                  // Contenido del código de barras (para credenciales T2 y T3)
                                   if (credential.barcodeContent.isNotEmpty)
                                     _buildCredentialField('Contenido Código de Barras', credential.barcodeContent),
                                 ],
@@ -517,8 +517,8 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ),
                                 ],
                                 
-                                // Sección de MRZ extraído (para credenciales T2)
-                                if (credential.tipo == 't2' && credential.mrzContent.isNotEmpty) ...[                                  
+                                // Sección de MRZ extraído (para credenciales T2 y T3)
+                                if ((credential.tipo == 't2' || credential.tipo == 't3') && credential.mrzContent.isNotEmpty) ...[                                  
                                   const SizedBox(height: 16),
                                   Container(
                                     width: double.infinity,
@@ -590,8 +590,8 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ),
                                 ],
                                 
-                                // Sección de código QR extraído (para credenciales T2 traseras - mostrar imagen aunque no tenga contenido)
-                                if (credential.tipo == 't2' && credential.lado == 'reverso' && credential.qrImagePath.isNotEmpty) ...[
+                                // Sección de código QR extraído (para credenciales T2 y T3 traseras - mostrar imagen aunque no tenga contenido)
+                                if ((credential.tipo == 't2' || credential.tipo == 't3') && credential.lado == 'reverso' && credential.qrImagePath.isNotEmpty) ...[
                                   const SizedBox(height: 16),
                                   Container(
                                     width: double.infinity,
@@ -687,8 +687,8 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ),
                                 ],
                                 
-                                // Sección de código de barras extraído (para credenciales T2)
-                                if (credential.tipo == 't2' && credential.barcodeImagePath.isNotEmpty) ...[
+                                // Sección de código de barras extraído (para credenciales T2 y T3)
+                                if ((credential.tipo == 't2' || credential.tipo == 't3') && credential.barcodeImagePath.isNotEmpty) ...[
                                   const SizedBox(height: 16),
                                   Container(
                                     width: double.infinity,

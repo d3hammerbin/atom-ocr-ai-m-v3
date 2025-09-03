@@ -42,20 +42,17 @@ class IneCredentialProcessorService {
     'LOCALIDAD',
   ];
 
-  /// Etiquetas específicas para credenciales t1 (más antiguas)
-  static const List<String> _tipo1Labels = ['EDAD', 'FOLIO'];
+  // T1 deshabilitado completamente - solo se procesan T2 y T3
 
   /// Etiquetas específicas para credenciales t2
   static const List<String> _tipo2Labels = ['ESTADO', 'MUNICIPIO', 'LOCALIDAD'];
 
   /// Configuración de tipos de credenciales y su procesamiento
+  /// NOTA: La detección de tipo usa métodos híbridos:
+  /// - Lado frontal: Análisis de texto OCR (método _detectCredentialType)
+  /// - Lado reverso: Conteo de códigos QR (método _detectCredentialTypeByQrCount)
   static const Map<String, Map<String, dynamic>> _credentialTypeConfig = {
-    'Tipo 1': {
-      'code': 't1',
-      'process': false,
-      'description': 'Credenciales más antiguas con EDAD/FOLIO',
-      'requiredFields': [],
-    },
+    // T1 completamente deshabilitado - solo se procesan T2 y T3
     'Tipo 2': {
       'code': 't2',
       'process': true,
@@ -233,11 +230,7 @@ class IneCredentialProcessorService {
       String extractedText, String imagePath) async {
     print('🎯 Iniciando procesamiento con detección de lado');
     
-    // Procesar el texto extraído para obtener el modelo base
-    CredencialIneModel credential = processCredentialText(extractedText);
-    print('🔍 Tipo de credencial detectado: ${credential.tipo}');
-    
-    // Detectar lado para todos los tipos de credencial usando el texto extraído
+    // Detectar lado PRIMERO para determinar el método de procesamiento
     String detectedSide = 'frontal';
     try {
       final sideResult = CredentialSideDetector.detectSide(extractedText);
@@ -247,6 +240,56 @@ class IneCredentialProcessorService {
       // En caso de error, mantener lado como frontal por defecto
       detectedSide = 'frontal';
       print('⚠️ Error detectando lado, usando frontal por defecto: $e');
+    }
+    
+    // Crear modelo base según el lado detectado
+    CredencialIneModel credential;
+    if (detectedSide == 'reverso' || detectedSide == 'trasero') {
+      // Para lado reverso: usar SOLO conteo de QRs sin análisis OCR previo
+      print('🔍 Lado reverso detectado - usando SOLO conteo de QRs para clasificación');
+      Map<String, dynamic> qrCountResult = await QrDetectionService.countAllQrCodesInImage(imagePath);
+      int qrCount = qrCountResult['qrCount'] ?? 0;
+      print('📊 Códigos QR detectados: $qrCount');
+      
+      // Detectar tipo usando SOLO conteo de QRs (sin análisis de texto)
+      String credentialType = _detectCredentialTypeByQrCount(qrCount);
+      print('🔍 Tipo de credencial detectado por QR: $credentialType');
+      
+      // Crear modelo básico con solo el tipo detectado por QRs
+      credential = CredencialIneModel(
+        nombre: '',
+        domicilio: '',
+        claveElector: '',
+        curp: '',
+        fechaNacimiento: '',
+        sexo: '',
+        anoRegistro: '',
+        seccion: '',
+        vigencia: '',
+        tipo: credentialType,
+        lado: detectedSide,
+        estado: '',
+        municipio: '',
+        localidad: '',
+        photoPath: '',
+        signaturePath: '',
+        qrContent: '',
+        qrImagePath: '',
+        barcodeContent: '',
+        barcodeImagePath: '',
+        mrzContent: '',
+        mrzImagePath: '',
+        mrzDocumentNumber: '',
+        mrzNationality: '',
+        mrzBirthDate: '',
+        mrzExpiryDate: '',
+        mrzSex: '',
+      );
+    } else {
+      // Para lado frontal: usar lógica original basada en texto
+      print('🔍 Lado frontal detectado - usando análisis de texto OCR');
+      credential = processCredentialText(extractedText);
+      print('🔍 Tipo de credencial detectado por texto: ${credential.tipo}');
     }
     
     // Actualizar el lado detectado
@@ -262,7 +305,9 @@ class IneCredentialProcessorService {
       frontalData = await _processFrontalSide(imagePath, credential);
     } else if (detectedSide == 'reverso' || detectedSide == 'trasero') {
       print('🔍 Procesando lado trasero de la credencial...');
-      reversoData = await _processReversoSide(imagePath, credential);
+      final reversoResult = await _processReversoSide(imagePath, credential);
+      reversoData = reversoResult['reversoData'] as Map<String, String>;
+      credential = reversoResult['updatedCredential'] as CredencialIneModel;
       
       // Para credenciales T2 del lado reverso, limpiar campos frontales incorrectos
       if (credential.tipo == 't2') {
@@ -329,7 +374,7 @@ class IneCredentialProcessorService {
     return updatedCredential;
   }
 
-  /// Procesa el lado frontal de una credencial (T1, T2, T3)
+  /// Procesa el lado frontal de una credencial (T2, T3)
   /// Incluye: detección facial y extracción de firma (solo T3)
   static Future<Map<String, String>> _processFrontalSide(
     String imagePath,
@@ -340,9 +385,9 @@ class IneCredentialProcessorService {
       'signaturePath': '',
     };
 
-    // Detectar y extraer fotografía del rostro si es credencial T1, T2 o T3
+    // Detectar y extraer fotografía del rostro para credenciales T2 y T3
     print('🎯 Procesando lado frontal - tipo: ${credential.tipo}');
-    if (credential.tipo == 't1' || credential.tipo == 't2' || credential.tipo == 't3') {
+    if (credential.tipo == 't2' || credential.tipo == 't3') {
       print('✅ Iniciando detección facial...');
       try {
         frontalData['photoPath'] = await FaceDetectionService.extractFaceFromCredential(imagePath);
@@ -453,8 +498,9 @@ class IneCredentialProcessorService {
   }
 
   /// Procesa el lado reverso de una credencial (T2, T3)
-  /// Incluye: QR (solo T2), código de barras (solo T2), MRZ (solo T2)
-  static Future<Map<String, String>> _processReversoSide(
+  /// El tipo de credencial ya fue determinado por conteo de QRs en processCredentialWithSideDetection
+  /// Incluye: QR (T2 y T3), código de barras (T2 y T3), MRZ (T2 y T3)
+  static Future<Map<String, dynamic>> _processReversoSide(
     String imagePath,
     CredencialIneModel credential,
   ) async {
@@ -473,10 +519,15 @@ class IneCredentialProcessorService {
     };
 
     print('🎯 Procesando lado reverso - tipo: ${credential.tipo}');
+    
+    // El tipo ya fue determinado correctamente en processCredentialWithSideDetection
+    // usando conteo de QRs, no necesitamos re-evaluarlo aquí
+    CredencialIneModel updatedCredential = credential;
+    String processingType = credential.tipo;
 
-    // Detectar y extraer código QR solo para credenciales T2 traseras
-    if (credential.tipo == 't2') {
-      print('🔍 Iniciando detección de código QR para credencial T2 trasera...');
+    // Detectar y extraer código QR para credenciales T2 y T3 traseras
+    if (processingType == 't2' || processingType == 't3') {
+      print('🔍 Iniciando detección de código QR para credencial ${processingType.toUpperCase()} trasera...');
       try {
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
         final qrResult = await QrDetectionService.detectQrFromT2Credential(
@@ -497,12 +548,12 @@ class IneCredentialProcessorService {
         print('❌ Error en detección de QR: $e');
       }
 
-      // Detectar y extraer código de barras para credenciales T2
-      print('🔍 Iniciando detección de código de barras para credencial T2...');
+      // Detectar y extraer código de barras para credenciales T2 y T3
+      print('🔍 Iniciando detección de código de barras para credencial ${processingType.toUpperCase()}...');
       try {
         final barcodeResult = await BarcodeDetectionService.detectBarcodeFromCredential(
           imagePath,
-          credential.tipo,
+          processingType,
         );
         
         reversoData['barcodeImagePath'] = barcodeResult['imagePath'] ?? '';
@@ -522,12 +573,12 @@ class IneCredentialProcessorService {
     }
 
     // Detectar y extraer código MRZ para credenciales T2 y T3
-    if (credential.tipo == 't2' || credential.tipo == 't3') {
-      print('🔍 Iniciando detección de código MRZ para credencial ${credential.tipo.toUpperCase()}...');
+    if (processingType == 't2' || processingType == 't3') {
+      print('🔍 Iniciando detección de código MRZ para credencial ${processingType.toUpperCase()}...');
       try {
         final mrzResult = await MrzDetectionService.detectMrzFromCredential(
           imagePath,
-          credential.tipo,
+          processingType,
         );
         
         reversoData['mrzImagePath'] = mrzResult['imagePath'] ?? '';
@@ -554,10 +605,222 @@ class IneCredentialProcessorService {
       }
     }
 
-    return reversoData;
+    return {
+      'reversoData': reversoData,
+      'updatedCredential': updatedCredential,
+    };
   }
 
-  /// Procesa el texto extraído y devuelve un modelo estructurado
+  /// Procesa el texto extraído y devuelve un modelo estructurado usando conteo de QRs
+  static CredencialIneModel processCredentialTextWithQrCount(String extractedText, int qrCount) {
+    if (!isIneCredential(extractedText)) {
+      return CredencialIneModel.empty();
+    }
+
+    // Dividir el texto en líneas y limpiar
+    final lines =
+        extractedText
+            .split('\n')
+            .map((line) => line.trim())
+            .where((line) => line.isNotEmpty)
+            .toList();
+
+    // Detectar tipo de credencial usando conteo de QRs
+    final tipoCredencial = _detectCredentialTypeByQrCount(qrCount);
+    print('🔍 Tipo detectado por conteo QR ($qrCount QRs): $tipoCredencial');
+
+    // Verificar si este tipo de credencial debe ser procesado
+    if (!_shouldProcessCredentialType(tipoCredencial)) {
+      // Retornar modelo con solo el tipo detectado para credenciales no procesadas
+      return CredencialIneModel(
+        nombre: '',
+        domicilio: '',
+        claveElector: '',
+        curp: '',
+        fechaNacimiento: '',
+        sexo: '',
+        anoRegistro: '',
+        seccion: '',
+        vigencia: '',
+        tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente si es T2 o T3
+        estado: '',
+        municipio: '',
+        localidad: '',
+        photoPath: '', // No procesado
+        signaturePath: '', // No procesado
+        qrContent: '', // No procesado
+        qrImagePath: '', // No procesado
+        barcodeContent: '', // No procesado
+        barcodeImagePath: '', // No procesado
+        mrzContent: '', // No procesado
+        mrzImagePath: '', // No procesado
+        mrzDocumentNumber: '', // No procesado
+        mrzNationality: '', // No procesado
+        mrzSex: '', // No procesado
+        mrzBirthDate: '', // No procesado
+        mrzExpiryDate: '', // No procesado
+      );
+    }
+
+    // Filtrar líneas no deseadas
+    final filteredLines = _filterUnwantedText(lines);
+
+    // Extraer información adicional usando similitud de cadenas
+    final additionalInfo = extractAdditionalInfoWithSimilarity(lines);
+
+    // Extraer campos específicos solo para tipos procesables (t2 y t3)
+    // Para t2, usar métodos específicos que manejan campos en la misma línea
+    if (tipoCredencial == 't2') {
+      // Extraer datos con validación y limpieza
+      final nombre = _extractNombre(filteredLines);
+      final claveElector = _extractClaveElector(filteredLines);
+      final fechaNacimiento = _extractFechaNacimientoT2(filteredLines);
+      final sexo = _extractSexo(filteredLines);
+      final anoRegistro = _extractAnoRegistroT2(filteredLines);
+      final seccion = _extractSeccionT2(filteredLines);
+      final vigencia = _extractVigenciaT2(filteredLines);
+      final estado = _extractEstado(filteredLines);
+      final municipio = _extractMunicipioT2(filteredLines);
+      final localidad = _extractLocalidadT2(filteredLines);
+
+      // Aplicar normalización OCR al nombre antes de validación
+      final nombreNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombre);
+      
+      return CredencialIneModel(
+        nombre:
+            ValidationUtils.isValidName(nombreNormalizado)
+                ? ValidationUtils.cleanNormalizedName(nombreNormalizado)
+                : nombreNormalizado,
+        domicilio: _extractDomicilio(filteredLines),
+        claveElector:
+            ValidationUtils.isValidClaveElector(claveElector)
+                ? ValidationUtils.cleanClaveElector(claveElector)
+                : claveElector,
+        curp: _extractCurpT2(filteredLines),
+        fechaNacimiento:
+            ValidationUtils.isValidBirthDate(fechaNacimiento)
+                ? ValidationUtils.formatBirthDate(fechaNacimiento)
+                : fechaNacimiento,
+        sexo: ValidationUtils.isValidSex(sexo) ? sexo.toUpperCase() : sexo,
+        anoRegistro: anoRegistro,
+        seccion:
+            ValidationUtils.isValidSection(seccion)
+                ? ValidationUtils.cleanNumericCode(seccion)
+                : seccion,
+        vigencia: vigencia,
+        tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente con QR detection
+        estado:
+            ValidationUtils.isValidState(estado)
+                ? ValidationUtils.cleanNumericCode(estado)
+                : estado,
+        municipio:
+            ValidationUtils.isValidMunicipality(municipio)
+                ? ValidationUtils.cleanNumericCode(municipio)
+                : municipio,
+        localidad:
+            ValidationUtils.isValidLocality(localidad)
+                ? ValidationUtils.cleanNumericCode(localidad)
+                : localidad,
+        photoPath: '', // Se establecerá en processCredentialWithSideDetection
+        signaturePath: '', // Se establecerá para T3 en processCredentialWithSideDetection
+        qrContent: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
+        qrImagePath: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
+        barcodeContent: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        barcodeImagePath: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzContent: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzImagePath: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzDocumentNumber: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzNationality: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzBirthDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzExpiryDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzSex: '', // Se establecerá para T2 en processCredentialWithSideDetection
+      );
+    }
+
+    // Para t3, usar métodos optimizados específicos
+    if (tipoCredencial == 't3') {
+      // Extraer datos específicos para T3
+      final nombre = _extractNombre(filteredLines);
+      // Aplicar normalización OCR al nombre antes de validación
+      final nombreNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombre);
+      
+      return CredencialIneModel(
+        nombre:
+            ValidationUtils.isValidName(nombreNormalizado)
+                ? ValidationUtils.cleanNormalizedName(nombreNormalizado)
+                : nombreNormalizado,
+        domicilio: _extractDomicilio(filteredLines),
+        claveElector: _extractClaveElector(filteredLines),
+        curp: _extractCurpT3(filteredLines),
+        fechaNacimiento: _extractFechaNacimientoT3(filteredLines),
+        sexo: _extractSexo(filteredLines),
+        anoRegistro: _extractAnoRegistroT3(filteredLines),
+        seccion: _extractSeccionT3(filteredLines),
+        vigencia: _extractVigenciaT3(filteredLines),
+        tipo: tipoCredencial,
+        lado: '', // Se detectará posteriormente con QR detection
+        estado: '',
+        municipio: '',
+        localidad: '',
+        photoPath: '', // Se establecerá en processCredentialWithSideDetection
+        signaturePath: '', // Se establecerá en processCredentialWithSideDetection
+        qrContent: '', // No aplicable para T3
+        qrImagePath: '', // No aplicable para T3
+        barcodeContent: '', // No aplicable para T3
+        barcodeImagePath: '', // No aplicable para T3
+        mrzContent: '', // No aplicable para T3
+        mrzImagePath: '', // No aplicable para T3
+        mrzDocumentNumber: '', // No aplicable para T3
+        mrzNationality: '', // No aplicable para T3
+        mrzBirthDate: '', // No aplicable para T3
+        mrzExpiryDate: '', // No aplicable para T3
+        mrzSex: '', // No aplicable para T3
+      );
+    }
+
+    // Para otros tipos, usar métodos estándar
+    final nombreStandard = _extractNombre(filteredLines);
+    // Aplicar normalización OCR al nombre antes de validación
+    final nombreStandardNormalizado = StringSimilarityUtils.normalizeOcrCharacters(nombreStandard);
+    
+    return CredencialIneModel(
+      nombre:
+          ValidationUtils.isValidName(nombreStandardNormalizado)
+              ? ValidationUtils.cleanNormalizedName(nombreStandardNormalizado)
+              : nombreStandardNormalizado,
+      domicilio: _extractDomicilio(filteredLines),
+      claveElector: _extractClaveElector(filteredLines),
+      curp: _extractCurp(filteredLines),
+      fechaNacimiento: _extractFechaNacimiento(filteredLines),
+      sexo: _extractSexo(filteredLines),
+      anoRegistro:
+          additionalInfo['año_registro'] ?? _extractAnoRegistro(filteredLines),
+      seccion: _extractSeccion(filteredLines),
+      vigencia: additionalInfo['vigencia'] ?? _extractVigencia(filteredLines),
+      tipo: tipoCredencial,
+      lado: '', // Se detectará posteriormente si es necesario
+      estado: tipoCredencial == 't2' ? _extractEstado(filteredLines) : '',
+      municipio: tipoCredencial == 't2' ? _extractMunicipio(filteredLines) : '',
+      localidad: tipoCredencial == 't2' ? _extractLocalidad(filteredLines) : '',
+      photoPath: '', // Se establecerá en processCredentialWithSideDetection
+      signaturePath: '', // No procesado
+      qrContent: '', // Se establecerá para T2 trasero
+      qrImagePath: '', // Se establecerá para T2 trasero
+      barcodeContent: '', // Se establecerá para T2
+      barcodeImagePath: '', // Se establecerá para T2
+      mrzContent: '', // Se establecerá para T2
+      mrzImagePath: '', // Se establecerá para T2
+      mrzDocumentNumber: '', // Se establecerá para T2
+      mrzNationality: '', // Se establecerá para T2
+      mrzBirthDate: '', // Se establecerá para T2
+      mrzExpiryDate: '', // Se establecerá para T2
+      mrzSex: '', // Se establecerá para T2
+    );
+  }
+
+  /// Procesa el texto extraído y devuelve un modelo estructurado (método legacy)
   static CredencialIneModel processCredentialText(String extractedText) {
     if (!isIneCredential(extractedText)) {
       return CredencialIneModel.empty();
@@ -571,7 +834,7 @@ class IneCredentialProcessorService {
             .where((line) => line.isNotEmpty)
             .toList();
 
-    // Detectar tipo de credencial primero
+    // Detectar tipo de credencial primero (método legacy basado en texto)
     final tipoCredencial = _detectCredentialType(lines);
 
     // Verificar si este tipo de credencial debe ser procesado
@@ -2333,16 +2596,13 @@ class IneCredentialProcessorService {
     final upperLines = lines.map((line) => line.toUpperCase()).toList();
     final fullText = upperLines.join(' ');
 
-    print('DEBUG: Texto completo para detección de tipo: ${fullText.length > 200 ? fullText.substring(0, 200) + '...' : fullText}');
+    print('DEBUG: Método de detección basado en texto para lado frontal');
+    print('DEBUG: Para lado reverso se usa _detectCredentialTypeByQrCount con conteo QR');
+    print('DEBUG: Texto completo para detección de tipo (${fullText.length} chars): ${fullText.length > 200 ? fullText.substring(0, 200) + '...' : fullText}');
+    print('DEBUG: Líneas de texto (${lines.length} líneas): ${lines.take(5).join(' | ')}${lines.length > 5 ? ' | ...' : ''}');
 
-    // Contar cuántas etiquetas de t1 están presentes
-    int tipo1FieldsFound = 0;
-    for (final label in _tipo1Labels) {
-      if (upperLines.any((line) => line.contains(label))) {
-        tipo1FieldsFound++;
-        print('DEBUG: Etiqueta T1 encontrada: $label');
-      }
-    }
+    // T1 deshabilitado completamente - solo se procesan T2 y T3
+    // NOTA: Este método es legacy, la nueva lógica usa únicamente conteo de QRs
 
     // Contar cuántas etiquetas de t2 están presentes
     int tipo2FieldsFound = 0;
@@ -2356,16 +2616,49 @@ class IneCredentialProcessorService {
     // Patrones adicionales para detectar T2 en el reverso
     bool hasT2ReversePatterns = false;
     
-    // Patrón 1: Códigos específicos de T2 (formato EC seguido de números y letras)
-    if (RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText)) {
-      hasT2ReversePatterns = true;
-      print('DEBUG: Patrón T2 reverso detectado - EC código');
-    }
+    // Primero verificar si es T3 por número de códigos QR detectados
+     bool hasT3MultipleQRPatterns = false;
+     
+     // Patrón T3: Múltiples códigos QR detectados
+     // Las T3 tienen más de 1 código QR, las T2 tienen solo 1 código QR
+     // Este es el diferenciador más confiable entre T2 y T3
+     int qrReferences = RegExp(r'QR|CODIGO.*QR|QR.*CODE').allMatches(fullText).length;
+     if (qrReferences > 1) {
+       hasT3MultipleQRPatterns = true;
+       print('DEBUG: Patrón T3 detectado - Múltiples códigos QR ($qrReferences > 1)');
+     } else {
+       print('DEBUG: Patrón T2/T3 - Códigos QR detectados: $qrReferences');
+     }
+    
+    // Si se detectan patrones T3, no evaluar como T2
+     if (hasT3MultipleQRPatterns) {
+       print('DEBUG: Credencial identificada como T3 por múltiples códigos QR - omitiendo evaluación T2');
+     } else {
+      // Solo evaluar patrones T2 si no se detectaron patrones T3
+      
+      // Patrón 1: Códigos específicos de T2 (formato EC seguido de números y letras)
+      if (RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText)) {
+        hasT2ReversePatterns = true;
+        print('DEBUG: Patrón T2 reverso detectado - EC código');
+      }
     
     // Patrón 2: Estructura típica del reverso T2 con códigos MRZ
+    // NOTA: IDMEX también aparece en T3, necesitamos ser más específicos
+    // T2 reverso típicamente tiene IDMEX seguido de patrones específicos de T2
     if (RegExp(r'IDMEX\d+<<\d+').hasMatch(fullText)) {
-      hasT2ReversePatterns = true;
-      print('DEBUG: Patrón T2 reverso detectado - IDMEX MRZ');
+      // Verificar si también contiene otros indicadores específicos de T2
+      bool hasAdditionalT2Indicators = 
+          fullText.contains('SECRETARIO EJECUTIVO') ||
+          fullText.contains('SECRETARIO EJEC') ||
+          RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText) ||
+          (fullText.length < 500 && tipo2FieldsFound == 0);
+      
+      if (hasAdditionalT2Indicators) {
+        hasT2ReversePatterns = true;
+        print('DEBUG: Patrón T2 reverso detectado - IDMEX MRZ con indicadores T2');
+      } else {
+        print('DEBUG: IDMEX MRZ detectado pero sin indicadores específicos de T2 - posible T3');
+      }
     }
     
     // Patrón 3: Líneas con formato específico de T2 reverso (números y letras específicos)
@@ -2381,39 +2674,94 @@ class IneCredentialProcessorService {
     }
     
     // Patrón 5: Detectar texto muy corto o mal reconocido que podría ser T2 reverso
-    // Si el texto es muy corto (menos de 300 caracteres) y no contiene etiquetas frontales,
-    // es probable que sea un reverso T2 con OCR deficiente
-    if (fullText.length < 300 && tipo1FieldsFound == 0 && tipo2FieldsFound == 0) {
-      // Verificar si contiene algunos caracteres típicos de MRZ mal reconocidos
-      if (fullText.contains('MEX') || fullText.contains('<<') || 
-          RegExp(r'\d{6,}').hasMatch(fullText) || fullText.contains('&')) {
+    // NOTA: Texto corto con MRZ también puede ser T3, necesitamos indicadores más específicos
+    if (fullText.length < 300 && tipo2FieldsFound == 0) {
+      // Verificar si contiene caracteres típicos de MRZ Y indicadores específicos de T2
+      bool hasMrzIndicators = fullText.contains('MEX') || fullText.contains('<<') || 
+          RegExp(r'\d{6,}').hasMatch(fullText) || fullText.contains('&');
+      
+      bool hasSpecificT2Indicators = 
+          fullText.contains('SECRETARIO EJECUTIVO') ||
+          fullText.contains('SECRETARIO EJEC') ||
+          RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText);
+      
+      if (hasMrzIndicators && hasSpecificT2Indicators) {
         hasT2ReversePatterns = true;
-        print('DEBUG: Patrón T2 reverso detectado - Texto corto con indicios de MRZ');
-      }
-    }
+        print('DEBUG: Patrón T2 reverso detectado - Texto corto con MRZ e indicadores T2');
+      } else if (hasMrzIndicators) {
+         print('DEBUG: Texto corto con MRZ detectado pero sin indicadores específicos de T2 - posible T3');
+       }
+     }
+     
+     // Patrón 6: Detectar patrones de texto mal reconocido típicos del reverso T2
+     if (RegExp(r'[A-Z]{2,}[&<>]{1,}[A-Z0-9]{2,}').hasMatch(fullText)) {
+       hasT2ReversePatterns = true;
+       print('DEBUG: Patrón T2 reverso detectado - Patrón de texto mal reconocido');
+     }
+     
+     } // Cerrar el bloque else de evaluación T2
+
+    print('DEBUG [LEGACY]: Resumen detección - T2: $tipo2FieldsFound, T2 Reverso: $hasT2ReversePatterns, T3 Múltiples QR: $hasT3MultipleQRPatterns');
     
-    // Patrón 6: Detectar patrones de texto mal reconocido típicos del reverso T2
-    if (RegExp(r'[A-Z]{2,}[&<>]{1,}[A-Z0-9]{2,}').hasMatch(fullText)) {
-      hasT2ReversePatterns = true;
-      print('DEBUG: Patrón T2 reverso detectado - Patrón de texto mal reconocido');
-    }
+    // Logs adicionales para diagnóstico
+    print('DEBUG [LEGACY]: Análisis de patrones MRZ (OBSOLETO):');
+    print('  - Contiene IDMEX: ${RegExp(r'IDMEX\d+<<\d+').hasMatch(fullText)}');
+    print('  - Contiene SECRETARIO EJECUTIVO: ${fullText.contains('SECRETARIO EJECUTIVO') || fullText.contains('SECRETARIO EJEC')}');
+    print('  - Contiene patrón EC: ${RegExp(r'EC\d{4}[A-Z]').hasMatch(fullText)}');
+    print('  - Longitud de texto: ${fullText.length}');
+    print('  - Texto corto sin etiquetas: ${fullText.length < 500 && tipo2FieldsFound == 0}');
+    print('DEBUG [LEGACY]: Análisis de patrones T3 (OBSOLETO):');
+     print('  - Múltiples QR detectados: $hasT3MultipleQRPatterns');
+     print('  - Total referencias QR: ${RegExp(r'QR|CODIGO.*QR|QR.*CODE').allMatches(fullText).length}');
+     print('  - Criterio T3: > 1 código QR (T2 tiene solo 1 QR)');
 
-    print('DEBUG: Resumen detección - T1: $tipo1FieldsFound, T2: $tipo2FieldsFound, T2 Reverso: $hasT2ReversePatterns');
-
-    // Lógica de detección:
-    // t1: tiene EDAD o FOLIO -> retorna 't1'
-    // t2: tiene ESTADO, MUNICIPIO o LOCALIDAD (frontal) O patrones de reverso T2 (pero no EDAD/FOLIO) -> retorna 't2'
-    // t3: no tiene ninguna de las etiquetas anteriores -> retorna 't3'
+    // Lógica de detección legacy (T1 deshabilitado):
+     // NOTA: Este método se usa EXCLUSIVAMENTE para detección frontal
+  // El lado reverso usa _detectCredentialTypeByQrCount basado en conteo de QRs
+     // t3: tiene múltiples códigos QR (>1) -> retorna 't3'
+     // t2: tiene ESTADO, MUNICIPIO o LOCALIDAD (frontal) O patrones de reverso T2 (pero no múltiples QR) -> retorna 't2'
+     // t3: no tiene ninguna de las etiquetas anteriores -> retorna 't3'
     String detectedType;
-    if (tipo1FieldsFound > 0) {
-      detectedType = _credentialTypeConfig['Tipo 1']!['code'];
-    } else if (tipo2FieldsFound > 0 || hasT2ReversePatterns) {
+    if (hasT3MultipleQRPatterns) {
+      detectedType = _credentialTypeConfig['Tipo 3']!['code'];
+      print('DEBUG [LEGACY]: Clasificado como T3 por múltiples códigos QR detectados');
+    } else if (tipo2FieldsFound > 0) {
       detectedType = _credentialTypeConfig['Tipo 2']!['code'];
+      print('DEBUG [LEGACY]: Clasificado como T2 por etiquetas frontales (ESTADO/MUNICIPIO/LOCALIDAD)');
+    } else if (hasT2ReversePatterns) {
+      detectedType = _credentialTypeConfig['Tipo 2']!['code'];
+      print('DEBUG [LEGACY]: Clasificado como T2 por patrones de reverso');
     } else {
       detectedType = _credentialTypeConfig['Tipo 3']!['code'];
+      print('DEBUG [LEGACY]: Clasificado como T3 por exclusión (sin etiquetas específicas)');
     }
 
-    print('DEBUG: Tipo de credencial detectado: $detectedType');
+    print('DEBUG: Tipo de credencial detectado por análisis de texto: $detectedType');
+    print('DEBUG: Detección híbrida: OCR (frontal) + conteo QR (reverso) para mayor precisión');
+    return detectedType;
+  }
+
+  /// Detecta el tipo de credencial basándose únicamente en el conteo de códigos QR
+  /// Este método se utiliza EXCLUSIVAMENTE para el procesamiento del lado reverso
+  /// T2: 1 código QR
+  /// T3: >= 2 códigos QR (más flexible que exactamente 3)
+  static String _detectCredentialTypeByQrCount(int qrCount) {
+    print('DEBUG: Detectando tipo de credencial por conteo QR: $qrCount');
+    
+    String detectedType;
+    if (qrCount == 1) {
+      detectedType = _credentialTypeConfig['Tipo 2']!['code'];
+      print('DEBUG: Clasificado como T2 - 1 código QR detectado');
+    } else if (qrCount >= 2) {
+      detectedType = _credentialTypeConfig['Tipo 3']!['code'];
+      print('DEBUG: Clasificado como T3 - $qrCount códigos QR detectados (>= 2)');
+    } else {
+      // Fallback: si es 0 QRs, usar T3 por defecto
+      detectedType = _credentialTypeConfig['Tipo 3']!['code'];
+      print('DEBUG: Clasificado como T3 por defecto - $qrCount códigos QR (esperado: 1 para T2, >= 2 para T3)');
+    }
+    
+    print('DEBUG: Tipo de credencial detectado por QR: $detectedType');
     return detectedType;
   }
 

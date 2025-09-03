@@ -19,31 +19,38 @@ Atom OCR AI es una aplicación móvil desarrollada en Flutter que permite captur
 
 ## Tipos de Credenciales INE
 
-La aplicación soporta el procesamiento de tres tipos de credenciales del Instituto Nacional Electoral (INE) de México, clasificadas cronológicamente de la más antigua a la más nueva:
+El sistema procesa únicamente credenciales **Tipo 2 (T2)** y **Tipo 3 (T3)**, ya que el procesamiento de **Tipo 1 (T1)** ha sido completamente deshabilitado.
 
-### Tipo 1 - Credenciales Más Antiguas
-- **Identificadores**: Contienen los campos "EDAD" y/o "FOLIO"
-- **Características**: Formato más antiguo del INE
-- **Detección**: Se identifica por la presencia de al menos uno de estos campos específicos
+### Detección de Tipos de Credencial
 
-### Tipo 2 - Credenciales Intermedias
-- **Identificadores**: Contienen los campos "ESTADO", "MUNICIPIO" y/o "LOCALIDAD"
-- **Características**: Incluyen información geográfica detallada
-- **Detección**: Se identifica cuando no es Tipo 1 pero contiene campos de ubicación
-- **Campos adicionales**: Estado, Municipio, Localidad
+La detección del tipo de credencial utiliza un **enfoque híbrido**:
 
-### Tipo 3 - Credenciales Más Recientes
-- **Identificadores**: No contienen ninguna de las etiquetas específicas de Tipo 1 o Tipo 2
+#### Lado Frontal
+- Utiliza **análisis de texto OCR** (lógica original)
+- Detecta el tipo basándose en campos específicos presentes en el texto extraído
+- Mantiene la lógica de detección priorizada existente
+
+#### Lado Reverso
+- Utiliza **conteo de códigos QR** para mayor precisión:
+  - **Tipo 2 (T2)**: Se identifica por la presencia de **1 código QR**
+  - **Tipo 3 (T3)**: Se identifica por la presencia de **3 códigos QR**
+  - **Fallback**: Si el conteo no es 1 ni 3, se asume **Tipo 3 (T3)** por defecto
+
+Esta implementación híbrida mantiene el funcionamiento correcto del lado frontal mientras mejora la precisión en la detección del tipo para el procesamiento del lado reverso.
+
+### Tipo 2 - Credenciales con Un Código QR
+- **Identificador principal**: Contienen exactamente 1 código QR
+- **Características**: Incluyen información geográfica detallada (Estado, Municipio, Localidad)
+- **Campos específicos**: Estado, Municipio, Localidad, códigos de barras y MRZ en el reverso
+- **Formato de vigencia**: YYYY (año único)
+- **Procesamiento**: Extracción de datos del frente y reverso con códigos QR, de barras y MRZ
+
+### Tipo 3 - Credenciales con Múltiples Códigos QR
+- **Identificador principal**: Contienen 3 códigos QR
 - **Características**: Formato más moderno y simplificado
-- **Detección**: Se identifica por exclusión cuando no cumple criterios de tipos anteriores
 - **Formato de vigencia**: YYYY-YYYY (rango de años)
 - **Validación de nombres**: Normalización automática eliminando números y caracteres especiales
-- **Procesamiento especializado**: Métodos optimizados para extracción de datos específicos del formato T3
-
-### Lógica de Detección
-1. **Prioridad Tipo 1**: Si contiene "EDAD" o "FOLIO" → Tipo 1
-2. **Prioridad Tipo 2**: Si no es Tipo 1 pero contiene "ESTADO", "MUNICIPIO" o "LOCALIDAD" → Tipo 2
-3. **Por defecto Tipo 3**: Si no contiene ninguna etiqueta específica → Tipo 3
+- **Procesamiento**: Extracción optimizada para formato T3 con múltiples códigos QR
 
 La aplicación extrae automáticamente los campos específicos según el tipo detectado y valida la completitud de los datos de acuerdo a las características de cada tipo de credencial.
 
@@ -87,10 +94,11 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Características del sistema**:
   - Búsqueda insensible a mayúsculas y minúsculas
   - Nivel de confianza proporcional al número de etiquetas encontradas
-  - Aplicable a todos los tipos de credencial (T1, T2, T3, T4)
+  - Aplicable únicamente a credenciales T2 y T3 (T1 deshabilitado completamente)
+  - Enfoque híbrido: Análisis OCR para lado frontal, conteo QR para lado reverso
 - **Validación de consistencia**: Verifica que el lado detectado contenga los datos esperados según el tipo de credencial
 
-### Sistema Híbrido de Detección de Códigos QR
+### Sistema Híbrido de Detección de Códigos QR para Credenciales T2 y T3
 - **Arquitectura de tres niveles**: Implementación de sistema robusto con múltiples métodos de fallback para detección de códigos QR
 - **Detección por Finder Patterns**: Algoritmo principal que detecta patrones de búsqueda QR (1:1:3:1:1) según especificación QR Model 2
 - **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit para detección en imagen completa cuando falla el método principal
@@ -98,25 +106,26 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Compatibilidad Android mejorada**: Corrección de errores de MethodChannel mediante uso de archivos temporales en lugar de InputImageMetadata
 - **Gestión de memoria optimizada**: Limpieza automática de archivos temporales y cierre de recursos ML Kit
 - **Detección inteligente**: Algoritmos que buscan automáticamente patrones característicos del QR Model 2
+- **Integración automática**: Sistema que se activa automáticamente durante el procesamiento de credenciales T2 y T3 reverso
 - **Manejo robusto de errores**: Sistema de recuperación que garantiza extracción exitosa del código QR
 - **Logging detallado**: Sistema de trazabilidad completo para diagnóstico y depuración del proceso de detección
 - **Rendimiento optimizado**: Especificación de formato QR para acelerar el procesamiento con ML Kit
 
-### Sistema Híbrido de Detección de Códigos de Barras para Credenciales T2
+### Sistema Híbrido de Detección de Códigos de Barras para Credenciales T2 y T3
 - **Arquitectura de tres niveles**: Implementación de sistema robusto con múltiples métodos de fallback para detección de códigos de barras
 - **Detección por patrones específicos**: Algoritmo principal que busca patrones característicos de códigos de barras en la región superior izquierda
 - **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit para detección de códigos de barras en imagen completa
-- **Región fija optimizada**: Tercer nivel de fallback que utiliza región predefinida específica para códigos de barras T2
+- **Región fija optimizada**: Tercer nivel de fallback que utiliza región predefinida específica para códigos de barras
 - **Compatibilidad mejorada**: Uso de archivos temporales para evitar errores de MethodChannel en Android
 - **Gestión de memoria optimizada**: Limpieza automática de archivos temporales y cierre de recursos ML Kit
 - **Detección inteligente de tamaño**: Algoritmos que detectan tanto códigos de barras grandes como pequeños
-- **Integración automática**: Sistema que se activa automáticamente durante el procesamiento de credenciales T2
+- **Integración automática**: Sistema que se activa automáticamente durante el procesamiento de credenciales T2 y T3 reverso
 - **Visualización en interfaz**: Contenedor especializado que muestra la imagen del código de barras extraído y su contenido decodificado
 - **Almacenamiento seguro**: Los códigos de barras extraídos se guardan en el directorio de documentos con nombres únicos
 - **Logging detallado**: Sistema de trazabilidad completo para diagnóstico del proceso de detección de códigos de barras
 - **Manejo robusto de errores**: Sistema de recuperación que garantiza la continuidad del procesamiento aunque falle la detección
 
-### Sistema de Detección MRZ (Machine Readable Zone) para Credenciales T2
+### Sistema de Detección MRZ (Machine Readable Zone) para Credenciales T2 y T3
 - **Arquitectura híbrida de tres niveles**: Implementación robusta con múltiples métodos de fallback para detección de códigos MRZ
 - **Detección por patrones OACI**: Algoritmo principal que busca patrones MRZ estándar (3 líneas x 30 caracteres) según especificaciones OACI
 - **Respaldo con Google ML Kit**: Segundo nivel que utiliza ML Kit Text Recognition para detección en imagen completa
@@ -132,15 +141,31 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Manejo robusto de errores**: Sistema de recuperación que garantiza la continuidad del procesamiento aunque falle la detección MRZ
 
 ### Sistema de Diagnóstico Avanzado para Detección de Tipos de Credencial
-- **Logs de depuración detallados**: Implementación de sistema de logging exhaustivo en el método de detección de tipos
-- **Análisis de texto completo**: Registro del texto completo extraído por OCR para diagnóstico de problemas de reconocimiento
-- **Detección de etiquetas específicas**: Logging de todas las etiquetas T1 y T2 encontradas durante el análisis
-- **Patrones de reverso T2**: Registro detallado de patrones específicos detectados en el lado reverso de credenciales T2
-- **Resumen de detección**: Logging del proceso completo de clasificación con justificación del tipo asignado
-- **Patrones mejorados para T2**: Implementación de patrones adicionales para detectar credenciales T2 con texto corto o mal reconocido
-- **Optimización de compatibilidad**: Eliminación de caracteres especiales en logs para garantizar compatibilidad con sistemas de logging
-- **Diagnóstico de OCR**: Herramientas para identificar problemas de reconocimiento de texto que afecten la clasificación
-- **Validación de consistencia**: Sistema que verifica la coherencia entre el tipo detectado y el contenido de la credencial
+- **Logs de depuración detallados**: Sistema completo de trazabilidad para el proceso de detección de tipos T2 y T3
+- **Enfoque híbrido de detección**: Combina análisis de texto OCR (lado frontal) con conteo de códigos QR (lado reverso)
+- **Detección frontal por OCR**: Utiliza análisis de texto para identificar tipos basándose en campos específicos presentes
+- **Detección reverso por QRs**: Conteo automático de códigos QR para diferenciación precisa entre T2 (1 QR) y T3 (≥2 QRs)
+- **Criterio de detección por lado**: Lado frontal usa OCR, lado reverso usa conteo de QRs
+- **Compatibilidad mantenida**: Preserva la lógica original de detección frontal mientras mejora la precisión del reverso
+- **Método legacy disponible**: Mantenimiento del método anterior de detección por patrones como respaldo
+- **Jerarquía híbrida**: OCR (frontal) → Conteo QRs (reverso) → T2 (1 QR) → T3 (≥2 QRs) → T3 (por defecto)
+- **Logs sin emojis**: Formato optimizado para compatibilidad con sistemas de logging y depuración
+- **Resumen de detección**: Información consolidada del proceso de clasificación híbrido
+- **Diagnóstico de errores**: Identificación de casos donde el conteo de QRs no coincide con los valores esperados
+- **Trazabilidad completa**: Seguimiento paso a paso del proceso híbrido de detección
+- **Procesamiento condicional**: Sistema que solo procesa credenciales T2 y T3, ignorando completamente T1
+
+### Correcciones de Visualización para Credenciales T3
+- **Problema identificado**: La interfaz de usuario limitaba la visualización de datos extraídos únicamente a credenciales T2
+- **Corrección implementada**: Extensión de condiciones de visualización para incluir credenciales T3 en todas las secciones
+- **Secciones corregidas**:
+  - **MRZ (Machine Readable Zone)**: Visualización de códigos MRZ formateados para credenciales T2 y T3
+  - **Códigos QR**: Mostrar imágenes y contenido de códigos QR extraídos del lado reverso para ambos tipos
+  - **Códigos de barras**: Visualización de imágenes y contenido decodificado para credenciales T2 y T3
+  - **Campos específicos**: Estado, Municipio y Localidad ahora visibles para ambos tipos de credencial
+- **Impacto**: Los datos procesados correctamente para credenciales T3 ahora se muestran completamente en la interfaz
+- **Compatibilidad**: Mantiene funcionalidad completa para credenciales T2 mientras habilita visualización para T3
+- **Validación**: Verificación de que todos los campos extraídos se muestren según el tipo de credencial detectado
 
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)

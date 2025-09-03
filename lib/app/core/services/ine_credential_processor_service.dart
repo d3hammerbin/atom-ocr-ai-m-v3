@@ -6,6 +6,7 @@ import 'face_detection_service.dart';
 import 'signature_extraction_service.dart';
 import 'qr_detection_service.dart';
 import 'barcode_detection_service.dart';
+import 'mrz_detection_service.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -230,8 +231,10 @@ class IneCredentialProcessorService {
   /// Procesa credencial con detección de lado basada en texto
   static Future<CredencialIneModel> processCredentialWithSideDetection(
       String extractedText, String imagePath) async {
-    // Procesar el texto primero
-    final credential = processCredentialText(extractedText);
+    print('🎯 Iniciando procesamiento con detección de lado');
+    
+    // Procesar el texto extraído para obtener el modelo base
+    CredencialIneModel credential = processCredentialText(extractedText);
     print('🔍 Tipo de credencial detectado: ${credential.tipo}');
     
     // Detectar lado para todos los tipos de credencial usando el texto extraído
@@ -246,78 +249,195 @@ class IneCredentialProcessorService {
       print('⚠️ Error detectando lado, usando frontal por defecto: $e');
     }
     
-    // Detectar y extraer fotografía del rostro si es credencial T1, T2 o T3 y es lado frontal
-    String photoPath = '';
-    print('🎯 Verificando condiciones para detección facial: tipo=${credential.tipo}, lado=$detectedSide');
-    if ((credential.tipo == 't1' || credential.tipo == 't2' || credential.tipo == 't3') && detectedSide == 'frontal') {
-      print('✅ Iniciando detección facial...');
-      try {
-        photoPath = await FaceDetectionService.extractFaceFromCredential(imagePath);
-        print('📸 Foto extraída exitosamente: $photoPath');
-      } catch (e) {
-        // En caso de error en la detección facial, continuar sin la foto
-        print('❌ Error en detección facial: $e');
+    // Actualizar el lado detectado
+    credential = credential.copyWith(lado: detectedSide);
+    
+    // Variables para almacenar los resultados de detección
+    Map<String, String> frontalData = {};
+    Map<String, String> reversoData = {};
+
+    // Procesar según el lado detectado
+    if (detectedSide == 'frontal') {
+      print('🔍 Procesando lado frontal de la credencial...');
+      frontalData = await _processFrontalSide(imagePath, credential);
+    } else if (detectedSide == 'reverso' || detectedSide == 'trasero') {
+      print('🔍 Procesando lado trasero de la credencial...');
+      reversoData = await _processReversoSide(imagePath, credential);
+      
+      // Para credenciales T2 del lado reverso, limpiar campos frontales incorrectos
+      if (credential.tipo == 't2') {
+        print('🧹 Limpiando campos frontales incorrectos para T2 reverso...');
+        credential = credential.copyWith(
+          nombre: '',
+          claveElector: '',
+          domicilio: '',
+          curp: '',
+          fechaNacimiento: '',
+          sexo: '',
+          anoRegistro: '',
+          seccion: '',
+          vigencia: '',
+          estado: '',
+          municipio: '',
+          localidad: '',
+        );
       }
     } else {
-      print('❌ No se cumplieron las condiciones para detección facial');
+      print('⚠️ Lado no reconocido: $detectedSide. Procesando como frontal por defecto.');
+      frontalData = await _processFrontalSide(imagePath, credential);
     }
-    
+
+    // Formatear cadena MRZ si está presente (eliminar espacios y saltos de línea)
+    String formattedMrzContent = '';
+    if (reversoData['mrzContent']?.isNotEmpty == true) {
+      formattedMrzContent = _formatMrzContent(reversoData['mrzContent']!);
+      print('📝 MRZ formateada: ${formattedMrzContent.length} caracteres');
+    }
+
+    // Actualizar el modelo con todos los datos detectados
+    final updatedCredential = credential.copyWith(
+      lado: detectedSide,
+      // Datos frontales
+      photoPath: frontalData['photoPath']?.isNotEmpty == true ? frontalData['photoPath'] : credential.photoPath,
+      signaturePath: frontalData['signaturePath']?.isNotEmpty == true ? frontalData['signaturePath'] : credential.signaturePath,
+      // Datos del reverso
+      qrContent: reversoData['qrContent']?.isNotEmpty == true ? reversoData['qrContent'] : credential.qrContent,
+      qrImagePath: reversoData['qrImagePath']?.isNotEmpty == true ? reversoData['qrImagePath'] : credential.qrImagePath,
+      barcodeContent: reversoData['barcodeContent']?.isNotEmpty == true ? reversoData['barcodeContent'] : credential.barcodeContent,
+      barcodeImagePath: reversoData['barcodeImagePath']?.isNotEmpty == true ? reversoData['barcodeImagePath'] : credential.barcodeImagePath,
+      mrzContent: formattedMrzContent.isNotEmpty ? formattedMrzContent : credential.mrzContent,
+      mrzImagePath: reversoData['mrzImagePath']?.isNotEmpty == true ? reversoData['mrzImagePath'] : credential.mrzImagePath,
+      mrzDocumentNumber: reversoData['mrzDocumentNumber']?.isNotEmpty == true ? reversoData['mrzDocumentNumber'] : credential.mrzDocumentNumber,
+      mrzNationality: reversoData['mrzNationality']?.isNotEmpty == true ? reversoData['mrzNationality'] : credential.mrzNationality,
+      mrzBirthDate: reversoData['mrzBirthDate']?.isNotEmpty == true ? reversoData['mrzBirthDate'] : credential.mrzBirthDate,
+      mrzExpiryDate: reversoData['mrzExpiryDate']?.isNotEmpty == true ? reversoData['mrzExpiryDate'] : credential.mrzExpiryDate,
+      mrzSex: reversoData['mrzSex']?.isNotEmpty == true ? reversoData['mrzSex'] : credential.mrzSex,
+    );
+
+    print('✅ Procesamiento completado para credencial ${updatedCredential.tipo} lado ${updatedCredential.lado}');
+    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
+    return updatedCredential;
+  }
+
+  /// Procesa el lado frontal de una credencial (T1, T2, T3)
+  /// Incluye: detección facial y extracción de firma (solo T3)
+  static Future<Map<String, String>> _processFrontalSide(
+    String imagePath,
+    CredencialIneModel credential,
+  ) async {
+    final Map<String, String> frontalData = {
+      'photoPath': '',
+      'signaturePath': '',
+    };
+
+    // Detectar y extraer fotografía del rostro si es credencial T1, T2 o T3
+    print('🎯 Procesando lado frontal - tipo: ${credential.tipo}');
+    if (credential.tipo == 't1' || credential.tipo == 't2' || credential.tipo == 't3') {
+      print('✅ Iniciando detección facial...');
+      try {
+        frontalData['photoPath'] = await FaceDetectionService.extractFaceFromCredential(imagePath);
+        print('📸 Foto extraída exitosamente: ${frontalData['photoPath']}');
+      } catch (e) {
+        print('❌ Error en detección facial: $e');
+      }
+    }
+
     // Extraer firma solo para credenciales T3 frontales
-    String signaturePath = '';
-    if (credential.tipo == 't3' && detectedSide == 'frontal' && photoPath.isNotEmpty) {
+    if (credential.tipo == 't3' && frontalData['photoPath']!.isNotEmpty) {
       print('🖋️ Iniciando extracción de firma para credencial T3...');
       try {
-        // Generar ID único para la credencial
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
-        signaturePath = await SignatureExtractionService.extractSignatureFromT3Credential(
+        frontalData['signaturePath'] = await SignatureExtractionService.extractSignatureFromT3Credential(
           imagePath: imagePath,
-          facePhotoPath: photoPath,
+          facePhotoPath: frontalData['photoPath']!,
           credentialId: credentialId,
         );
-        print('🖋️ Firma extraída exitosamente: $signaturePath');
+        print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
       } catch (e) {
-        // En caso de error en la extracción de firma, continuar sin la firma
         print('❌ Error en extracción de firma: $e');
       }
-    } else if (credential.tipo == 't3' && detectedSide == 'frontal') {
+    } else if (credential.tipo == 't3') {
       print('⚠️ No se puede extraer firma: falta la fotografía del rostro');
     }
+
+    return frontalData;
+  }
+
+  /// Formatea el contenido MRZ eliminando espacios y saltos de línea
+  /// para obtener una cadena de exactamente 90 caracteres
+  static String _formatMrzContent(String mrzContent) {
+    if (mrzContent.isEmpty) return '';
     
+    // Eliminar espacios en blanco, saltos de línea y caracteres de control
+    String cleanedMrz = mrzContent
+        .replaceAll(RegExp(r'\s+'), '') // Eliminar espacios, tabs, saltos de línea
+        .replaceAll(RegExp(r'[\r\n\t]'), '') // Eliminar caracteres de control específicos
+        .trim();
+    
+    print('🧹 MRZ original: ${mrzContent.length} caracteres');
+    print('🧹 MRZ limpia: ${cleanedMrz.length} caracteres');
+    
+    // Validar que tenga exactamente 90 caracteres
+    if (cleanedMrz.length == 90) {
+      print('✅ MRZ formateada correctamente: 90 caracteres');
+      return cleanedMrz;
+    } else if (cleanedMrz.length > 90) {
+      // Si tiene más de 90, tomar solo los primeros 90
+      print('⚠️ MRZ demasiado larga (${cleanedMrz.length}), truncando a 90 caracteres');
+      return cleanedMrz.substring(0, 90);
+    } else {
+      // Si tiene menos de 90, rellenar con '<' hasta completar 90
+      print('⚠️ MRZ demasiado corta (${cleanedMrz.length}), rellenando hasta 90 caracteres');
+      return cleanedMrz.padRight(90, '<');
+    }
+  }
+
+  /// Procesa el lado reverso de una credencial (T2, T3)
+  /// Incluye: QR (solo T2), código de barras (solo T2), MRZ (solo T2)
+  static Future<Map<String, String>> _processReversoSide(
+    String imagePath,
+    CredencialIneModel credential,
+  ) async {
+    final Map<String, String> reversoData = {
+      'qrContent': '',
+      'qrImagePath': '',
+      'barcodeContent': '',
+      'barcodeImagePath': '',
+      'mrzContent': '',
+      'mrzImagePath': '',
+      'mrzDocumentNumber': '',
+      'mrzNationality': '',
+      'mrzBirthDate': '',
+      'mrzExpiryDate': '',
+      'mrzSex': '',
+    };
+
+    print('🎯 Procesando lado reverso - tipo: ${credential.tipo}');
+
     // Detectar y extraer código QR solo para credenciales T2 traseras
-    String qrContent = '';
-    String qrImagePath = '';
-    if (credential.tipo == 't2' && detectedSide == 'reverso') {
+    if (credential.tipo == 't2') {
       print('🔍 Iniciando detección de código QR para credencial T2 trasera...');
       try {
-        // Generar ID único para la credencial
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
         final qrResult = await QrDetectionService.detectQrFromT2Credential(
           imagePath: imagePath,
           credentialId: credentialId,
         );
         
-        // Asignar siempre qrImagePath si está disponible (imagen guardada)
-        qrImagePath = qrResult['qrImagePath'] ?? '';
+        reversoData['qrImagePath'] = qrResult['qrImagePath'] ?? '';
         
         if (qrResult['success'] == true) {
-          qrContent = qrResult['qrContent'] ?? '';
-          print('📱 QR detectado exitosamente: ${qrContent.length > 50 ? qrContent.substring(0, 50) + '...' : qrContent}');
+          reversoData['qrContent'] = qrResult['qrContent'] ?? '';
+          print('📱 QR detectado exitosamente: ${reversoData['qrContent']!.length > 50 ? reversoData['qrContent']!.substring(0, 50) + '...' : reversoData['qrContent']}');
         } else {
           print('⚠️ No se pudo detectar código QR: ${qrResult['error']}');
-          print('📷 Imagen QR guardada para revisión: $qrImagePath');
+          print('📷 Imagen QR guardada para revisión: ${reversoData['qrImagePath']}');
         }
       } catch (e) {
-        // En caso de error en la detección de QR, continuar sin el QR
         print('❌ Error en detección de QR: $e');
       }
-    } else if (credential.tipo == 't2' && detectedSide == 'frontal') {
-      print('ℹ️ Credencial T2 frontal - QR no aplicable');
-    }
-    
-    // Detectar y extraer código de barras para credenciales T2
-    String barcodeContent = '';
-    String barcodeImagePath = '';
-    if (credential.tipo == 't2') {
+
+      // Detectar y extraer código de barras para credenciales T2
       print('🔍 Iniciando detección de código de barras para credencial T2...');
       try {
         final barcodeResult = await BarcodeDetectionService.detectBarcodeFromCredential(
@@ -325,35 +445,53 @@ class IneCredentialProcessorService {
           credential.tipo,
         );
         
-        // Asignar siempre barcodeImagePath si está disponible (imagen guardada)
-        barcodeImagePath = barcodeResult['imagePath'] ?? '';
+        reversoData['barcodeImagePath'] = barcodeResult['imagePath'] ?? '';
         
         if (barcodeResult['success'] == true) {
-          barcodeContent = barcodeResult['content'] ?? '';
-          print('📊 Código de barras detectado exitosamente: ${barcodeContent.length > 30 ? barcodeContent.substring(0, 30) + '...' : barcodeContent}');
+          reversoData['barcodeContent'] = barcodeResult['content'] ?? '';
+          print('📊 Código de barras detectado exitosamente: ${reversoData['barcodeContent']!.length > 30 ? reversoData['barcodeContent']!.substring(0, 30) + '...' : reversoData['barcodeContent']}');
           print('🎯 Método usado: ${barcodeResult['method']}, Confianza: ${barcodeResult['confidence']}');
         } else {
           print('⚠️ No se pudo detectar código de barras: ${barcodeResult['error']}');
-          print('📷 Imagen de código de barras guardada para revisión: $barcodeImagePath');
+          print('📷 Imagen de código de barras guardada para revisión: ${reversoData['barcodeImagePath']}');
         }
       } catch (e) {
-        // En caso de error en la detección de código de barras, continuar sin el código de barras
         print('❌ Error en detección de código de barras: $e');
       }
+
+      // Detectar y extraer código MRZ para credenciales T2
+      print('🔍 Iniciando detección de código MRZ para credencial T2...');
+      try {
+        final mrzResult = await MrzDetectionService.detectMrzFromCredential(
+          imagePath,
+          credential.tipo,
+        );
+        
+        reversoData['mrzImagePath'] = mrzResult['imagePath'] ?? '';
+        
+        if (mrzResult['success'] == true) {
+          reversoData['mrzContent'] = mrzResult['content'] ?? '';
+          final parsedData = mrzResult['parsedData'] as Map<String, dynamic>? ?? {};
+          
+          reversoData['mrzDocumentNumber'] = parsedData['documentNumber'] ?? '';
+          reversoData['mrzNationality'] = parsedData['nationality'] ?? '';
+          reversoData['mrzBirthDate'] = parsedData['birthDate'] ?? '';
+          reversoData['mrzExpiryDate'] = parsedData['expiryDate'] ?? '';
+          reversoData['mrzSex'] = parsedData['sex'] ?? '';
+          
+          print('🆔 Código MRZ detectado exitosamente: ${reversoData['mrzContent']!.length > 50 ? reversoData['mrzContent']!.substring(0, 50).replaceAll('\n', ' ') + '...' : reversoData['mrzContent']!.replaceAll('\n', ' ')}');
+          print('🎯 Método usado: ${mrzResult['method']}, Confianza: ${mrzResult['confidence']}');
+          print('📋 Datos extraídos - Doc: ${reversoData['mrzDocumentNumber']}, Nacionalidad: ${reversoData['mrzNationality']}, Sexo: ${reversoData['mrzSex']}');
+        } else {
+          print('⚠️ No se pudo detectar código MRZ: ${mrzResult['error']}');
+          print('📷 Imagen MRZ guardada para revisión: ${reversoData['mrzImagePath']}');
+        }
+      } catch (e) {
+        print('❌ Error en detección de código MRZ: $e');
+      }
     }
-    
-    // Actualizar la credencial con el lado detectado, la ruta de la foto, la firma, el QR y el código de barras
-    final updatedCredential = credential.copyWith(
-      lado: detectedSide, 
-      photoPath: photoPath,
-      signaturePath: signaturePath,
-      qrContent: qrContent,
-      qrImagePath: qrImagePath,
-      barcodeContent: barcodeContent,
-      barcodeImagePath: barcodeImagePath,
-    );
-    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
-    return updatedCredential;
+
+    return reversoData;
   }
 
   /// Procesa el texto extraído y devuelve un modelo estructurado
@@ -397,6 +535,13 @@ class IneCredentialProcessorService {
         qrImagePath: '', // No procesado
         barcodeContent: '', // No procesado
         barcodeImagePath: '', // No procesado
+        mrzContent: '', // No procesado
+        mrzImagePath: '', // No procesado
+        mrzDocumentNumber: '', // No procesado
+        mrzNationality: '', // No procesado
+        mrzBirthDate: '', // No procesado
+        mrzExpiryDate: '', // No procesado
+        mrzSex: '', // No procesado
       );
     }
 
@@ -466,6 +611,13 @@ class IneCredentialProcessorService {
         qrImagePath: '', // Se establecerá para T2 trasero en processCredentialWithSideDetection
         barcodeContent: '', // Se establecerá para T2 en processCredentialWithSideDetection
         barcodeImagePath: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzContent: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzImagePath: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzDocumentNumber: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzNationality: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzBirthDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzExpiryDate: '', // Se establecerá para T2 en processCredentialWithSideDetection
+        mrzSex: '', // Se establecerá para T2 en processCredentialWithSideDetection
       );
     }
 
@@ -499,6 +651,13 @@ class IneCredentialProcessorService {
         qrImagePath: '', // No aplicable para T3
         barcodeContent: '', // No aplicable para T3
         barcodeImagePath: '', // No aplicable para T3
+        mrzContent: '', // No aplicable para T3
+        mrzImagePath: '', // No aplicable para T3
+        mrzDocumentNumber: '', // No aplicable para T3
+        mrzNationality: '', // No aplicable para T3
+        mrzBirthDate: '', // No aplicable para T3
+        mrzExpiryDate: '', // No aplicable para T3
+        mrzSex: '', // No aplicable para T3
       );
     }
 
@@ -532,6 +691,13 @@ class IneCredentialProcessorService {
       qrImagePath: '', // Se establecerá para T2 trasero
       barcodeContent: '', // Se establecerá para T2
       barcodeImagePath: '', // Se establecerá para T2
+      mrzContent: '', // Se establecerá para T2
+      mrzImagePath: '', // Se establecerá para T2
+      mrzDocumentNumber: '', // Se establecerá para T2
+      mrzNationality: '', // Se establecerá para T2
+      mrzBirthDate: '', // Se establecerá para T2
+      mrzExpiryDate: '', // Se establecerá para T2
+      mrzSex: '', // Se establecerá para T2
     );
   }
 
@@ -795,7 +961,7 @@ class IneCredentialProcessorService {
         for (int j = i + 1; j < lines.length && j <= i + 3; j++) {
           final nextLine = lines[j].trim();
 
-          if (nextLine.isNotEmpty) {
+          if (nextLine.isNotEmpty && !_isMrzLine(nextLine)) {
             // Filtrar etiquetas de referencia del resultado final
             final filteredData = _filterReferenceLabels([nextLine]);
             if (filteredData.isNotEmpty) {
@@ -824,13 +990,47 @@ class IneCredentialProcessorService {
             line.length > 10 &&
             !upperLine.contains('CURP') &&
             !upperLine.contains('SEXO') &&
-            !upperLine.contains('NOMBRE')) {
+            !upperLine.contains('NOMBRE') &&
+            !_isMrzLine(line)) {
           domicilioLines.add(line.toUpperCase());
         }
       }
     }
 
     return domicilioLines.join(' ').trim();
+  }
+
+  /// Verifica si una línea es parte de un código MRZ
+  /// Los códigos MRZ tienen exactamente 30 caracteres y patrones específicos
+  static bool _isMrzLine(String line) {
+    final cleanLine = line.trim().replaceAll(' ', '');
+    
+    // Verificar longitud exacta de 30 caracteres (característica del MRZ)
+    if (cleanLine.length != 30) return false;
+    
+    // Verificar patrones típicos del MRZ
+    // Línea 1: Comienza con código de documento (I, A, C, P, V) y contiene MEX
+    if (RegExp(r'^[IACPV]').hasMatch(cleanLine) && cleanLine.contains('MEX')) {
+      return true;
+    }
+    
+    // Línea 2: Contiene fecha de nacimiento (6 dígitos) y sexo (M/F)
+    if (RegExp(r'\d{6}').hasMatch(cleanLine) && RegExp(r'[MF]').hasMatch(cleanLine)) {
+      return true;
+    }
+    
+    // Línea 3: Contiene principalmente letras y caracteres de relleno '<'
+    if (RegExp(r'^[A-Z<]+$').hasMatch(cleanLine) && cleanLine.contains('<')) {
+      return true;
+    }
+    
+    // Verificar alta densidad de caracteres de relleno '<' (típico del MRZ)
+    final fillCharCount = cleanLine.split('<').length - 1;
+    if (fillCharCount >= 5) {
+      return true;
+    }
+    
+    return false;
   }
 
   /// Extrae la clave de elector

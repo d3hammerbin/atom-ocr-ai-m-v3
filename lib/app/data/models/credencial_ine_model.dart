@@ -21,6 +21,13 @@ class CredencialIneModel {
   final String qrImagePath; // Ruta de la imagen del código QR extraído (solo T2 trasero)
   final String barcodeContent; // Contenido del código de barras (solo T2)
   final String barcodeImagePath; // Ruta de la imagen del código de barras extraído (solo T2)
+  final String mrzContent; // Contenido completo del código MRZ (3 líneas x 30 caracteres, solo T2)
+  final String mrzImagePath; // Ruta de la imagen del código MRZ extraído (solo T2)
+  final String mrzDocumentNumber; // Número de documento extraído del MRZ (solo T2)
+  final String mrzNationality; // Nacionalidad extraída del MRZ (solo T2)
+  final String mrzBirthDate; // Fecha de nacimiento extraída del MRZ (solo T2)
+  final String mrzExpiryDate; // Fecha de expiración extraída del MRZ (solo T2)
+  final String mrzSex; // Sexo extraído del MRZ (solo T2)
 
   CredencialIneModel({
     required this.nombre,
@@ -43,6 +50,13 @@ class CredencialIneModel {
     required this.qrImagePath,
     required this.barcodeContent,
     required this.barcodeImagePath,
+    required this.mrzContent,
+    required this.mrzImagePath,
+    required this.mrzDocumentNumber,
+    required this.mrzNationality,
+    required this.mrzBirthDate,
+    required this.mrzExpiryDate,
+    required this.mrzSex,
   });
 
   /// Crea una instancia vacía de CredencialIneModel
@@ -66,7 +80,14 @@ class CredencialIneModel {
       qrContent = '',
       qrImagePath = '',
       barcodeContent = '',
-      barcodeImagePath = '';
+      barcodeImagePath = '',
+      mrzContent = '',
+      mrzImagePath = '',
+      mrzDocumentNumber = '',
+      mrzNationality = '',
+      mrzBirthDate = '',
+      mrzExpiryDate = '',
+      mrzSex = '';
 
   /// Crea una instancia desde un Map
   factory CredencialIneModel.fromJson(Map<String, dynamic> json) {
@@ -91,6 +112,13 @@ class CredencialIneModel {
       qrImagePath: json['qrImagePath'] ?? '',
       barcodeContent: json['barcodeContent'] ?? '',
       barcodeImagePath: json['barcodeImagePath'] ?? '',
+      mrzContent: json['mrzContent'] ?? '',
+      mrzImagePath: json['mrzImagePath'] ?? '',
+      mrzDocumentNumber: json['mrzDocumentNumber'] ?? '',
+      mrzNationality: json['mrzNationality'] ?? '',
+      mrzBirthDate: json['mrzBirthDate'] ?? '',
+      mrzExpiryDate: json['mrzExpiryDate'] ?? '',
+      mrzSex: json['mrzSex'] ?? '',
     );
   }
 
@@ -117,6 +145,13 @@ class CredencialIneModel {
       'qrImagePath': qrImagePath,
       'barcodeContent': barcodeContent,
       'barcodeImagePath': barcodeImagePath,
+      'mrzContent': mrzContent,
+      'mrzImagePath': mrzImagePath,
+      'mrzDocumentNumber': mrzDocumentNumber,
+      'mrzNationality': mrzNationality,
+      'mrzBirthDate': mrzBirthDate,
+      'mrzExpiryDate': mrzExpiryDate,
+      'mrzSex': mrzSex,
     };
   }
 
@@ -142,6 +177,13 @@ class CredencialIneModel {
     String? qrImagePath,
     String? barcodeContent,
     String? barcodeImagePath,
+    String? mrzContent,
+    String? mrzImagePath,
+    String? mrzDocumentNumber,
+    String? mrzNationality,
+    String? mrzBirthDate,
+    String? mrzExpiryDate,
+    String? mrzSex,
   }) {
     return CredencialIneModel(
       nombre: nombre ?? this.nombre,
@@ -164,6 +206,13 @@ class CredencialIneModel {
       qrImagePath: qrImagePath ?? this.qrImagePath,
       barcodeContent: barcodeContent ?? this.barcodeContent,
       barcodeImagePath: barcodeImagePath ?? this.barcodeImagePath,
+      mrzContent: mrzContent ?? this.mrzContent,
+      mrzImagePath: mrzImagePath ?? this.mrzImagePath,
+      mrzDocumentNumber: mrzDocumentNumber ?? this.mrzDocumentNumber,
+      mrzNationality: mrzNationality ?? this.mrzNationality,
+      mrzBirthDate: mrzBirthDate ?? this.mrzBirthDate,
+      mrzExpiryDate: mrzExpiryDate ?? this.mrzExpiryDate,
+      mrzSex: mrzSex ?? this.mrzSex,
     );
   }
 
@@ -235,7 +284,16 @@ class CredencialIneModel {
         other.photoPath == photoPath &&
         other.signaturePath == signaturePath &&
         other.qrContent == qrContent &&
-        other.qrImagePath == qrImagePath;
+        other.qrImagePath == qrImagePath &&
+        other.barcodeContent == barcodeContent &&
+        other.barcodeImagePath == barcodeImagePath &&
+        other.mrzContent == mrzContent &&
+        other.mrzImagePath == mrzImagePath &&
+        other.mrzDocumentNumber == mrzDocumentNumber &&
+        other.mrzNationality == mrzNationality &&
+        other.mrzBirthDate == mrzBirthDate &&
+        other.mrzExpiryDate == mrzExpiryDate &&
+        other.mrzSex == mrzSex;
   }
 
   @override
@@ -259,6 +317,17 @@ class CredencialIneModel {
       signaturePath,
       qrContent,
       qrImagePath,
+      Object.hash(
+        barcodeContent,
+        barcodeImagePath,
+        mrzContent,
+        mrzImagePath,
+        mrzDocumentNumber,
+        mrzNationality,
+        mrzBirthDate,
+        mrzExpiryDate,
+        mrzSex,
+      ),
     );
   }
 }

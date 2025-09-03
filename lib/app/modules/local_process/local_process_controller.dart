@@ -47,6 +47,10 @@ class LocalProcessController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
       
+      // Limpiar información anterior antes de seleccionar nueva imagen
+      clearExtractedText();
+      clearProcessedCredential();
+      
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,

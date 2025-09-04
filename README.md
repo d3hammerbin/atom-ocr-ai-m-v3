@@ -41,16 +41,64 @@ Esta implementación híbrida mantiene el funcionamiento correcto del lado front
 ### Tipo 2 - Credenciales con Un Código QR
 - **Identificador principal**: Contienen exactamente 1 código QR
 - **Características**: Incluyen información geográfica detallada (Estado, Municipio, Localidad)
-- **Campos específicos**: Estado, Municipio, Localidad, códigos de barras y MRZ en el reverso
+- **Campos específicos del lado frontal**: 
+  - Apellido Paterno
+  - Apellido Materno
+  - Estado
+  - Municipio
+  - Localidad
+  - Emisión
+- **Campos comunes frontales**: Nombre, Domicilio, Clave de Elector, CURP, Año de Registro, Fecha de Nacimiento, Sexo, Sección, Vigencia
+- **Campos del lado reverso**: Códigos QR, códigos de barras y MRZ con datos adicionales
 - **Formato de vigencia**: YYYY (año único)
-- **Procesamiento**: Extracción de datos del frente y reverso con códigos QR, de barras y MRZ
+- **Procesamiento**: Extracción diferenciada de datos del frente según campos específicos de T2
 
 ### Tipo 3 - Credenciales con Múltiples Códigos QR
 - **Identificador principal**: Contienen 3 códigos QR
 - **Características**: Formato más moderno y simplificado
+- **Campos del lado frontal**: Solo campos comunes (sin información geográfica específica)
+- **Campos comunes frontales**: Nombre, Domicilio, Clave de Elector, CURP, Año de Registro, Fecha de Nacimiento, Sexo, Sección, Vigencia
+- **Campos del lado reverso**: Múltiples códigos QR y MRZ con datos adicionales
 - **Formato de vigencia**: YYYY-YYYY (rango de años)
 - **Validación de nombres**: Normalización automática eliminando números y caracteres especiales
-- **Procesamiento**: Extracción optimizada para formato T3 con múltiples códigos QR
+- **Procesamiento**: Extracción optimizada para formato T3 sin campos geográficos específicos
+
+### Estructura de Datos Diferenciada
+
+La aplicación implementa una **estructura de datos unificada** que soporta ambos tipos de credencial:
+
+#### Campos Frontales Comunes (T2 y T3)
+- `nombre`: Nombre completo del titular
+- `domicilio`: Dirección del titular
+- `claveElector`: Clave de elector única
+- `curp`: CURP del titular
+- `anoRegistro`: Año de registro
+- `fechaNacimiento`: Fecha de nacimiento
+- `sexo`: Sexo del titular
+- `seccion`: Sección electoral
+- `vigencia`: Vigencia de la credencial
+
+#### Campos Frontales Específicos de T2
+- `apellidoPaterno`: Apellido paterno (solo T2)
+- `apellidoMaterno`: Apellido materno (solo T2)
+- `estado`: Estado de emisión (solo T2)
+- `municipio`: Municipio de emisión (solo T2)
+- `localidad`: Localidad de emisión (solo T2)
+- `emision`: Fecha de emisión (solo T2)
+
+#### Campos MRZ (Lado Reverso)
+- `mrzContent`: Contenido completo del MRZ
+- `mrzDocumentNumber`: Número de documento del MRZ
+- `mrzNationality`: Nacionalidad del MRZ
+- `mrzBirthDate`: Fecha de nacimiento del MRZ
+- `mrzExpiryDate`: Fecha de expiración del MRZ
+- `mrzSex`: Sexo del MRZ
+- `mrzName`: Nombre del MRZ
+
+#### Metadatos de Procesamiento
+- `tipo`: Tipo de credencial detectado (T2/T3)
+- `lado`: Lado del documento procesado (frontal/reverso)
+- Rutas de imágenes extraídas (foto, firma, QR, códigos de barras, MRZ)
 
 La aplicación extrae automáticamente los campos específicos según el tipo detectado y valida la completitud de los datos de acuerdo a las características de cada tipo de credencial.
 

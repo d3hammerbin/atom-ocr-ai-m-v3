@@ -19,6 +19,8 @@ import org.json.JSONException;
 
 /**
  * Servicio Android que procesa credenciales INE mexicanas
+ * Para el lado frontal: extrae datos completos según tipo T2/T3
+ * Para el lado reverso: extrae únicamente datos MRZ
  * Implementa la interfaz AIDL para comunicación con React Native
  * Utiliza WorkManager para procesamiento en background
  */
@@ -78,8 +80,8 @@ public class IneProcessorService extends Service {
     private final IIneProcessorService.Stub binder = new IIneProcessorService.Stub() {
         
         @Override
-        public String processCredentialAsync(String imagePath, IIneProcessorCallback callback) throws RemoteException {
-            Log.d(TAG, "Iniciando procesamiento asíncrono: " + imagePath);
+        public String processCredentialAsync(String imagePath, String documentSide, IIneProcessorCallback callback) throws RemoteException {
+            Log.d(TAG, "Iniciando procesamiento asíncrono: " + imagePath + ", lado: " + documentSide);
             
             String taskId = UUID.randomUUID().toString();
             activeCallbacks.put(taskId, callback);
@@ -88,6 +90,7 @@ public class IneProcessorService extends Service {
                 // Crear datos para WorkManager
                 Data inputData = new Data.Builder()
                     .putString("imagePath", imagePath)
+                    .putString("documentSide", documentSide)
                     .putString("taskId", taskId)
                     .build();
                 
@@ -114,8 +117,8 @@ public class IneProcessorService extends Service {
         }
         
         @Override
-        public String processCredentialSync(String imagePath) throws RemoteException {
-            Log.d(TAG, "Iniciando procesamiento síncrono: " + imagePath);
+        public String processCredentialSync(String imagePath, String documentSide) throws RemoteException {
+            Log.d(TAG, "Iniciando procesamiento síncrono: " + imagePath + ", lado: " + documentSide);
             
             try {
                 // Validar que el archivo existe
@@ -123,8 +126,8 @@ public class IneProcessorService extends Service {
                     throw new RuntimeException("Archivo no encontrado: " + imagePath);
                 }
                 
-                // Procesar la credencial usando el procesador nativo
-                CredentialResult result = IneNativeProcessor.processCredential(imagePath);
+                // Procesar la credencial usando el procesador nativo con el lado especificado
+                CredentialResult result = IneNativeProcessor.processCredential(imagePath, documentSide);
                 
                 if (result != null) {
                     Log.d(TAG, "Procesamiento síncrono completado exitosamente");
@@ -146,8 +149,8 @@ public class IneProcessorService extends Service {
         }
         
         @Override
-        public boolean isValidIneCredential(String imagePath) throws RemoteException {
-            Log.d(TAG, "Validando credencial INE: " + imagePath);
+        public boolean isValidIneCredential(String imagePath, String documentSide) throws RemoteException {
+            Log.d(TAG, "Validando credencial INE: " + imagePath + ", lado: " + documentSide);
             
             try {
                 // Validar que el archivo existe
@@ -155,8 +158,8 @@ public class IneProcessorService extends Service {
                     return false;
                 }
                 
-                // Usar el procesador nativo para validar
-                return IneNativeProcessor.isValidIneCredential(imagePath);
+                // Usar el procesador nativo para validar con el lado especificado
+                return IneNativeProcessor.isValidIneCredential(imagePath, documentSide);
                 
             } catch (Exception e) {
                 Log.e(TAG, "Error validando credencial", e);
@@ -221,12 +224,11 @@ public class IneProcessorService extends Service {
                 info.put("version", SERVICE_VERSION);
                 info.put("supportedTypes", new org.json.JSONArray().put("t2").put("t3"));
                 info.put("capabilities", new org.json.JSONArray()
-                    .put("ocr")
-                    .put("qr_detection")
-                    .put("barcode_detection")
-                    .put("mrz_detection")
-                    .put("face_detection")
-                    .put("signature_extraction")
+                    .put("mrz_extraction")
+                    .put("front_data_extraction")
+                    .put("credential_type_detection")
+                    .put("t2_full_extraction")
+                    .put("t3_full_extraction")
                 );
                 info.put("maxImageSize", 10 * 1024 * 1024); // 10MB
                 info.put("supportedFormats", new org.json.JSONArray()

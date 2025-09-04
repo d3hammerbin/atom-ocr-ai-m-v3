@@ -141,27 +141,36 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
     
     /**
      * Procesa una credencial de forma asíncrona
+     * Para el lado frontal: extrae datos completos según tipo T2/T3
+     * Para el lado reverso: extrae únicamente datos MRZ
      */
     @ReactMethod
-    public void processCredentialAsync(String imagePath, ReadableMap config, Promise promise) {
+    public void processCredentialAsync(String imagePath, String documentSide, ReadableMap config, Promise promise) {
         if (!isServiceBound || ineService == null) {
             promise.reject("SERVICE_NOT_AVAILABLE", "El servicio de procesamiento no está disponible");
             return;
         }
         
         try {
-            String configJson = readableMapToJson(config).toString();
             
             // Crear callback para manejar el resultado
             IIneProcessorCallback callback = new IIneProcessorCallback.Stub() {
                 @Override
-                public void onProcessingComplete(String taskId, CredentialResult result) throws RemoteException {
-                    Log.d(TAG, "Procesamiento completado para tarea: " + taskId);
+                public void onProcessingComplete(String taskId, String resultJson) throws RemoteException {
+                    Log.d(TAG, "Procesamiento de MRZ completado para tarea: " + taskId);
                     
                     // Enviar evento a JavaScript
                     WritableMap eventData = Arguments.createMap();
                     eventData.putString("taskId", taskId);
-                    eventData.putMap("result", credentialResultToWritableMap(result));
+                    
+                    try {
+                        JSONObject jsonResult = new JSONObject(resultJson);
+                        eventData.putMap("result", jsonObjectToWritableMap(jsonResult));
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error parseando resultado JSON: " + e.getMessage());
+                        eventData.putString("error", "Error parseando resultado del MRZ");
+                    }
+                    
                     sendEvent(EVENT_COMPLETE, eventData);
                 }
                 
@@ -201,8 +210,8 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
                 }
             };
             
-            // Llamar al servicio
-            String taskId = ineService.processCredentialAsync(imagePath, configJson, callback);
+            // Llamar al servicio con el lado del documento especificado
+            String taskId = ineService.processCredentialAsync(imagePath, documentSide, callback);
             promise.resolve(taskId);
             
         } catch (Exception e) {
@@ -213,20 +222,27 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
     
     /**
      * Procesa una credencial de forma síncrona
+     * Para el lado frontal: extrae datos completos según tipo T2/T3
+     * Para el lado reverso: extrae únicamente datos MRZ
      */
     @ReactMethod
-    public void processCredential(String imagePath, ReadableMap config, Promise promise) {
+    public void processCredential(String imagePath, String documentSide, ReadableMap config, Promise promise) {
         if (!isServiceBound || ineService == null) {
             promise.reject("SERVICE_NOT_AVAILABLE", "El servicio de procesamiento no está disponible");
             return;
         }
         
         try {
-            String configJson = readableMapToJson(config).toString();
-            CredentialResult result = ineService.processCredential(imagePath, configJson);
+            String result = ineService.processCredentialSync(imagePath, documentSide);
             
-            WritableMap resultMap = credentialResultToWritableMap(result);
-            promise.resolve(resultMap);
+            // Parsear el resultado JSON y convertir a WritableMap
+            try {
+                JSONObject jsonResult = new JSONObject(result);
+                WritableMap resultMap = jsonObjectToWritableMap(jsonResult);
+                promise.resolve(resultMap);
+            } catch (JSONException e) {
+                promise.reject("PARSE_ERROR", "Error parseando resultado: " + e.getMessage());
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Error procesando credencial", e);
@@ -235,17 +251,19 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
     }
     
     /**
-     * Verifica si una imagen es una credencial válida
+     * Verifica si una imagen contiene una credencial INE válida en el lado especificado
+     * Para el lado frontal: valida datos básicos de la credencial
+     * Para el lado reverso: valida datos MRZ
      */
     @ReactMethod
-    public void isValidCredential(String imagePath, Promise promise) {
+    public void isValidCredential(String imagePath, String documentSide, Promise promise) {
         if (!isServiceBound || ineService == null) {
             promise.reject("SERVICE_NOT_AVAILABLE", "El servicio de procesamiento no está disponible");
             return;
         }
         
         try {
-            boolean isValid = ineService.isValidCredential(imagePath);
+            boolean isValid = ineService.isValidIneCredential(imagePath, documentSide);
             promise.resolve(isValid);
             
         } catch (Exception e) {
@@ -359,35 +377,73 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
             return map;
         }
         
-        // Información personal
+        // Datos del lado frontal (comunes para T2 y T3)
         putStringIfNotNull(map, "nombre", result.getNombre());
-        putStringIfNotNull(map, "apellidoPaterno", result.getApellidoPaterno());
-        putStringIfNotNull(map, "apellidoMaterno", result.getApellidoMaterno());
+        putStringIfNotNull(map, "domicilio", result.getDomicilio());
+        putStringIfNotNull(map, "claveElector", result.getClaveElector());
+        putStringIfNotNull(map, "curp", result.getCurp());
         putStringIfNotNull(map, "fechaNacimiento", result.getFechaNacimiento());
         putStringIfNotNull(map, "sexo", result.getSexo());
-        
-        // Información de identificación
-        putStringIfNotNull(map, "curp", result.getCurp());
-        putStringIfNotNull(map, "claveElector", result.getClaveElector());
-        
-        // Información de domicilio
-        putStringIfNotNull(map, "domicilio", result.getDomicilio());
         putStringIfNotNull(map, "seccion", result.getSeccion());
-        putStringIfNotNull(map, "localidad", result.getLocalidad());
-        putStringIfNotNull(map, "municipio", result.getMunicipio());
-        putStringIfNotNull(map, "estado", result.getEstado());
-        
-        // Información de la credencial
-        putStringIfNotNull(map, "tipo", result.getTipo());
-        putStringIfNotNull(map, "lado", result.getLado());
         putStringIfNotNull(map, "vigencia", result.getVigencia());
-        putStringIfNotNull(map, "añoRegistro", result.getAñoRegistro());
+        putStringIfNotNull(map, "anoRegistro", result.getAnoRegistro());
+        
+        // Datos específicos de T2 (pueden estar vacíos en T3)
+        putStringIfNotNull(map, "estado", result.getEstado());
+        putStringIfNotNull(map, "municipio", result.getMunicipio());
+        putStringIfNotNull(map, "localidad", result.getLocalidad());
+        putStringIfNotNull(map, "emision", result.getEmision());
+        
+        // Datos MRZ (lado reverso)
+        putStringIfNotNull(map, "mrzContent", result.getMrzContent());
+        putStringIfNotNull(map, "mrzDocumentNumber", result.getMrzDocumentNumber());
+        putStringIfNotNull(map, "mrzNationality", result.getMrzNationality());
+        putStringIfNotNull(map, "mrzBirthDate", result.getMrzBirthDate());
+        putStringIfNotNull(map, "mrzExpiryDate", result.getMrzExpiryDate());
+        putStringIfNotNull(map, "mrzSex", result.getMrzSex());
+        putStringIfNotNull(map, "mrzName", result.getMrzName());
         
         // Metadatos
+        putStringIfNotNull(map, "documentSide", result.getDocumentSide());
+        putStringIfNotNull(map, "credentialType", result.getCredentialType());
         map.putBoolean("acceptable", result.isAcceptable());
         map.putDouble("processingTimeMs", result.getProcessingTimeMs());
-        map.putDouble("confidence", result.getConfidence());
         putStringIfNotNull(map, "errorMessage", result.getErrorMessage());
+        
+        return map;
+    }
+    
+    /**
+     * Convierte JSONObject a WritableMap para datos del MRZ
+     */
+    private WritableMap jsonObjectToWritableMap(JSONObject jsonObject) {
+        WritableMap map = Arguments.createMap();
+        
+        if (jsonObject == null) {
+            return map;
+        }
+        
+        try {
+            // Datos básicos del MRZ
+            putStringIfNotNull(map, "documentType", jsonObject.optString("documentType", null));
+            putStringIfNotNull(map, "countryCode", jsonObject.optString("countryCode", null));
+            putStringIfNotNull(map, "documentNumber", jsonObject.optString("documentNumber", null));
+            putStringIfNotNull(map, "dateOfBirth", jsonObject.optString("dateOfBirth", null));
+            putStringIfNotNull(map, "sex", jsonObject.optString("sex", null));
+            putStringIfNotNull(map, "expirationDate", jsonObject.optString("expirationDate", null));
+            putStringIfNotNull(map, "nationality", jsonObject.optString("nationality", null));
+            putStringIfNotNull(map, "surname", jsonObject.optString("surname", null));
+            putStringIfNotNull(map, "givenNames", jsonObject.optString("givenNames", null));
+            
+            // Metadatos
+            map.putBoolean("acceptable", jsonObject.optBoolean("acceptable", false));
+            map.putDouble("processingTimeMs", jsonObject.optDouble("processingTimeMs", 0.0));
+            map.putDouble("confidence", jsonObject.optDouble("confidence", 0.0));
+            putStringIfNotNull(map, "errorMessage", jsonObject.optString("errorMessage", null));
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error convirtiendo JSONObject a WritableMap", e);
+        }
         
         return map;
     }
@@ -396,7 +452,7 @@ public class IneProcessorModule extends ReactContextBaseJavaModule {
      * Añade una cadena al mapa solo si no es nula
      */
     private void putStringIfNotNull(WritableMap map, String key, String value) {
-        if (value != null) {
+        if (value != null && !value.isEmpty()) {
             map.putString(key, value);
         }
     }

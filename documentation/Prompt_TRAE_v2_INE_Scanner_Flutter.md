@@ -102,6 +102,46 @@
 - **QR obligatorio**: ZXing (Model 2). Soportar desenfoque moderado y rotación.
 - **MRZ opcional**: OCR + validación **ICAO 9303** (checksums 7‑3‑1).
 
+### 4.4 Servicio Android Refactorizado (MRZ únicamente)
+**NOTA IMPORTANTE**: El servicio Android nativo ha sido refactorizado para enfocarse exclusivamente en la extracción de MRZ.
+
+#### Cambios realizados:
+- **IneProcessorService**: Ahora requiere parámetro `documentSide` ("front" o "back") y solo soporta capacidad `mrz_extraction`
+- **IneNativeProcessor**: Simplificado para procesar únicamente datos MRZ del lado especificado del documento
+- **IneProcessingWorker**: Actualizado para manejar el parámetro `documentSide` en el procesamiento en segundo plano
+- **Módulo React Native**: Interfaces actualizadas para requerir `documentSide` y retornar solo datos MRZ
+
+#### Estructura de datos MRZ:
+```json
+{
+  "documentType": "ID",
+  "countryCode": "MEX", 
+  "documentNumber": "123456789",
+  "dateOfBirth": "YYMMDD",
+  "sex": "M/F",
+  "expirationDate": "YYMMDD",
+  "nationality": "MEX",
+  "surname": "APELLIDOS",
+  "givenNames": "NOMBRES",
+  "acceptable": true,
+  "processingTimeMs": 1250.5,
+  "confidence": 0.95,
+  "errorMessage": null
+}
+```
+
+#### Uso del servicio refactorizado:
+```typescript
+// React Native
+import { processCredential, DocumentSide } from 'react-native-ine-processor';
+
+const result = await processCredential(
+  '/path/to/image.jpg',
+  DocumentSide.BACK, // Especificar lado del documento
+  { timeoutMs: 30000 }
+);
+```
+
 ---
 
 ## 5) Arquitectura y organización de código

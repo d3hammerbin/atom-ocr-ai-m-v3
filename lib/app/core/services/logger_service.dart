@@ -159,7 +159,7 @@ class LoggerService {
       final buffer = StringBuffer();
       
       for (final file in logFiles) {
-        final fileName = file.path.split('/').last;
+        final fileName = file.path.split(Platform.pathSeparator).last;
         buffer.writeln('=== $fileName ===');
         final content = await file.readAsString();
         buffer.writeln(content);

@@ -23,11 +23,12 @@ public class IneProcessingWorker extends Worker {
     @Override
     public Result doWork() {
         String imagePath = getInputData().getString("imagePath");
+        String documentSide = getInputData().getString("documentSide");
         String taskId = getInputData().getString("taskId");
         
-        Log.d(TAG, "Iniciando procesamiento de tarea: " + taskId + ", imagen: " + imagePath);
+        Log.d(TAG, "Iniciando procesamiento de tarea: " + taskId + ", imagen: " + imagePath + ", lado: " + documentSide);
         
-        if (imagePath == null || taskId == null) {
+        if (imagePath == null || documentSide == null || taskId == null) {
             Log.e(TAG, "Datos de entrada inválidos");
             return Result.failure(createErrorOutput(IneProcessorService.ERROR_UNKNOWN, "Datos de entrada inválidos"));
         }
@@ -49,17 +50,17 @@ public class IneProcessingWorker extends Worker {
             // Reportar progreso inicial
             setProgressAsync(createProgressData(10, "Validando imagen..."));
             
-            // Verificar si es una credencial INE válida
-            if (!IneNativeProcessor.isValidIneCredential(imagePath)) {
-                Log.w(TAG, "La imagen no parece ser una credencial INE válida");
+            // Verificar si contiene un MRZ válido en el lado especificado
+            if (!IneNativeProcessor.isValidIneCredential(imagePath, documentSide)) {
+                Log.w(TAG, "La imagen no parece contener un MRZ válido en el lado " + documentSide);
                 // Continuar procesamiento pero marcar como advertencia
             }
             
             // Reportar progreso
-            setProgressAsync(createProgressData(30, "Extrayendo texto..."));
+            setProgressAsync(createProgressData(30, "Extrayendo MRZ..."));
             
-            // Procesar la credencial
-            CredentialResult result = IneNativeProcessor.processCredential(imagePath);
+            // Procesar la credencial extrayendo solo el MRZ del lado especificado
+            CredentialResult result = IneNativeProcessor.processCredential(imagePath, documentSide);
             
             if (result == null) {
                 Log.e(TAG, "El procesamiento no devolvió resultados");

@@ -37,11 +37,11 @@ export enum CredentialType {
 }
 
 /**
- * Lado de la credencial
+ * Lado del documento para extracción de MRZ
  */
-export enum CredentialSide {
-  FRONT = 'frontal',
-  BACK = 'reverso',
+export enum DocumentSide {
+  FRONT = 'front',
+  BACK = 'back',
 }
 
 /**
@@ -70,56 +70,51 @@ export enum ErrorCode {
 
 /**
  * Resultado del procesamiento de credencial INE
+ * Incluye datos completos del lado frontal (T2/T3) y datos MRZ del reverso
  */
-export interface CredentialResult {
-  // Información personal
+export interface MrzResult {
+  // Datos del lado frontal (comunes para T2 y T3)
   nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
+  domicilio?: string;
+  claveElector?: string;
+  curp?: string;
   fechaNacimiento?: string;
   sexo?: string;
-  
-  // Información de identificación
-  curp?: string;
-  claveElector?: string;
-  
-  // Información de domicilio
-  domicilio?: string;
   seccion?: string;
-  localidad?: string;
-  municipio?: string;
-  estado?: string;
-  
-  // Información de la credencial
-  tipo?: CredentialType;
-  lado?: CredentialSide;
   vigencia?: string;
-  añoRegistro?: string;
+  anoRegistro?: string;
+  
+  // Datos específicos de T2 (pueden estar vacíos en T3)
+  estado?: string;
+  municipio?: string;
+  localidad?: string;
+  emision?: string;
+  
+  // Datos MRZ (lado reverso)
+  mrzContent?: string;
+  mrzDocumentNumber?: string;
+  mrzNationality?: string;
+  mrzBirthDate?: string;
+  mrzExpiryDate?: string;
+  mrzSex?: string;
+  mrzName?: string;
   
   // Metadatos del procesamiento
+  documentSide?: string;
+  credentialType?: string;
   acceptable?: boolean;
   processingTimeMs?: number;
-  confidence?: number;
   errorMessage?: string;
 }
 
 /**
- * Configuración de procesamiento
+ * Configuración de procesamiento de credencial INE
  */
 export interface ProcessingConfig {
   // Configuración de calidad de imagen
   minImageWidth?: number;
   minImageHeight?: number;
   maxImageSize?: number;
-  
-  // Configuración de OCR
-  ocrLanguage?: string;
-  ocrMode?: 'fast' | 'accurate';
-  
-  // Configuración de validación
-  strictValidation?: boolean;
-  validateCurp?: boolean;
-  validateClaveElector?: boolean;
   
   // Configuración de timeout
   timeoutMs?: number;
@@ -150,7 +145,7 @@ export interface ServiceInfo {
  */
 export interface ProcessingEventListeners {
   onProgress?: (progress: ProcessingProgress) => void;
-  onComplete?: (taskId: string, result: CredentialResult) => void;
+  onComplete?: (taskId: string, result: MrzResult) => void;
   onError?: (taskId: string, errorCode: ErrorCode, errorMessage: string) => void;
   onCancelled?: (taskId: string) => void;
 }
@@ -184,7 +179,7 @@ class IneCredentialProcessor {
     // Listener para completado
     const completeSubscription = eventEmitter.addListener(
       'IneProcessor_Complete',
-      (data: { taskId: string; result: CredentialResult }) => {
+      (data: { taskId: string; result: MrzResult }) => {
         const listeners = this.eventListeners.get(data.taskId);
         if (listeners?.onComplete) {
           listeners.onComplete(data.taskId, data.result);
@@ -229,15 +224,17 @@ class IneCredentialProcessor {
   }
 
   /**
-   * Procesa una credencial INE de forma asíncrona
+   * Extrae MRZ de forma asíncrona del lado especificado del documento
    */
   async processCredentialAsync(
     imagePath: string,
+    documentSide: DocumentSide,
     config?: ProcessingConfig,
     listeners?: ProcessingEventListeners
   ): Promise<string> {
     const taskId = await IneProcessor.processCredentialAsync(
       imagePath,
+      documentSide,
       config || {}
     );
 
@@ -249,20 +246,21 @@ class IneCredentialProcessor {
   }
 
   /**
-   * Procesa una credencial INE de forma síncrona
+   * Extrae MRZ de forma síncrona del lado especificado del documento
    */
   async processCredential(
     imagePath: string,
+    documentSide: DocumentSide,
     config?: ProcessingConfig
-  ): Promise<CredentialResult> {
-    return await IneProcessor.processCredential(imagePath, config || {});
+  ): Promise<MrzResult> {
+    return await IneProcessor.processCredential(imagePath, documentSide, config || {});
   }
 
   /**
-   * Verifica si una imagen es una credencial INE válida
+   * Verifica si una imagen contiene un MRZ válido en el lado especificado
    */
-  async isValidCredential(imagePath: string): Promise<boolean> {
-    return await IneProcessor.isValidCredential(imagePath);
+  async isValidCredential(imagePath: string, documentSide: DocumentSide): Promise<boolean> {
+    return await IneProcessor.isValidCredential(imagePath, documentSide);
   }
 
   /**
@@ -326,26 +324,29 @@ export {
   type ProcessingProgress,
   type ProcessingEventListeners,
   type ServiceInfo,
+  type MrzResult,
 };
 
-// Funciones de conveniencia
+// Funciones de conveniencia para extracción de MRZ
 export const processCredential = (
   imagePath: string,
+  documentSide: DocumentSide,
   config?: ProcessingConfig
-): Promise<CredentialResult> => {
-  return processorInstance.processCredential(imagePath, config);
+): Promise<MrzResult> => {
+  return processorInstance.processCredential(imagePath, documentSide, config);
 };
 
 export const processCredentialAsync = (
   imagePath: string,
+  documentSide: DocumentSide,
   config?: ProcessingConfig,
   listeners?: ProcessingEventListeners
 ): Promise<string> => {
-  return processorInstance.processCredentialAsync(imagePath, config, listeners);
+  return processorInstance.processCredentialAsync(imagePath, documentSide, config, listeners);
 };
 
-export const isValidCredential = (imagePath: string): Promise<boolean> => {
-  return processorInstance.isValidCredential(imagePath);
+export const isValidCredential = (imagePath: string, documentSide: DocumentSide): Promise<boolean> => {
+  return processorInstance.isValidCredential(imagePath, documentSide);
 };
 
 export const cancelTask = (taskId: string): Promise<boolean> => {

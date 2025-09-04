@@ -99,6 +99,132 @@ class IneCredentialProcessorService {
     return false; // Por defecto no procesar tipos desconocidos
   }
 
+  /// Procesa una credencial INE con el lado del documento especificado como parámetro
+  /// Este método NO utiliza autodetección de lado, sino que usa el parámetro proporcionado
+  /// @param extractedText Texto extraído de la imagen mediante OCR
+  /// @param imagePath Ruta de la imagen para extracción de elementos gráficos
+  /// @param documentSide Lado del documento ('frontal' o 'reverso')
+  /// @return CredencialIneModel con los datos procesados según el lado especificado
+  static Future<CredencialIneModel> processCredentialWithSpecifiedSide(
+      String extractedText, String imagePath, String documentSide) async {
+    print('🎯 Iniciando procesamiento con lado especificado: $documentSide');
+    
+    // Validar parámetro de lado
+    if (!ValidationUtils.isValidSide(documentSide)) {
+      print('⚠️ Lado inválido especificado: $documentSide, usando frontal por defecto');
+      documentSide = 'frontal';
+    }
+    
+    // Crear modelo base según el lado especificado (sin autodetección)
+    CredencialIneModel credential;
+    if (documentSide == 'reverso' || documentSide == 'trasero') {
+      // Para lado reverso: usar SOLO conteo de QRs sin análisis OCR previo
+      print('🔍 Procesando lado reverso - usando SOLO conteo de QRs para clasificación');
+      Map<String, dynamic> qrCountResult = await QrDetectionService.countAllQrCodesInImage(imagePath);
+      int qrCount = qrCountResult['qrCount'] ?? 0;
+      print('📊 Códigos QR detectados: $qrCount');
+      
+      // Detectar tipo usando SOLO conteo de QRs (sin análisis de texto)
+      String credentialType = _detectCredentialTypeByQrCount(qrCount);
+      print('🔍 Tipo de credencial detectado por QR: $credentialType');
+      
+      // Crear modelo básico con solo el tipo detectado por QRs
+      credential = CredencialIneModel(
+        nombre: '',
+        domicilio: '',
+        claveElector: '',
+        curp: '',
+        fechaNacimiento: '',
+        sexo: '',
+        anoRegistro: '',
+        seccion: '',
+        vigencia: '',
+        tipo: credentialType,
+        lado: documentSide,
+        estado: '',
+        municipio: '',
+        localidad: '',
+        photoPath: '',
+        signaturePath: '',
+        qrContent: '',
+        qrImagePath: '',
+        barcodeContent: '',
+        barcodeImagePath: '',
+        mrzContent: '',
+        mrzImagePath: '',
+        mrzDocumentNumber: '',
+        mrzNationality: '',
+        mrzBirthDate: '',
+        mrzExpiryDate: '',
+        mrzSex: '',
+        signatureHuellaImagePath: '',
+      );
+    } else {
+      // Para lado frontal: usar lógica original basada en texto
+      print('🔍 Procesando lado frontal - usando análisis de texto OCR');
+      credential = processCredentialText(extractedText);
+      print('🔍 Tipo de credencial detectado por texto: ${credential.tipo}');
+    }
+    
+    // Establecer el lado especificado (sin detección automática)
+    credential = credential.copyWith(lado: documentSide);
+    
+    // Procesar elementos gráficos según el lado y tipo
+    if (documentSide == 'frontal') {
+      // Extraer foto del rostro para lado frontal
+      try {
+        final facePhotoPath = await FaceDetectionService.extractFaceFromCredential(imagePath);
+        if (facePhotoPath.isNotEmpty) {
+          credential = credential.copyWith(photoPath: facePhotoPath);
+          print('📸 Foto del rostro extraída: $facePhotoPath');
+          
+          // Para T3 frontal, extraer firma después de extraer la foto
+          if (credential.tipo == 'T3') {
+            try {
+              final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+              final signaturePath = await SignatureExtractionService.extractSignatureFromT3Credential(
+                imagePath: imagePath,
+                facePhotoPath: facePhotoPath,
+                credentialId: credentialId,
+              );
+              if (signaturePath.isNotEmpty) {
+                credential = credential.copyWith(signaturePath: signaturePath);
+                print('✍️ Firma extraída para T3: $signaturePath');
+              }
+            } catch (e) {
+              print('⚠️ Error extrayendo firma T3: $e');
+            }
+          }
+        }
+      } catch (e) {
+        print('⚠️ Error extrayendo foto del rostro: $e');
+      }
+    } else {
+      // Para lado reverso, extraer MRZ
+      try {
+        final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+        final mrzResult = await MrzDetectionService.detectMrzFromCredential(imagePath, credentialId);
+        if (mrzResult['success'] == true) {
+          credential = credential.copyWith(
+            mrzContent: mrzResult['mrzText'] ?? '',
+            mrzImagePath: mrzResult['mrzImagePath'] ?? '',
+            mrzDocumentNumber: mrzResult['documentNumber'] ?? '',
+            mrzNationality: mrzResult['nationality'] ?? '',
+            mrzBirthDate: mrzResult['birthDate'] ?? '',
+            mrzExpiryDate: mrzResult['expiryDate'] ?? '',
+            mrzSex: mrzResult['sex'] ?? '',
+          );
+          print('📄 MRZ extraído: ${mrzResult['mrzText']}');
+        }
+      } catch (e) {
+        print('⚠️ Error extrayendo MRZ: $e');
+      }
+    }
+    
+    print('✅ Procesamiento completado para lado: $documentSide');
+    return credential;
+  }
+
   /// Verifica si una credencial cumple con los requisitos mínimos
   static bool isCredentialAcceptable(CredencialIneModel credential) {
     // Buscar la configuración del tipo de credencial
@@ -2411,12 +2537,91 @@ class IneCredentialProcessorService {
     return corrected;
   }
 
-  /// Valida si los datos extraídos son suficientes
+  /// Valida si los datos extraídos son suficientes según el tipo de credencial y lado del documento
   static bool validateExtractedData(CredencialIneModel credencial) {
-    // Campos mínimos requeridos para considerar válida la extracción
-    return credencial.nombre.isNotEmpty ||
+    // Validación básica: al menos uno de los campos principales debe estar presente
+    bool hasBasicData = credencial.nombre.isNotEmpty ||
         credencial.curp.isNotEmpty ||
         credencial.claveElector.isNotEmpty;
+    
+    if (!hasBasicData) {
+      return false;
+    }
+    
+    // Validación específica por lado del documento
+    if (credencial.lado == 'frontal') {
+      // Para el lado frontal, validar según el tipo de credencial
+      if (credencial.tipo == 'T2') {
+        // T2 debe tener campos adicionales como estado, municipio, localidad
+        return _validateT2FrontData(credencial);
+      } else if (credencial.tipo == 'T3') {
+        // T3 tiene menos campos que T2
+        return _validateT3FrontData(credencial);
+      }
+      // Si no se detectó el tipo, validar campos comunes
+      return _validateCommonFrontData(credencial);
+    } else if (credencial.lado == 'reverso') {
+      // Para el lado reverso, validar datos MRZ
+      return _validateMrzData(credencial);
+    }
+    
+    // Si no se especificó el lado, aceptar si tiene datos básicos
+    return true;
+  }
+  
+  /// Valida datos frontales comunes para T2 y T3
+  static bool _validateCommonFrontData(CredencialIneModel credencial) {
+    int validFields = 0;
+    
+    if (credencial.nombre.isNotEmpty) validFields++;
+    if (credencial.claveElector.isNotEmpty) validFields++;
+    if (credencial.curp.isNotEmpty) validFields++;
+    if (credencial.fechaNacimiento.isNotEmpty) validFields++;
+    if (credencial.sexo.isNotEmpty) validFields++;
+    if (credencial.seccion.isNotEmpty) validFields++;
+    if (credencial.vigencia.isNotEmpty) validFields++;
+    
+    // Requiere al menos 3 campos válidos para considerar exitosa la extracción frontal
+    return validFields >= 3;
+  }
+  
+  /// Valida datos específicos de credencial T2 (lado frontal)
+  static bool _validateT2FrontData(CredencialIneModel credencial) {
+    // Validar campos comunes primero
+    if (!_validateCommonFrontData(credencial)) {
+      return false;
+    }
+    
+    // Validar campos específicos de T2
+    int t2Fields = 0;
+    if (credencial.estado.isNotEmpty) t2Fields++;
+    if (credencial.municipio.isNotEmpty) t2Fields++;
+    if (credencial.localidad.isNotEmpty) t2Fields++;
+    
+    // Para T2, al menos 2 de los campos específicos deben estar presentes
+    return t2Fields >= 2;
+  }
+  
+  /// Valida datos específicos de credencial T3 (lado frontal)
+  static bool _validateT3FrontData(CredencialIneModel credencial) {
+    // Para T3, solo validar campos comunes ya que no tiene campos específicos adicionales
+    return _validateCommonFrontData(credencial);
+  }
+  
+  /// Valida datos MRZ (lado reverso)
+  static bool _validateMrzData(CredencialIneModel credencial) {
+    int mrzFields = 0;
+    
+    if (credencial.mrzContent.isNotEmpty) mrzFields++;
+    if (credencial.mrzDocumentNumber.isNotEmpty) mrzFields++;
+    if (credencial.mrzNationality.isNotEmpty) mrzFields++;
+    if (credencial.mrzBirthDate.isNotEmpty) mrzFields++;
+    if (credencial.mrzExpiryDate.isNotEmpty) mrzFields++;
+    if (credencial.mrzSex.isNotEmpty) mrzFields++;
+    // Removido mrzName ya que no existe en el modelo
+    
+    // Requiere al menos 4 campos MRZ válidos para considerar exitosa la extracción del reverso
+    return mrzFields >= 4;
   }
 
   /// Extrae la vigencia usando algoritmos de similitud para manejar variantes OCR

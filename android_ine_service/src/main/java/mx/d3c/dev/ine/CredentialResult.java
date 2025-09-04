@@ -6,38 +6,40 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Modelo de datos para el resultado del procesamiento de credenciales INE
+ * Modelo de datos completo para el resultado del procesamiento de credenciales INE
+ * Contiene datos del lado frontal (específicos por tipo T2/T3) y datos MRZ del reverso
  * Implementa Parcelable para transferencia entre procesos Android
  */
 public class CredentialResult implements Parcelable {
+    // Datos del lado frontal - Comunes para T2 y T3
     private String nombre;
     private String domicilio;
     private String claveElector;
     private String curp;
+    private String anoRegistro;
     private String fechaNacimiento;
     private String sexo;
-    private String anoRegistro;
     private String seccion;
     private String vigencia;
-    private String tipo;
-    private String lado;
+    
+    // Datos del lado frontal - Específicos para T2
     private String estado;
     private String municipio;
     private String localidad;
-    private String photoPath;
-    private String signaturePath;
-    private String qrContent;
-    private String qrImagePath;
-    private String barcodeContent;
-    private String barcodeImagePath;
+    private String emision;
+    
+    // Datos del MRZ (lado reverso)
     private String mrzContent;
-    private String mrzImagePath;
     private String mrzDocumentNumber;
     private String mrzNationality;
     private String mrzBirthDate;
     private String mrzExpiryDate;
     private String mrzSex;
-    private String signatureHuellaImagePath;
+    private String mrzName;
+    
+    // Metadatos del procesamiento
+    private String documentSide;
+    private String credentialType; // "T2" o "T3"
     private boolean isAcceptable;
     private long processingTimeMs;
     private String errorMessage;
@@ -47,34 +49,35 @@ public class CredentialResult implements Parcelable {
     }
 
     protected CredentialResult(Parcel in) {
+        // Datos del lado frontal - Comunes
         nombre = in.readString();
         domicilio = in.readString();
         claveElector = in.readString();
         curp = in.readString();
+        anoRegistro = in.readString();
         fechaNacimiento = in.readString();
         sexo = in.readString();
-        anoRegistro = in.readString();
         seccion = in.readString();
         vigencia = in.readString();
-        tipo = in.readString();
-        lado = in.readString();
+        
+        // Datos del lado frontal - Específicos T2
         estado = in.readString();
         municipio = in.readString();
         localidad = in.readString();
-        photoPath = in.readString();
-        signaturePath = in.readString();
-        qrContent = in.readString();
-        qrImagePath = in.readString();
-        barcodeContent = in.readString();
-        barcodeImagePath = in.readString();
+        emision = in.readString();
+        
+        // Datos del MRZ
         mrzContent = in.readString();
-        mrzImagePath = in.readString();
         mrzDocumentNumber = in.readString();
         mrzNationality = in.readString();
         mrzBirthDate = in.readString();
         mrzExpiryDate = in.readString();
         mrzSex = in.readString();
-        signatureHuellaImagePath = in.readString();
+        mrzName = in.readString();
+        
+        // Metadatos
+        documentSide = in.readString();
+        credentialType = in.readString();
         isAcceptable = in.readByte() != 0;
         processingTimeMs = in.readLong();
         errorMessage = in.readString();
@@ -82,34 +85,35 @@ public class CredentialResult implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+        // Datos del lado frontal - Comunes
         dest.writeString(nombre);
         dest.writeString(domicilio);
         dest.writeString(claveElector);
         dest.writeString(curp);
+        dest.writeString(anoRegistro);
         dest.writeString(fechaNacimiento);
         dest.writeString(sexo);
-        dest.writeString(anoRegistro);
         dest.writeString(seccion);
         dest.writeString(vigencia);
-        dest.writeString(tipo);
-        dest.writeString(lado);
+        
+        // Datos del lado frontal - Específicos T2
         dest.writeString(estado);
         dest.writeString(municipio);
         dest.writeString(localidad);
-        dest.writeString(photoPath);
-        dest.writeString(signaturePath);
-        dest.writeString(qrContent);
-        dest.writeString(qrImagePath);
-        dest.writeString(barcodeContent);
-        dest.writeString(barcodeImagePath);
+        dest.writeString(emision);
+        
+        // Datos del MRZ
         dest.writeString(mrzContent);
-        dest.writeString(mrzImagePath);
         dest.writeString(mrzDocumentNumber);
         dest.writeString(mrzNationality);
         dest.writeString(mrzBirthDate);
         dest.writeString(mrzExpiryDate);
         dest.writeString(mrzSex);
-        dest.writeString(signatureHuellaImagePath);
+        dest.writeString(mrzName);
+        
+        // Metadatos
+        dest.writeString(documentSide);
+        dest.writeString(credentialType);
         dest.writeByte((byte) (isAcceptable ? 1 : 0));
         dest.writeLong(processingTimeMs);
         dest.writeString(errorMessage);
@@ -133,45 +137,50 @@ public class CredentialResult implements Parcelable {
     };
 
     /**
-     * Convierte el resultado a JSON
+     * Convierte el resultado a JSON con todos los datos disponibles
      */
     public String toJson() {
         try {
             JSONObject json = new JSONObject();
+            
+            // Datos del lado frontal - Comunes para T2 y T3
             json.put("nombre", nombre != null ? nombre : "");
             json.put("domicilio", domicilio != null ? domicilio : "");
             json.put("claveElector", claveElector != null ? claveElector : "");
             json.put("curp", curp != null ? curp : "");
+            json.put("anoRegistro", anoRegistro != null ? anoRegistro : "");
             json.put("fechaNacimiento", fechaNacimiento != null ? fechaNacimiento : "");
             json.put("sexo", sexo != null ? sexo : "");
-            json.put("anoRegistro", anoRegistro != null ? anoRegistro : "");
             json.put("seccion", seccion != null ? seccion : "");
             json.put("vigencia", vigencia != null ? vigencia : "");
-            json.put("tipo", tipo != null ? tipo : "");
-            json.put("lado", lado != null ? lado : "");
+            
+            // Datos del lado frontal - Específicos para T2 (opcionales para T3)
             json.put("estado", estado != null ? estado : "");
             json.put("municipio", municipio != null ? municipio : "");
             json.put("localidad", localidad != null ? localidad : "");
-            json.put("photoPath", photoPath != null ? photoPath : "");
-            json.put("signaturePath", signaturePath != null ? signaturePath : "");
-            json.put("qrContent", qrContent != null ? qrContent : "");
-            json.put("qrImagePath", qrImagePath != null ? qrImagePath : "");
-            json.put("barcodeContent", barcodeContent != null ? barcodeContent : "");
-            json.put("barcodeImagePath", barcodeImagePath != null ? barcodeImagePath : "");
-            json.put("mrzContent", mrzContent != null ? mrzContent : "");
-            json.put("mrzImagePath", mrzImagePath != null ? mrzImagePath : "");
-            json.put("mrzDocumentNumber", mrzDocumentNumber != null ? mrzDocumentNumber : "");
-            json.put("mrzNationality", mrzNationality != null ? mrzNationality : "");
-            json.put("mrzBirthDate", mrzBirthDate != null ? mrzBirthDate : "");
-            json.put("mrzExpiryDate", mrzExpiryDate != null ? mrzExpiryDate : "");
-            json.put("mrzSex", mrzSex != null ? mrzSex : "");
-            json.put("signatureHuellaImagePath", signatureHuellaImagePath != null ? signatureHuellaImagePath : "");
+            json.put("emision", emision != null ? emision : "");
+            
+            // Datos del MRZ (lado reverso)
+            JSONObject mrzData = new JSONObject();
+            mrzData.put("content", mrzContent != null ? mrzContent : "");
+            mrzData.put("documentNumber", mrzDocumentNumber != null ? mrzDocumentNumber : "");
+            mrzData.put("nationality", mrzNationality != null ? mrzNationality : "");
+            mrzData.put("birthDate", mrzBirthDate != null ? mrzBirthDate : "");
+            mrzData.put("expiryDate", mrzExpiryDate != null ? mrzExpiryDate : "");
+            mrzData.put("sex", mrzSex != null ? mrzSex : "");
+            mrzData.put("name", mrzName != null ? mrzName : "");
+            json.put("mrz", mrzData);
+            
+            // Metadatos
+            json.put("documentSide", documentSide != null ? documentSide : "");
+            json.put("credentialType", credentialType != null ? credentialType : "");
             json.put("isAcceptable", isAcceptable);
             json.put("processingTimeMs", processingTimeMs);
             json.put("errorMessage", errorMessage != null ? errorMessage : "");
+            
             return json.toString();
         } catch (JSONException e) {
-            return "{}";
+            return "{\"error\":\"Error serializando resultado: " + e.getMessage() + "\"}";
         }
     }
 
@@ -179,140 +188,294 @@ public class CredentialResult implements Parcelable {
      * Crea un CredentialResult desde JSON
      */
     public static CredentialResult fromJson(String jsonString) {
+        CredentialResult result = new CredentialResult();
+        
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            result.setErrorMessage("JSON vacío o nulo");
+            result.setAcceptable(false);
+            return result;
+        }
+        
         try {
             JSONObject json = new JSONObject(jsonString);
-            CredentialResult result = new CredentialResult();
             
-            result.nombre = json.optString("nombre", "");
-            result.domicilio = json.optString("domicilio", "");
-            result.claveElector = json.optString("claveElector", "");
-            result.curp = json.optString("curp", "");
-            result.fechaNacimiento = json.optString("fechaNacimiento", "");
-            result.sexo = json.optString("sexo", "");
-            result.anoRegistro = json.optString("anoRegistro", "");
-            result.seccion = json.optString("seccion", "");
-            result.vigencia = json.optString("vigencia", "");
-            result.tipo = json.optString("tipo", "");
-            result.lado = json.optString("lado", "");
-            result.estado = json.optString("estado", "");
-            result.municipio = json.optString("municipio", "");
-            result.localidad = json.optString("localidad", "");
-            result.photoPath = json.optString("photoPath", "");
-            result.signaturePath = json.optString("signaturePath", "");
-            result.qrContent = json.optString("qrContent", "");
-            result.qrImagePath = json.optString("qrImagePath", "");
-            result.barcodeContent = json.optString("barcodeContent", "");
-            result.barcodeImagePath = json.optString("barcodeImagePath", "");
-            result.mrzContent = json.optString("mrzContent", "");
-            result.mrzImagePath = json.optString("mrzImagePath", "");
-            result.mrzDocumentNumber = json.optString("mrzDocumentNumber", "");
-            result.mrzNationality = json.optString("mrzNationality", "");
-            result.mrzBirthDate = json.optString("mrzBirthDate", "");
-            result.mrzExpiryDate = json.optString("mrzExpiryDate", "");
-            result.mrzSex = json.optString("mrzSex", "");
-            result.signatureHuellaImagePath = json.optString("signatureHuellaImagePath", "");
-            result.isAcceptable = json.optBoolean("isAcceptable", false);
-            result.processingTimeMs = json.optLong("processingTimeMs", 0);
-            result.errorMessage = json.optString("errorMessage", "");
+            // Datos del lado frontal - Comunes para T2 y T3
+            result.setNombre(json.optString("nombre", ""));
+            result.setDomicilio(json.optString("domicilio", ""));
+            result.setClaveElector(json.optString("claveElector", ""));
+            result.setCurp(json.optString("curp", ""));
+            result.setAnoRegistro(json.optString("anoRegistro", ""));
+            result.setFechaNacimiento(json.optString("fechaNacimiento", ""));
+            result.setSexo(json.optString("sexo", ""));
+            result.setSeccion(json.optString("seccion", ""));
+            result.setVigencia(json.optString("vigencia", ""));
             
-            return result;
+            // Datos del lado frontal - Específicos para T2
+            result.setEstado(json.optString("estado", ""));
+            result.setMunicipio(json.optString("municipio", ""));
+            result.setLocalidad(json.optString("localidad", ""));
+            result.setEmision(json.optString("emision", ""));
+            
+            // Datos del MRZ
+            if (json.has("mrz")) {
+                JSONObject mrzData = json.getJSONObject("mrz");
+                result.setMrzContent(mrzData.optString("content", ""));
+                result.setMrzDocumentNumber(mrzData.optString("documentNumber", ""));
+                result.setMrzNationality(mrzData.optString("nationality", ""));
+                result.setMrzBirthDate(mrzData.optString("birthDate", ""));
+                result.setMrzExpiryDate(mrzData.optString("expiryDate", ""));
+                result.setMrzSex(mrzData.optString("sex", ""));
+                result.setMrzName(mrzData.optString("name", ""));
+            }
+            
+            // Metadatos
+            result.setDocumentSide(json.optString("documentSide", ""));
+            result.setCredentialType(json.optString("credentialType", ""));
+            result.setAcceptable(json.optBoolean("isAcceptable", false));
+            result.setProcessingTimeMs(json.optLong("processingTimeMs", 0));
+            result.setErrorMessage(json.optString("errorMessage", ""));
+            
         } catch (JSONException e) {
-            return new CredentialResult();
+            result.setErrorMessage("Error parseando JSON: " + e.getMessage());
+            result.setAcceptable(false);
         }
+        
+        return result;
     }
 
     // Getters y Setters
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
     
-    public String getDomicilio() { return domicilio; }
-    public void setDomicilio(String domicilio) { this.domicilio = domicilio; }
-    
-    public String getClaveElector() { return claveElector; }
-    public void setClaveElector(String claveElector) { this.claveElector = claveElector; }
-    
-    public String getCurp() { return curp; }
-    public void setCurp(String curp) { this.curp = curp; }
-    
-    public String getFechaNacimiento() { return fechaNacimiento; }
-    public void setFechaNacimiento(String fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
-    
-    public String getSexo() { return sexo; }
-    public void setSexo(String sexo) { this.sexo = sexo; }
-    
-    public String getAnoRegistro() { return anoRegistro; }
-    public void setAnoRegistro(String anoRegistro) { this.anoRegistro = anoRegistro; }
-    
-    public String getSeccion() { return seccion; }
-    public void setSeccion(String seccion) { this.seccion = seccion; }
-    
-    public String getVigencia() { return vigencia; }
-    public void setVigencia(String vigencia) { this.vigencia = vigencia; }
-    
-    public String getTipo() { return tipo; }
-    public void setTipo(String tipo) { this.tipo = tipo; }
-    
-    public String getLado() { return lado; }
-    public void setLado(String lado) { this.lado = lado; }
-    
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
-    
-    public String getMunicipio() { return municipio; }
-    public void setMunicipio(String municipio) { this.municipio = municipio; }
-    
-    public String getLocalidad() { return localidad; }
-    public void setLocalidad(String localidad) { this.localidad = localidad; }
-    
-    public boolean isAcceptable() { return isAcceptable; }
-    public void setAcceptable(boolean acceptable) { isAcceptable = acceptable; }
-    
-    public long getProcessingTimeMs() { return processingTimeMs; }
-    public void setProcessingTimeMs(long processingTimeMs) { this.processingTimeMs = processingTimeMs; }
-    
-    public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    // Datos del lado frontal - Comunes para T2 y T3
+    public String getNombre() {
+        return nombre;
+    }
 
-    // Getters y setters para campos adicionales
-    public String getPhotoPath() { return photoPath; }
-    public void setPhotoPath(String photoPath) { this.photoPath = photoPath; }
-    
-    public String getSignaturePath() { return signaturePath; }
-    public void setSignaturePath(String signaturePath) { this.signaturePath = signaturePath; }
-    
-    public String getQrContent() { return qrContent; }
-    public void setQrContent(String qrContent) { this.qrContent = qrContent; }
-    
-    public String getQrImagePath() { return qrImagePath; }
-    public void setQrImagePath(String qrImagePath) { this.qrImagePath = qrImagePath; }
-    
-    public String getBarcodeContent() { return barcodeContent; }
-    public void setBarcodeContent(String barcodeContent) { this.barcodeContent = barcodeContent; }
-    
-    public String getBarcodeImagePath() { return barcodeImagePath; }
-    public void setBarcodeImagePath(String barcodeImagePath) { this.barcodeImagePath = barcodeImagePath; }
-    
-    public String getMrzContent() { return mrzContent; }
-    public void setMrzContent(String mrzContent) { this.mrzContent = mrzContent; }
-    
-    public String getMrzImagePath() { return mrzImagePath; }
-    public void setMrzImagePath(String mrzImagePath) { this.mrzImagePath = mrzImagePath; }
-    
-    public String getMrzDocumentNumber() { return mrzDocumentNumber; }
-    public void setMrzDocumentNumber(String mrzDocumentNumber) { this.mrzDocumentNumber = mrzDocumentNumber; }
-    
-    public String getMrzNationality() { return mrzNationality; }
-    public void setMrzNationality(String mrzNationality) { this.mrzNationality = mrzNationality; }
-    
-    public String getMrzBirthDate() { return mrzBirthDate; }
-    public void setMrzBirthDate(String mrzBirthDate) { this.mrzBirthDate = mrzBirthDate; }
-    
-    public String getMrzExpiryDate() { return mrzExpiryDate; }
-    public void setMrzExpiryDate(String mrzExpiryDate) { this.mrzExpiryDate = mrzExpiryDate; }
-    
-    public String getMrzSex() { return mrzSex; }
-    public void setMrzSex(String mrzSex) { this.mrzSex = mrzSex; }
-    
-    public String getSignatureHuellaImagePath() { return signatureHuellaImagePath; }
-    public void setSignatureHuellaImagePath(String signatureHuellaImagePath) { this.signatureHuellaImagePath = signatureHuellaImagePath; }
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getDomicilio() {
+        return domicilio;
+    }
+
+    public void setDomicilio(String domicilio) {
+        this.domicilio = domicilio;
+    }
+
+    public String getClaveElector() {
+        return claveElector;
+    }
+
+    public void setClaveElector(String claveElector) {
+        this.claveElector = claveElector;
+    }
+
+    public String getCurp() {
+        return curp;
+    }
+
+    public void setCurp(String curp) {
+        this.curp = curp;
+    }
+
+    public String getAnoRegistro() {
+        return anoRegistro;
+    }
+
+    public void setAnoRegistro(String anoRegistro) {
+        this.anoRegistro = anoRegistro;
+    }
+
+    public String getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(String fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public String getSexo() {
+        return sexo;
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo = sexo;
+    }
+
+    public String getSeccion() {
+        return seccion;
+    }
+
+    public void setSeccion(String seccion) {
+        this.seccion = seccion;
+    }
+
+    public String getVigencia() {
+        return vigencia;
+    }
+
+    public void setVigencia(String vigencia) {
+        this.vigencia = vigencia;
+    }
+
+    // Datos del lado frontal - Específicos para T2
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public String getMunicipio() {
+        return municipio;
+    }
+
+    public void setMunicipio(String municipio) {
+        this.municipio = municipio;
+    }
+
+    public String getLocalidad() {
+        return localidad;
+    }
+
+    public void setLocalidad(String localidad) {
+        this.localidad = localidad;
+    }
+
+    public String getEmision() {
+        return emision;
+    }
+
+    public void setEmision(String emision) {
+        this.emision = emision;
+    }
+
+    // Datos del MRZ (lado reverso)
+    public String getMrzContent() {
+        return mrzContent;
+    }
+
+    public void setMrzContent(String mrzContent) {
+        this.mrzContent = mrzContent;
+    }
+
+    public String getMrzDocumentNumber() {
+        return mrzDocumentNumber;
+    }
+
+    public void setMrzDocumentNumber(String mrzDocumentNumber) {
+        this.mrzDocumentNumber = mrzDocumentNumber;
+    }
+
+    public String getMrzNationality() {
+        return mrzNationality;
+    }
+
+    public void setMrzNationality(String mrzNationality) {
+        this.mrzNationality = mrzNationality;
+    }
+
+    public String getMrzBirthDate() {
+        return mrzBirthDate;
+    }
+
+    public void setMrzBirthDate(String mrzBirthDate) {
+        this.mrzBirthDate = mrzBirthDate;
+    }
+
+    public String getMrzExpiryDate() {
+        return mrzExpiryDate;
+    }
+
+    public void setMrzExpiryDate(String mrzExpiryDate) {
+        this.mrzExpiryDate = mrzExpiryDate;
+    }
+
+    public String getMrzSex() {
+        return mrzSex;
+    }
+
+    public void setMrzSex(String mrzSex) {
+        this.mrzSex = mrzSex;
+    }
+
+    public String getMrzName() {
+        return mrzName;
+    }
+
+    public void setMrzName(String mrzName) {
+        this.mrzName = mrzName;
+    }
+
+    public String getDocumentSide() {
+        return documentSide;
+    }
+
+    public void setDocumentSide(String documentSide) {
+        this.documentSide = documentSide;
+    }
+
+    public String getCredentialType() {
+        return credentialType;
+    }
+
+    public void setCredentialType(String credentialType) {
+        this.credentialType = credentialType;
+    }
+
+    public boolean isAcceptable() {
+        return isAcceptable;
+    }
+
+    public void setAcceptable(boolean acceptable) {
+        isAcceptable = acceptable;
+    }
+
+    public long getProcessingTimeMs() {
+        return processingTimeMs;
+    }
+
+    public void setProcessingTimeMs(long processingTimeMs) {
+        this.processingTimeMs = processingTimeMs;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    @Override
+    public String toString() {
+        return "CredentialResult{" +
+                "nombre='" + nombre + '\'' +
+                ", domicilio='" + domicilio + '\'' +
+                ", claveElector='" + claveElector + '\'' +
+                ", curp='" + curp + '\'' +
+                ", anoRegistro='" + anoRegistro + '\'' +
+                ", fechaNacimiento='" + fechaNacimiento + '\'' +
+                ", sexo='" + sexo + '\'' +
+                ", seccion='" + seccion + '\'' +
+                ", vigencia='" + vigencia + '\'' +
+                ", estado='" + estado + '\'' +
+                ", municipio='" + municipio + '\'' +
+                ", localidad='" + localidad + '\'' +
+                ", emision='" + emision + '\'' +
+                ", mrzContent='" + mrzContent + '\'' +
+                ", mrzDocumentNumber='" + mrzDocumentNumber + '\'' +
+                ", mrzNationality='" + mrzNationality + '\'' +
+                ", mrzBirthDate='" + mrzBirthDate + '\'' +
+                ", mrzExpiryDate='" + mrzExpiryDate + '\'' +
+                ", mrzSex='" + mrzSex + '\'' +
+                ", mrzName='" + mrzName + '\'' +
+                ", documentSide='" + documentSide + '\'' +
+                ", credentialType='" + credentialType + '\'' +
+                ", isAcceptable=" + isAcceptable +
+                ", processingTimeMs=" + processingTimeMs +
+                ", errorMessage='" + errorMessage + '\'' +
+                '}';
+    }
 }

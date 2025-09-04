@@ -242,29 +242,47 @@ const checkService = async () => {
 
 ```typescript
 interface CredentialResult {
-  // Información personal
+  // Datos del lado frontal - Comunes para T2 y T3
   nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
+  domicilio?: string;
+  claveElector?: string;
+  curp?: string;
+  anoRegistro?: string;
   fechaNacimiento?: string;
   sexo?: string;
-  
-  // Información de identificación
-  curp?: string;
-  claveElector?: string;
-  
-  // Información de domicilio
-  domicilio?: string;
   seccion?: string;
-  localidad?: string;
-  municipio?: string;
-  estado?: string;
+  vigencia?: string;
   
-  // Información de la credencial
+  // Datos del lado frontal - Específicos para T2
+  apellidoPaterno?: string; // Solo credenciales T2
+  apellidoMaterno?: string; // Solo credenciales T2
+  estado?: string; // Solo credenciales T2
+  municipio?: string; // Solo credenciales T2
+  localidad?: string; // Solo credenciales T2
+  emision?: string; // Solo credenciales T2
+  
+  // Datos del MRZ (lado reverso)
+  mrzContent?: string;
+  mrzDocumentNumber?: string;
+  mrzNationality?: string;
+  mrzBirthDate?: string;
+  mrzExpiryDate?: string;
+  mrzSex?: string;
+  mrzName?: string;
+  
+  // Metadatos del procesamiento
   tipo?: CredentialType; // 't2' | 't3'
   lado?: CredentialSide; // 'frontal' | 'reverso'
-  vigencia?: string;
-  añoRegistro?: string;
+  
+  // Rutas de imágenes extraídas
+  photoPath?: string;
+  signaturePath?: string;
+  qrContent?: string;
+  qrImagePath?: string;
+  barcodeContent?: string;
+  barcodeImagePath?: string;
+  mrzImagePath?: string;
+  signatureHuellaImagePath?: string;
   
   // Metadatos del procesamiento
   acceptable?: boolean;

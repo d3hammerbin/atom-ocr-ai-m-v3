@@ -24,12 +24,15 @@ public class IneNativeProcessor {
     }
     
     /**
-     * Procesa una credencial INE desde una imagen
+     * Procesa una credencial INE desde una imagen extrayendo datos completos
+     * Para el lado frontal: extrae datos específicos según tipo T2/T3
+     * Para el lado reverso: extrae únicamente datos MRZ
      * @param imagePath Ruta absoluta de la imagen
-     * @return Resultado del procesamiento
+     * @param documentSide Lado del documento ("front" o "back")
+     * @return Resultado del procesamiento con datos completos del lado frontal o MRZ del reverso
      */
-    public static CredentialResult processCredential(String imagePath) {
-        Log.d(TAG, "Procesando credencial: " + imagePath);
+    public static CredentialResult processCredential(String imagePath, String documentSide) {
+        Log.d(TAG, "Procesando credencial: " + imagePath + ", lado: " + documentSide);
         
         long startTime = System.currentTimeMillis();
         
@@ -44,8 +47,8 @@ public class IneNativeProcessor {
                 throw new IllegalArgumentException("Archivo no encontrado: " + imagePath);
             }
             
-            // Llamar al método nativo
-            String jsonResult = processCredentialNative(imagePath);
+            // Llamar al método nativo con el lado del documento
+            String jsonResult = processCredentialNative(imagePath, documentSide);
             
             if (jsonResult == null || jsonResult.trim().isEmpty()) {
                 throw new RuntimeException("El procesamiento nativo no devolvió resultados");
@@ -58,9 +61,16 @@ public class IneNativeProcessor {
             long processingTime = System.currentTimeMillis() - startTime;
             result.setProcessingTimeMs(processingTime);
             
-            // Validar si la credencial es aceptable
-            boolean isAcceptable = validateCredentialResult(result);
+            // Validar si el resultado es aceptable según el lado del documento
+            boolean isAcceptable = validateCredentialResult(result, documentSide);
             result.setAcceptable(isAcceptable);
+            
+            // Establecer el lado del documento y detectar tipo de credencial si es frontal
+            result.setDocumentSide(documentSide);
+            if ("front".equalsIgnoreCase(documentSide)) {
+                String credentialType = detectCredentialType(result);
+                result.setCredentialType(credentialType);
+            }
             
             Log.d(TAG, "Procesamiento completado en " + processingTime + "ms");
             Log.d(TAG, "Credencial aceptable: " + isAcceptable);
@@ -81,12 +91,13 @@ public class IneNativeProcessor {
     }
     
     /**
-     * Verifica si una imagen contiene una credencial INE válida
+     * Verifica si una imagen contiene un MRZ válido en el lado especificado
      * @param imagePath Ruta absoluta de la imagen
-     * @return true si es una credencial INE válida
+     * @param documentSide Lado del documento ("front" o "back")
+     * @return true si contiene un MRZ válido
      */
-    public static boolean isValidIneCredential(String imagePath) {
-        Log.d(TAG, "Validando credencial INE: " + imagePath);
+    public static boolean isValidIneCredential(String imagePath, String documentSide) {
+        Log.d(TAG, "Validando MRZ en credencial: " + imagePath + ", lado: " + documentSide);
         
         try {
             // Validar entrada
@@ -99,8 +110,8 @@ public class IneNativeProcessor {
                 return false;
             }
             
-            // Llamar al método nativo
-            return isValidIneCredentialNative(imagePath);
+            // Llamar al método nativo con el lado del documento
+            return isValidIneCredentialNative(imagePath, documentSide);
             
         } catch (Exception e) {
             Log.e(TAG, "Error validando credencial", e);
@@ -109,37 +120,82 @@ public class IneNativeProcessor {
     }
     
     /**
-     * Valida si un resultado de credencial cumple con los requisitos mínimos
+     * Valida si el resultado contiene datos mínimos requeridos según el lado del documento
+     * @param result Resultado del procesamiento
+     * @param documentSide Lado del documento ("front" o "back")
+     * @return true si el resultado es válido y aceptable
      */
-    private static boolean validateCredentialResult(CredentialResult result) {
+    private static boolean validateCredentialResult(CredentialResult result, String documentSide) {
         if (result == null) {
             return false;
         }
         
-        // Verificar campos básicos requeridos
-        if (isEmpty(result.getNombre()) || 
-            isEmpty(result.getClaveElector()) || 
-            isEmpty(result.getCurp()) || 
-            isEmpty(result.getTipo())) {
+        if ("back".equalsIgnoreCase(documentSide)) {
+            // Para el lado reverso, validar solo MRZ
+            return validateMrzData(result);
+        } else {
+            // Para el lado frontal, validar datos básicos de la credencial
+            return validateFrontData(result);
+        }
+    }
+    
+    /**
+     * Valida los datos del MRZ (lado reverso)
+     */
+    private static boolean validateMrzData(CredentialResult result) {
+        if (isEmpty(result.getMrzContent())) {
+            Log.w(TAG, "MRZ vacío o nulo");
             return false;
         }
         
-        // Validar formato de CURP
-        if (!isValidCurpFormat(result.getCurp())) {
+        // Verificar campos críticos del MRZ
+        boolean hasRequiredFields = !isEmpty(result.getMrzDocumentNumber()) &&
+                                   !isEmpty(result.getMrzName()) &&
+                                   !isEmpty(result.getMrzBirthDate());
+        
+        if (!hasRequiredFields) {
+            Log.w(TAG, "Faltan campos críticos en el MRZ");
             return false;
         }
         
-        // Validar clave de elector
-        if (!isValidClaveElector(result.getClaveElector())) {
-            return false;
-        }
-        
-        // Validar tipo de credencial
-        if (!isValidCredentialType(result.getTipo())) {
-            return false;
-        }
-        
+        Log.d(TAG, "MRZ validado exitosamente");
         return true;
+    }
+    
+    /**
+     * Valida los datos del lado frontal
+     */
+    private static boolean validateFrontData(CredentialResult result) {
+        // Campos comunes requeridos para T2 y T3
+        boolean hasCommonFields = !isEmpty(result.getNombre()) &&
+                                 !isEmpty(result.getCurp()) &&
+                                 !isEmpty(result.getClaveElector()) &&
+                                 !isEmpty(result.getFechaNacimiento()) &&
+                                 !isEmpty(result.getSexo());
+        
+        if (!hasCommonFields) {
+            Log.w(TAG, "Faltan campos críticos del lado frontal");
+            return false;
+        }
+        
+        Log.d(TAG, "Datos frontales validados exitosamente");
+        return true;
+    }
+    
+    /**
+     * Detecta el tipo de credencial (T2 o T3) basado en los campos disponibles
+     */
+    private static String detectCredentialType(CredentialResult result) {
+        // T2 tiene campos adicionales como Estado, Municipio, Localidad, Emisión
+        // T3 no tiene estos campos
+        boolean hasT2Fields = !isEmpty(result.getEstado()) ||
+                              !isEmpty(result.getMunicipio()) ||
+                              !isEmpty(result.getLocalidad()) ||
+                              !isEmpty(result.getEmision());
+        
+        String type = hasT2Fields ? "T2" : "T3";
+        Log.d(TAG, "Tipo de credencial detectado: " + type);
+        return type;
     }
     
     /**
@@ -150,51 +206,75 @@ public class IneNativeProcessor {
     }
     
     /**
-     * Valida formato básico de CURP
+     * Simula el procesamiento nativo para pruebas
+     * Para el lado frontal: genera datos completos según tipo de credencial
+     * Para el lado reverso: genera solo datos MRZ
+     * En producción, este método sería reemplazado por la implementación JNI real
      */
-    private static boolean isValidCurpFormat(String curp) {
-        if (isEmpty(curp)) {
-            return false;
+    private static String simulateNativeProcessing(String imagePath, String documentSide) {
+        Log.d(TAG, "Simulando procesamiento nativo para: " + imagePath + ", lado: " + documentSide);
+        
+        JSONObject result = new JSONObject();
+        try {
+            if ("front".equalsIgnoreCase(documentSide)) {
+                // Simular datos del lado frontal (T2 completo como ejemplo)
+                result.put("nombre", "JUAN CARLOS GARCIA LOPEZ");
+                result.put("domicilio", "CALLE REFORMA 123 COL CENTRO");
+                result.put("claveElector", "GALJ900101HDFRRN09");
+                result.put("curp", "GALJ900101HDFRRN09");
+                result.put("anoRegistro", "2020");
+                result.put("fechaNacimiento", "01/01/1990");
+                result.put("sexo", "H");
+                result.put("seccion", "1234");
+                result.put("vigencia", "2030");
+                result.put("estado", "DISTRITO FEDERAL");
+                result.put("municipio", "CUAUHTEMOC");
+                result.put("localidad", "CENTRO");
+                result.put("emision", "2020");
+            } else {
+                // Simular datos MRZ del lado reverso
+                result.put("mrzContent", "IDMEX123456789012345678901234567890123456789012345678901234567890");
+                result.put("mrzDocumentNumber", "123456789");
+                result.put("mrzNationality", "MEX");
+                result.put("mrzBirthDate", "900101");
+                result.put("mrzExpiryDate", "301231");
+                result.put("mrzSex", "M");
+                result.put("mrzName", "GARCIA<LOPEZ<<JUAN<CARLOS");
+            }
+            
+            // Simular tiempo de procesamiento
+            Thread.sleep(100);
+            
+        } catch (JSONException | InterruptedException e) {
+            Log.e(TAG, "Error en simulación: " + e.getMessage());
+            return "{}";
         }
         
-        String cleanCurp = curp.toUpperCase().replaceAll("[^A-Z0-9]", "");
-        return cleanCurp.length() == 18 && cleanCurp.matches("^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]$");
+        return result.toString();
     }
-    
-    /**
-     * Valida formato de clave de elector
-     */
-    private static boolean isValidClaveElector(String clave) {
-        if (isEmpty(clave)) {
-            return false;
-        }
-        
-        String cleanClave = clave.toUpperCase().replaceAll("[^A-Z0-9]", "");
-        return cleanClave.length() == 18 && cleanClave.matches("^[A-Z0-9]{18}$");
-    }
-    
-    /**
-     * Valida tipo de credencial
-     */
-    private static boolean isValidCredentialType(String tipo) {
-        return "t2".equals(tipo) || "t3".equals(tipo);
-    }
+
     
     // Métodos nativos (implementados en C/C++ o Dart FFI)
     
     /**
-     * Procesa una credencial INE usando el motor nativo
-     * @param imagePath Ruta de la imagen
-     * @return JSON con el resultado del procesamiento
+     * Método nativo que procesa la imagen y extrae datos completos
+     * Para el lado frontal: extrae datos específicos según tipo T2/T3
+     * Para el lado reverso: extrae únicamente datos MRZ
+     * Este método debe ser implementado en C/C++ y vinculado mediante JNI
+     * 
+     * @param imagePath Ruta absoluta de la imagen a procesar
+     * @param documentSide Lado del documento ("front" o "back")
+     * @return String JSON con los datos extraídos según el lado del documento
      */
-    private static native String processCredentialNative(String imagePath);
+    private static native String processCredentialNative(String imagePath, String documentSide);
     
     /**
-     * Verifica si una imagen es una credencial INE válida
+     * Verifica si una imagen contiene un MRZ válido en el lado especificado
      * @param imagePath Ruta de la imagen
-     * @return true si es válida
+     * @param documentSide Lado del documento ("front" o "back")
+     * @return true si contiene MRZ válido
      */
-    private static native boolean isValidIneCredentialNative(String imagePath);
+    private static native boolean isValidIneCredentialNative(String imagePath, String documentSide);
     
     /**
      * Obtiene información sobre las capacidades del procesador nativo

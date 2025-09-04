@@ -1,0 +1,70 @@
+{
+  "name": "react-native-ine-processor",
+  "version": "1.0.0",
+  "description": "Módulo React Native para procesamiento de credenciales INE T2 y T3 con soporte completo para extracción de datos del lado frontal y reverso",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf lib/",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "react-native",
+    "ine",
+    "ocr",
+    "credential",
+    "mexico",
+    "document-scanner",
+    "mrz",
+    "t2",
+    "t3",
+    "android",
+    "flutter"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "homepage": "https://github.com/tu-usuario/react-native-ine-processor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/react-native-ine-processor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/react-native-ine-processor/issues"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.60.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.0",
+    "@types/react-native": "^0.70.0",
+    "@types/react": "^18.0.0"
+  },
+  "dependencies": {},
+  "files": [
+    "src/",
+    "android/",
+    "android_service/",
+    "flutter_engine/",
+    "examples/",
+    "README.md",
+    "package.json"
+  ],
+  "react-native": {
+    "android": {
+      "sourceDir": "../android/",
+      "packageImportPath": "import com.ineprocessor.IneProcessorPackage;"
+    }
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "android"
+  ],
+  "cpu": [
+    "arm",
+    "arm64",
+    "x64"
+  ]
+}

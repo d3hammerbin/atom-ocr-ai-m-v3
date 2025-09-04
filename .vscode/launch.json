@@ -10,6 +10,45 @@
             "type": "dart"
         },
         {
+            "name": "TRAE - Servicio INE Debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define=ENABLE_INE_SERVICE=true",
+                "--dart-define=DEBUG_MODE=true",
+                "--dart-define=SERVICE_ID=TRAE"
+            ],
+            "console": "debugConsole",
+            "flutterMode": "debug"
+        },
+        {
+            "name": "TRAE - Servicio INE Test Mode",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define=ENABLE_INE_SERVICE=true",
+                "--dart-define=TEST_MODE=true",
+                "--dart-define=SERVICE_ID=TRAE",
+                "--dart-define=AUTO_LAUNCH_SERVICE=true"
+            ],
+            "console": "debugConsole",
+            "flutterMode": "debug"
+        },
+        {
+            "name": "TRAE - Solo Servicio INE (Standalone)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define=STANDALONE_INE_SERVICE=true",
+                "--dart-define=SERVICE_ID=TRAE"
+            ],
+            "console": "debugConsole",
+            "flutterMode": "debug"
+        },
+        {
             "name": "atom-ocr-ai-m-v3 (profile mode)",
             "request": "launch",
             "type": "dart",

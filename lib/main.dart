@@ -5,6 +5,8 @@ import 'app/routes/app_pages.dart';
 import 'app/core/user_preferences_controller.dart';
 import 'app/core/app_version_service.dart';
 import 'app/core/services/logger_service.dart';
+import 'app/core/services/native_bridge_service.dart';
+import 'app/core/services/ine_processor_bridge_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,12 @@ void main() async {
   await LoggerService.instance.initialize();
   Get.put(UserPreferencesController());
   await Get.putAsync(() => AppVersionService().onInit().then((_) => AppVersionService()));
+  
+  // Inicializar NativeBridgeService para comunicación con Activity nativa
+  Get.put(NativeBridgeService());
+  
+  // Inicializar IneProcessorBridgeService para comunicación con IneProcessorBridge
+  IneProcessorBridgeService.initialize();
   
   runApp(const MyApp());
 }

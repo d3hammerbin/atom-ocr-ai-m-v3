@@ -13,9 +13,12 @@ Atom OCR AI es una aplicación móvil desarrollada en Flutter que permite captur
 - Extracción de texto mediante OCR
 - Procesamiento especializado de credenciales INE
 - Detección automática de tipos de credenciales
+- Servicio INE nativo para Android con procesamiento automático
 - Interfaz de usuario intuitiva
 - Arquitectura modular con GetX
 - Soporte para Android API 33+
+- Integración con aplicaciones externas mediante ResultReceiver
+- Modo standalone para pruebas y desarrollo
 
 ## Tipos de Credenciales INE
 
@@ -177,6 +180,100 @@ La aplicación extrae automáticamente los campos específicos según el tipo de
 - **Impacto**: Los datos procesados correctamente para credenciales T3 ahora se muestran completamente en la interfaz
 - **Compatibilidad**: Mantiene funcionalidad completa para credenciales T2 mientras habilita visualización para T3
 - **Validación**: Verificación de que todos los campos extraídos se muestren según el tipo de credencial detectado
+
+## Servicio INE Nativo para Android
+
+### Descripción del Servicio
+El proyecto incluye un servicio nativo Android (`IneServiceActivity`) que permite el procesamiento automático de credenciales INE mediante integración con aplicaciones externas o uso standalone para pruebas.
+
+### Características del Servicio
+- **Procesamiento automático**: Inicia el procesamiento automáticamente cuando se proporcionan imagen y lado
+- **Integración externa**: Soporte para `ResultReceiver` para comunicación con aplicaciones cliente
+- **Modo standalone**: Capacidad de ejecutarse independientemente para pruebas y desarrollo
+- **Detección de lado**: Identificación automática entre lado frontal y reverso de credenciales
+- **Soporte multi-tipo**: Compatible con credenciales T2 y T3 (T1 deshabilitado)
+- **Interfaz nativa**: UI Android nativa con Material Design y tema oscuro
+
+### Modos de Operación
+
+#### 1. Modo Aplicación Externa
+- Requiere `ResultReceiver` para envío de resultados
+- Procesamiento automático al recibir imagen y lado
+- Cierre automático después de completar el procesamiento
+- Ideal para integración con aplicaciones cliente
+
+#### 2. Modo Test/Standalone
+- Activado con parámetro `testMode="true"`
+- Procesamiento automático sin `ResultReceiver`
+- Interfaz completa para visualización de resultados
+- Perfecto para pruebas y desarrollo
+
+#### 3. Modo Manual
+- Sin `ResultReceiver` ni `testMode`
+- Requiere interacción del usuario (botón "PROCESAR")
+- Control manual del flujo de procesamiento
+
+### Parámetros de Entrada
+- `image_path`: Ruta absoluta de la imagen a procesar
+- `side`: Lado de la credencial ("frontal" o "reverso")
+- `testMode`: Modo de prueba ("true" para activar)
+- `imageUri`: URI alternativo para la imagen (opcional)
+
+### Flujo de Procesamiento Automático
+1. **Inicialización**: La actividad recibe parámetros del intent
+2. **Carga de imagen**: Se carga la imagen desde `image_path` o `imageUri`
+3. **Inicialización del bridge**: Se configura el puente con Flutter
+4. **Procesamiento automático**: Se inicia si se cumplen las condiciones:
+   - `bitmap != null` (imagen cargada)
+   - `side != null` (lado especificado)
+   - `resultReceiver != null` O `testMode == "true"`
+5. **Resultado**: Se envía vía `ResultReceiver` o se muestra en interfaz
+
+### Uso mediante ADB
+```bash
+# Procesamiento frontal
+adb shell am start -n com.example.atom_ocr_ai_m_v3/.IneServiceActivity \
+  --es image_path "/data/local/tmp/credencial_front.jpg" \
+  --es side "frontal" \
+  --es testMode "true"
+
+# Procesamiento reverso
+adb shell am start -n com.example.atom_ocr_ai_m_v3/.IneServiceActivity \
+  --es image_path "/data/local/tmp/credencial_back.jpg" \
+  --es side "reverso" \
+  --es testMode "true"
+```
+
+### Integración con Aplicaciones Cliente
+```java
+// Ejemplo de integración desde aplicación cliente
+Intent intent = new Intent();
+intent.setComponent(new ComponentName(
+    "com.example.atom_ocr_ai_m_v3", 
+    "com.example.atom_ocr_ai_m_v3.IneServiceActivity"
+));
+intent.putExtra("image_path", imagePath);
+intent.putExtra("side", "frontal");
+intent.putExtra("resultReceiver", resultReceiver);
+startActivity(intent);
+```
+
+### Datos Extraídos
+El servicio extrae y estructura los siguientes datos según el tipo de credencial:
+
+#### Credenciales T2 y T3
+- **Datos personales**: Nombre, apellidos, CURP, clave de elector
+- **Información temporal**: Fecha de nacimiento, año de registro, vigencia
+- **Datos geográficos**: Domicilio, sección, estado, municipio, localidad
+- **Datos biométricos**: Fotografía, firma (T2: firma+huella, T3: solo firma)
+- **Códigos**: QR, códigos de barras, MRZ (Machine Readable Zone)
+
+### Arquitectura del Servicio
+- **IneServiceActivity.kt**: Actividad principal Android nativa
+- **Bridge Flutter**: Comunicación con servicios Flutter de procesamiento
+- **MLKit Integration**: Reconocimiento de texto y códigos
+- **Material Design UI**: Interfaz nativa con tema oscuro optimizado
+- **Gestión de memoria**: Limpieza automática de recursos y archivos temporales
 
 ### Validaciones Mejoradas
 - **Vigencia flexible**: Soporte para formatos YYYY (T2) y YYYY-YYYY (T3)

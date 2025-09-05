@@ -30,6 +30,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class IneServiceActivity : Activity() {
     
@@ -49,6 +51,11 @@ class IneServiceActivity : Activity() {
         const val KEY_DATA = "data"
         const val KEY_ERROR = "error"
         const val KEY_MESSAGE = "message"
+        
+        // Configuración de límite temporal del servicio
+        private const val EXPIRATION_DATE = "2025-11-01 00:00:00"
+        private const val EXPIRATION_MESSAGE = "El servicio INE ha expirado. Contacte al administrador para renovar la licencia."
+        private const val DATE_FORMAT = "yyyy-MM-dd HH:mm:ss"
         
         // Colores del tema Material Dark
         private const val COLOR_BACKGROUND = "#2C2C2C"        // Fondo principal más claro
@@ -82,6 +89,12 @@ class IneServiceActivity : Activity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Verificar si el servicio ha expirado
+        if (isServiceExpired()) {
+            handleServiceExpired()
+            return
+        }
         
         // Configurar layout programáticamente (sin XML)
         setupLayout()
@@ -228,6 +241,12 @@ class IneServiceActivity : Activity() {
     
     private fun processIntent() {
         try {
+            // Verificar expiración antes de procesar
+            if (isServiceExpired()) {
+                handleServiceExpired()
+                return
+            }
+            
             // Obtener parámetros del intent
             imagePath = intent.getStringExtra(EXTRA_IMAGE_PATH)
             val imageUriString = intent.getStringExtra(EXTRA_IMAGE_URI)
@@ -241,10 +260,10 @@ class IneServiceActivity : Activity() {
             
             Log.d(TAG, "Parámetros recibidos - Path: $imagePath, URI: $imageUri, Side: $side, TestMode: $testMode")
             
-            // Modo standalone: usar valores por defecto si no se proporcionan parámetros
+            // Validar que se proporcionen los parámetros requeridos
             if ((imagePath == null && imageUri == null) || side == null) {
-                Log.d(TAG, "Modo standalone detectado - usando valores por defecto")
-                setupStandaloneMode()
+                Log.e(TAG, "Parámetros requeridos faltantes - Path: $imagePath, URI: $imageUri, Side: $side")
+                showError("Error: Se requieren parámetros de imagen y lado para procesar")
                 return
             }
             
@@ -260,29 +279,7 @@ class IneServiceActivity : Activity() {
         }
     }
     
-    private fun setupStandaloneMode() {
-        Log.d(TAG, "Configurando modo standalone")
-        
-        // Usar imagen de prueba por defecto
-        imagePath = "/data/local/tmp/test_credencial_back.jpg"
-        side = "reverso"
-        
-        // Actualizar UI para modo standalone
-        sideTextView.text = "Modo Standalone - Lado: ${side?.uppercase()}"
-        updateStatusText("Aplicación iniciada en modo standalone\nUsando imagen de prueba: $imagePath")
-        
-        // Verificar si existe la imagen de prueba
-        val testFile = File(imagePath!!)
-        if (!testFile.exists()) {
-            // Si no existe la imagen de prueba, usar modo test con datos mock
-            Log.d(TAG, "Imagen de prueba no encontrada, usando modo test")
-            updateStatusText("Modo Test - Usando datos de ejemplo\nPresiona 'Procesar' para ver resultado mock")
-            intent.putExtra("testMode", "true")
-        }
-        
-        // Cargar imagen si existe, sino mostrar placeholder
-        loadImage()
-    }
+
     
     private fun loadImage() {
         try {
@@ -355,6 +352,12 @@ class IneServiceActivity : Activity() {
     }
     
     private fun startProcessing() {
+        // Verificar expiración antes de iniciar procesamiento
+        if (isServiceExpired()) {
+            handleServiceExpired()
+            return
+        }
+        
         if (bitmap == null) {
             showError("No hay imagen para procesar")
             return
@@ -578,6 +581,61 @@ class IneServiceActivity : Activity() {
                 else -> Color.parseColor(COLOR_ON_SURFACE_MEDIUM)       // Gris medio para estado normal
             })
         }
+    }
+    
+    // Funciones de verificación de límite temporal
+    private fun isServiceExpired(): Boolean {
+        return try {
+            val currentDate = LocalDateTime.now()
+            val expirationDate = parseExpirationDate()
+            val isExpired = currentDate.isAfter(expirationDate)
+            
+            Log.d(TAG, "Verificación de expiración:")
+            Log.d(TAG, "- Fecha actual: ${formatCurrentDate(currentDate)}")
+            Log.d(TAG, "- Fecha de expiración: $EXPIRATION_DATE")
+            Log.d(TAG, "- Servicio expirado: $isExpired")
+            
+            isExpired
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al verificar expiración del servicio", e)
+            // En caso de error, permitir el funcionamiento
+            false
+        }
+    }
+    
+    private fun parseExpirationDate(): LocalDateTime {
+        val formatter = DateTimeFormatter.ofPattern(DATE_FORMAT)
+        return LocalDateTime.parse(EXPIRATION_DATE, formatter)
+    }
+    
+    private fun formatCurrentDate(date: LocalDateTime): String {
+        val formatter = DateTimeFormatter.ofPattern(DATE_FORMAT)
+        return date.format(formatter)
+    }
+    
+    private fun handleServiceExpired() {
+        Log.w(TAG, "Servicio INE expirado. Fecha límite: $EXPIRATION_DATE")
+        
+        // Enviar mensaje de expiración si hay un receiver
+        resultReceiver?.let { receiver ->
+            val bundle = Bundle().apply {
+                putString(KEY_ERROR, EXPIRATION_MESSAGE)
+                putString("status", "expired")
+                putString("expiration_date", EXPIRATION_DATE)
+            }
+            receiver.send(RESULT_ERROR, bundle)
+            Log.d(TAG, "Mensaje de expiración enviado al receiver")
+        }
+        
+        // Mostrar mensaje en logs para modo test
+        val testMode = intent.getStringExtra("testMode")
+        if (testMode == "true") {
+            Log.e(TAG, "SERVICIO_EXPIRADO: $EXPIRATION_MESSAGE")
+            Log.e(TAG, "FECHA_EXPIRACION: $EXPIRATION_DATE")
+        }
+        
+        // Cerrar la actividad
+        finish()
     }
     
     // Funciones auxiliares para el tema Material Design

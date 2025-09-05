@@ -91,8 +91,40 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+
+  # Fallback para dispositivos viejos (pre-Android 8). Usa un PNG cuadrado.
+  image_path_android: assets/icons/icon_legacy.png
+
+  # Adaptive icon (Android 8+):
+  adaptive_icon_foreground: assets/icons/icon_foreground.png
+  adaptive_icon_background: "#121212"   # o: assets/icons/icon_background.png
+
+  # (Opcional, Android 13+ icono monocromo para "Themed icons")
+  adaptive_icon_monochrome: assets/icons/icon_monochrome.png
+
+  min_sdk_android: 21
+
+flutter_native_splash:
+  android: true
+  ios: false
+
+  # Color del fondo del splash
+  color: "#121212"
+  color_dark: "#121212"
+
+  # Android 12+ (API SplashScreen)
+  android_12:
+    color: "#121212"
+    icon_background_color: "#121212"  # opcional si usas icono redondo
 
 # The following section is specific to Flutter packages.
 flutter:

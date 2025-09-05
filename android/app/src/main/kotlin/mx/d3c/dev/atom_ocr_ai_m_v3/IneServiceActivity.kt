@@ -1,7 +1,9 @@
 package mx.d3c.dev.atom_ocr_ai_m_v3
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -10,6 +12,7 @@ import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.StateListDrawable
 import android.content.res.ColorStateList
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,6 +28,8 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -45,6 +50,9 @@ class IneServiceActivity : Activity() {
         // Códigos de resultado
         const val RESULT_SUCCESS = 100
         const val RESULT_ERROR = 101
+        
+        // Código de solicitud de permisos
+        private const val PERMISSION_REQUEST_CODE = 1001
         
         // Claves para el resultado JSON
         const val KEY_SUCCESS = "success"
@@ -86,7 +94,69 @@ class IneServiceActivity : Activity() {
     private var resultReceiver: ResultReceiver? = null
     private var bitmap: Bitmap? = null
     private var processorBridge: IneProcessorBridge? = null
-    
+
+    /**
+     * Verifica si todos los permisos necesarios están concedidos
+     */
+    private fun checkPermissions(): Boolean {
+        val requiredPermissions = getRequiredPermissions()
+        return requiredPermissions.all { permission ->
+            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Obtiene la lista de permisos requeridos según la versión de Android
+     */
+    private fun getRequiredPermissions(): Array<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ - Permisos granulares para medios
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_MEDIA_IMAGES
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ - Gestión de almacenamiento externo
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.MANAGE_EXTERNAL_STORAGE
+            )
+        } else {
+            // Android 10 y anteriores
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
+    }
+
+    /**
+     * Solicita los permisos faltantes al usuario
+     */
+    private fun requestPermissions() {
+        val requiredPermissions = getRequiredPermissions()
+        val missingPermissions = requiredPermissions.filter { permission ->
+            ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (missingPermissions.isNotEmpty()) {
+            Log.d(TAG, "Solicitando permisos: ${missingPermissions.joinToString(", ")}")
+            ActivityCompat.requestPermissions(this, missingPermissions, PERMISSION_REQUEST_CODE)
+        }
+    }
+
+    /**
+     * Verifica si se debe mostrar la explicación de permisos
+     */
+    private fun shouldShowPermissionRationale(): Boolean {
+        val requiredPermissions = getRequiredPermissions()
+        return requiredPermissions.any { permission ->
+            ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -98,6 +168,12 @@ class IneServiceActivity : Activity() {
         
         // Configurar layout programáticamente (sin XML)
         setupLayout()
+        
+        // Verificar permisos iniciales
+        if (!checkPermissions()) {
+            Log.w(TAG, "Permisos no concedidos al inicializar")
+            updateStatusText("Verificando permisos necesarios...", isError = false)
+        }
         
         // Inicializar bridge de Flutter
         initializeFlutterBridge()
@@ -282,6 +358,14 @@ class IneServiceActivity : Activity() {
 
     
     private fun loadImage() {
+        // Verificar permisos antes de procesar la imagen
+        if (!checkPermissions()) {
+            Log.w(TAG, "Permisos no concedidos, solicitando permisos")
+            updateStatusText("Verificando permisos...", isError = false)
+            requestPermissions()
+            return
+        }
+        
         try {
             Log.d(TAG, "Intentando cargar imagen - Path: $imagePath, URI: $imageUri")
             
@@ -338,8 +422,8 @@ class IneServiceActivity : Activity() {
                     
                     // Si tenemos parámetros válidos, iniciar procesamiento automáticamente
                     // (con ResultReceiver para aplicaciones externas o en testMode para pruebas)
-                    val testMode = intent.getStringExtra("testMode")
-                    if (bitmap != null && side != null && (resultReceiver != null || testMode == "true")) {
+                    val testMode = intent.getBooleanExtra("testMode", false)
+                    if (bitmap != null && side != null && (resultReceiver != null || testMode)) {
                         Log.d(TAG, "Iniciando procesamiento automático... (TestMode: $testMode)")
                         startProcessing()
                     }
@@ -696,6 +780,86 @@ class IneServiceActivity : Activity() {
         return RippleDrawable(rippleColor, backgroundDrawable, maskDrawable)
     }
     
+    /**
+     * Maneja la respuesta del usuario a la solicitud de permisos
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            val allPermissionsGranted = grantResults.isNotEmpty() && 
+                grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            
+            if (allPermissionsGranted) {
+                Log.d(TAG, "Todos los permisos concedidos")
+                updateStatusText("Permisos concedidos. Continuando con el procesamiento...", isSuccess = true)
+                
+                // Continuar con la carga de imagen si hay parámetros válidos
+                if (imagePath != null || imageUri != null) {
+                    loadImage()
+                }
+            } else {
+                Log.w(TAG, "Algunos permisos fueron denegados")
+                val deniedPermissions = permissions.filterIndexed { index, _ -> 
+                    grantResults[index] != PackageManager.PERMISSION_GRANTED 
+                }
+                
+                val errorMessage = "Permisos requeridos denegados: ${deniedPermissions.joinToString(", ")}"
+                updateStatusText(errorMessage, isError = true)
+                
+                // Verificar si se debe mostrar explicación
+                if (shouldShowPermissionRationale()) {
+                    showPermissionRationaleDialog()
+                } else {
+                    // El usuario marcó "No volver a preguntar"
+                    showPermissionSettingsDialog()
+                }
+            }
+        }
+    }
+    
+    /**
+     * Muestra un diálogo explicando por qué se necesitan los permisos
+     */
+    private fun showPermissionRationaleDialog() {
+        updateStatusText("Los permisos son necesarios para procesar imágenes de credenciales", isError = true)
+        Toast.makeText(
+            this,
+            "Esta aplicación necesita acceso a la cámara y almacenamiento para procesar credenciales INE",
+            Toast.LENGTH_LONG
+        ).show()
+        
+        // Enviar error al receptor
+        sendResult(
+            success = false,
+            data = null,
+            error = "Permisos requeridos no concedidos"
+        )
+    }
+    
+    /**
+     * Muestra un diálogo sugiriendo ir a configuración para habilitar permisos
+     */
+    private fun showPermissionSettingsDialog() {
+        updateStatusText("Configure los permisos en Ajustes de la aplicación", isError = true)
+        Toast.makeText(
+            this,
+            "Por favor, habilite los permisos de cámara y almacenamiento en Ajustes > Aplicaciones",
+            Toast.LENGTH_LONG
+        ).show()
+        
+        // Enviar error al receptor
+        sendResult(
+            success = false,
+            data = null,
+            error = "Permisos requeridos no concedidos. Configure en Ajustes."
+        )
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         bitmap?.recycle()

@@ -85,7 +85,45 @@ class IneCredentialProcessorService {
   /// Verifica si el texto extraído corresponde a una credencial INE
   static bool isIneCredential(String extractedText) {
     final upperText = extractedText.toUpperCase();
-    return _ineKeywords.any((keyword) => upperText.contains(keyword));
+    
+    // Verificar palabras clave tradicionales
+    if (_ineKeywords.any((keyword) => upperText.contains(keyword))) {
+      return true;
+    }
+    
+    // Verificar patrones MRZ para credenciales T3 traseras
+    if (_isMrzPattern(upperText)) {
+      print('🔍 DIAGNÓSTICO: Credencial INE detectada por patrón MRZ');
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /// Verifica si el texto contiene patrones MRZ típicos de credenciales INE T3
+  static bool _isMrzPattern(String upperText) {
+    // Patrones típicos de MRZ en credenciales INE T3:
+    // - Líneas que terminan con <<< o contienen << 
+    // - Códigos de país MEX
+    // - Patrones de fecha con formato específico
+    // - Líneas con números de documento y checksums
+    
+    final lines = upperText.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    
+    // Verificar patrones MRZ específicos
+    bool hasMexCode = upperText.contains('MEX');
+    bool hasTripleAngleBrackets = upperText.contains('<<<');
+    bool hasDoubleAngleBrackets = upperText.contains('<<');
+    bool hasNumericPatterns = RegExp(r'\d{10,}').hasMatch(upperText);
+    
+    // Si tiene al menos 2 de estos patrones, probablemente es MRZ
+    int mrzPatternCount = 0;
+    if (hasMexCode) mrzPatternCount++;
+    if (hasTripleAngleBrackets) mrzPatternCount++;
+    if (hasDoubleAngleBrackets) mrzPatternCount++;
+    if (hasNumericPatterns) mrzPatternCount++;
+    
+    return mrzPatternCount >= 2;
   }
 
   /// Verifica si un tipo de credencial debe ser procesado
@@ -232,6 +270,8 @@ class IneCredentialProcessorService {
   static Future<CredencialIneModel> processCredentialWithSideDetection(
       String extractedText, String imagePath) async {
     print('🎯 Iniciando procesamiento con detección de lado');
+    print('DIAGNÓSTICO T3: Texto extraído para análisis: ${extractedText.substring(0, extractedText.length > 100 ? 100 : extractedText.length)}...');
+    print('DIAGNÓSTICO T3: Imagen path: $imagePath');
     
     // Detectar lado PRIMERO para determinar el método de procesamiento
     String detectedSide = 'frontal';
@@ -239,10 +279,12 @@ class IneCredentialProcessorService {
       final sideResult = CredentialSideDetector.detectSide(extractedText);
       detectedSide = sideResult['lado'] as String;
       print('📍 Lado detectado: $detectedSide');
+      print('DIAGNÓSTICO T3: Resultado completo de detección de lado: $sideResult');
     } catch (e) {
       // En caso de error, mantener lado como frontal por defecto
       detectedSide = 'frontal';
       print('⚠️ Error detectando lado, usando frontal por defecto: $e');
+      print('DIAGNÓSTICO T3: Error en detección de lado: $e');
     }
     
     // Crear modelo base según el lado detectado
@@ -250,13 +292,16 @@ class IneCredentialProcessorService {
     if (detectedSide == 'reverso' || detectedSide == 'trasero') {
       // Para lado reverso: usar SOLO conteo de QRs sin análisis OCR previo
       print('🔍 Lado reverso detectado - usando SOLO conteo de QRs para clasificación');
+      print('DIAGNÓSTICO T3: Iniciando conteo de QRs en imagen');
       Map<String, dynamic> qrCountResult = await QrDetectionService.countAllQrCodesInImage(imagePath);
       int qrCount = qrCountResult['qrCount'] ?? 0;
       print('📊 Códigos QR detectados: $qrCount');
+      print('DIAGNÓSTICO T3: Resultado completo del conteo QR: $qrCountResult');
       
       // Detectar tipo usando SOLO conteo de QRs (sin análisis de texto)
       String credentialType = _detectCredentialTypeByQrCount(qrCount);
       print('🔍 Tipo de credencial detectado por QR: $credentialType');
+      print('DIAGNÓSTICO T3: Tipo final asignado: $credentialType');
       
       // Crear modelo básico con solo el tipo detectado por QRs
       credential = CredencialIneModel(
@@ -535,6 +580,7 @@ class IneCredentialProcessorService {
     // Detectar y extraer código QR para credenciales T2 y T3 traseras
     if (processingType == 't2' || processingType == 't3') {
       print('🔍 Iniciando detección de código QR para credencial ${processingType.toUpperCase()} trasera...');
+      print('DIAGNÓSTICO: Ejecutando detecciones porque el tipo es ${processingType} (válido para detecciones)');
       try {
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
         final qrResult = await QrDetectionService.detectQrFromT2Credential(
@@ -577,6 +623,9 @@ class IneCredentialProcessorService {
         print('❌ Error en detección de código de barras: $e');
       }
 
+    } else {
+      print('DIAGNÓSTICO: Saltando detecciones de QR y códigos de barras - tipo no válido: ${processingType}');
+      print('DIAGNÓSTICO: Las detecciones solo se ejecutan para tipos t2 y t3, pero se detectó tipo: ${processingType}');
     }
 
     // Detectar y extraer código MRZ para credenciales T2 y T3

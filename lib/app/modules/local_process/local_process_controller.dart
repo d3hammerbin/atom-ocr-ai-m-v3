@@ -152,7 +152,13 @@ class LocalProcessController extends GetxController {
       errorMessage.value = '';
 
       // Verificar si es una credencial INE
-      if (!IneCredentialProcessorService.isIneCredential(extractedText.value)) {
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Verificando si es credencial INE válida...');
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Texto para validación: ${extractedText.value}');
+      final isValidIne = IneCredentialProcessorService.isIneCredential(extractedText.value);
+      print('🔍 DIAGNÓSTICO CONTROLADOR: ¿Es credencial INE válida? $isValidIne');
+      
+      if (!isValidIne) {
+        print('🔍 DIAGNÓSTICO CONTROLADOR: Texto rechazado - no contiene palabras clave INE');
         SnackbarUtils.showWarning(
           title: 'Información',
           message: 'La imagen no parece ser una credencial INE válida',
@@ -161,10 +167,34 @@ class LocalProcessController extends GetxController {
       }
 
       // Procesar la credencial con detección de lado si hay imagen seleccionada
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Imagen seleccionada: ${selectedImagePath.value.isNotEmpty ? "SÍ" : "NO"}');
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Path imagen: ${selectedImagePath.value}');
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Texto extraído (${extractedText.value.length} chars): ${extractedText.value.substring(0, extractedText.value.length > 100 ? 100 : extractedText.value.length)}...');
+      
       final credential = selectedImagePath.value.isNotEmpty
           ? await IneCredentialProcessorService.processCredentialWithSideDetection(
               extractedText.value, selectedImagePath.value)
           : IneCredentialProcessorService.processCredentialText(extractedText.value);
+      
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Procesamiento completado. Tipo detectado: ${credential.tipo}');
+
+      // Log de diagnóstico
+       if (selectedImagePath.value.isEmpty) {
+         LoggerService.instance.warning(
+           'LocalProcessController',
+           'DIAGNÓSTICO: No hay imagen seleccionada, saltando detección de lado, tipo, QR y códigos de barras. Esto explica por qué no se detectan estas características en credenciales con MRZ.',
+         );
+         
+         LoggerService.instance.debug(
+           'LocalProcessController',
+           'Texto extraído contiene MRZ pero no se procesará para detección de características adicionales sin imagen seleccionada',
+         );
+       } else {
+         LoggerService.instance.info(
+           'LocalProcessController',
+           'Procesando credencial con detección de lado usando imagen: ${selectedImagePath.value}',
+         );
+       }
 
       if (IneCredentialProcessorService.validateExtractedData(credential)) {
         processedCredential.value = credential;

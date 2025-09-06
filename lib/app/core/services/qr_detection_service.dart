@@ -29,24 +29,32 @@ class QrDetectionService {
   static Future<Map<String, dynamic>> countAllQrCodesInImage(String imagePath) async {
     try {
       _logger.info('QrDetectionService', 'Contando todos los códigos QR en imagen: $imagePath');
+      print('DIAGNÓSTICO T3 QR: Iniciando conteo de QRs en: $imagePath');
       
       // Verificar que el archivo existe
       final imageFile = File(imagePath);
       if (!await imageFile.exists()) {
         throw Exception('El archivo de imagen no existe: $imagePath');
       }
+      print('DIAGNÓSTICO T3 QR: Archivo de imagen existe y es accesible');
       
       // Crear InputImage para ML Kit
       final inputImage = InputImage.fromFilePath(imagePath);
+      print('DIAGNÓSTICO T3 QR: InputImage creado para ML Kit');
       
       // Usar ML Kit para detectar todos los códigos QR
       final barcodeScanner = BarcodeScanner(formats: [BarcodeFormat.qrCode]);
+      print('DIAGNÓSTICO T3 QR: BarcodeScanner inicializado');
       final barcodes = await barcodeScanner.processImage(inputImage);
+      print('DIAGNÓSTICO T3 QR: ML Kit procesó imagen, códigos detectados: ${barcodes.length}');
       
       // Extraer contenidos de todos los QRs detectados
       final qrContents = <String>[];
-      for (final barcode in barcodes) {
+      print('DIAGNÓSTICO T3 QR: Procesando ${barcodes.length} códigos detectados...');
+      for (int i = 0; i < barcodes.length; i++) {
+        final barcode = barcodes[i];
         final content = barcode.displayValue ?? '';
+        print('DIAGNÓSTICO T3 QR: Código $i - Contenido: ${content.isEmpty ? "VACÍO" : content.substring(0, content.length > 50 ? 50 : content.length)}...');
         if (content.isNotEmpty) {
           qrContents.add(content);
         }
@@ -56,6 +64,7 @@ class QrDetectionService {
       
       final qrCount = qrContents.length;
       _logger.info('QrDetectionService', 'Total de códigos QR detectados: $qrCount');
+      print('DIAGNÓSTICO T3 QR: Conteo final - QRs con contenido: $qrCount de ${barcodes.length} detectados');
       
       return {
         'qrCount': qrCount,

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:atom_ocr_ai_m_v3/app/modules/credential_processing/credential_processing_controller.dart';
 import 'package:atom_ocr_ai_m_v3/app/core/utils/validation_utils.dart';
 
@@ -83,6 +84,15 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
         ),
+        actions: [
+          Obx(() => controller.processedCredential.value != null
+              ? IconButton(
+                  icon: const Icon(Icons.share),
+                  onPressed: () => _shareCredentialInfo(controller.processedCredential.value!),
+                  tooltip: 'Compartir información',
+                )
+              : const SizedBox.shrink()),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -933,6 +943,124 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
           ),
         ),
       ),
+
     );
+  }
+  
+  /// Método para compartir la información de la credencial procesada
+  void _shareCredentialInfo(dynamic credential) async {
+    try {
+      // Construir el texto con la información de la credencial
+      final StringBuffer info = StringBuffer();
+      info.writeln('=== INFORMACIÓN DE CREDENCIAL PROCESADA ===\n');
+      
+      // Información básica
+      info.writeln('📋 DATOS GENERALES:');
+      info.writeln('• Nombre: ${credential.nombre.isNotEmpty ? credential.nombre : "No disponible"}');
+      info.writeln('• CURP: ${credential.curp.isNotEmpty ? credential.curp : "No disponible"}');
+      info.writeln('• Clave de Elector: ${credential.claveElector.isNotEmpty ? credential.claveElector : "No disponible"}');
+      info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento.isNotEmpty ? credential.fechaNacimiento : "No disponible"}');
+      info.writeln('• Sexo: ${credential.sexo.isNotEmpty ? credential.sexo : "No disponible"}');
+      info.writeln('• Domicilio: ${credential.domicilio.isNotEmpty ? credential.domicilio : "No disponible"}');
+      info.writeln('• Año de Registro: ${credential.anoRegistro.isNotEmpty ? credential.anoRegistro : "No disponible"}');
+      info.writeln('• Sección: ${credential.seccion.isNotEmpty ? credential.seccion : "No disponible"}');
+      info.writeln('• Vigencia: ${credential.vigencia.isNotEmpty ? credential.vigencia : "No disponible"}');
+      info.writeln('• Tipo: ${credential.tipo.isNotEmpty ? credential.tipo.toUpperCase() : "No disponible"}');
+      info.writeln('• Lado: ${credential.lado.isNotEmpty ? credential.lado : "No detectado"}\n');
+      
+      // Información específica para T2 y T3
+      if (credential.tipo == 't2' || credential.tipo == 't3') {
+        info.writeln('📍 DATOS DE UBICACIÓN:');
+        info.writeln('• Estado: ${credential.estado.isNotEmpty ? credential.estado : "No disponible"}');
+        info.writeln('• Municipio: ${credential.municipio.isNotEmpty ? credential.municipio : "No disponible"}');
+        info.writeln('• Localidad: ${credential.localidad.isNotEmpty ? credential.localidad : "No disponible"}\n');
+        
+        // Información de códigos
+        if (credential.qrContent.isNotEmpty) {
+          info.writeln('🔲 CÓDIGO QR:');
+          info.writeln('${credential.qrContent}\n');
+        }
+        
+        if (credential.barcodeContent.isNotEmpty) {
+          info.writeln('📊 CÓDIGO DE BARRAS:');
+          info.writeln('${credential.barcodeContent}\n');
+        }
+        
+        if (credential.mrzContent.isNotEmpty) {
+          info.writeln('📄 CÓDIGO MRZ:');
+          info.writeln('${credential.mrzContent}\n');
+        }
+      }
+      
+      // Información de imágenes extraídas
+      info.writeln('🖼️ IMÁGENES EXTRAÍDAS:');
+      if (credential.photoPath.isNotEmpty) {
+        info.writeln('• ✅ Fotografía del rostro');
+      }
+      if (credential.signaturePath.isNotEmpty) {
+        info.writeln('• ✅ Firma (T3)');
+      }
+      if (credential.qrImagePath.isNotEmpty) {
+        info.writeln('• ✅ Imagen del código QR');
+      }
+      if (credential.barcodeImagePath.isNotEmpty) {
+        info.writeln('• ✅ Imagen del código de barras');
+      }
+      
+      info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
+      info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
+      
+      // Preparar lista de archivos para compartir
+      final List<String> filesToShare = [];
+      
+      // Agregar imagen frontal de la credencial
+      if (controller.frontImagePath.value.isNotEmpty && File(controller.frontImagePath.value).existsSync()) {
+        filesToShare.add(controller.frontImagePath.value);
+      }
+      
+      // Agregar imagen trasera de la credencial
+      if (controller.backImagePath.value.isNotEmpty && File(controller.backImagePath.value).existsSync()) {
+        filesToShare.add(controller.backImagePath.value);
+      }
+      
+      // Agregar imágenes extraídas disponibles
+      if (credential.photoPath.isNotEmpty && File(credential.photoPath).existsSync()) {
+        filesToShare.add(credential.photoPath);
+      }
+      if (credential.signaturePath.isNotEmpty && File(credential.signaturePath).existsSync()) {
+        filesToShare.add(credential.signaturePath);
+      }
+      if (credential.qrImagePath.isNotEmpty && File(credential.qrImagePath).existsSync()) {
+        filesToShare.add(credential.qrImagePath);
+      }
+      if (credential.barcodeImagePath.isNotEmpty && File(credential.barcodeImagePath).existsSync()) {
+        filesToShare.add(credential.barcodeImagePath);
+      }
+      
+      // Usar Share.shareXFiles para compartir texto e imágenes
+      if (filesToShare.isNotEmpty) {
+        await Share.shareXFiles(
+          filesToShare.map((path) => XFile(path)).toList(),
+          text: info.toString(),
+          subject: 'Información de Credencial Procesada',
+        );
+      } else {
+        // Si no hay imágenes, compartir solo el texto
+        await Share.share(
+          info.toString(),
+          subject: 'Información de Credencial Procesada',
+        );
+      }
+      
+    } catch (e) {
+      // Mostrar error si falla el compartir
+      Get.snackbar(
+        'Error',
+        'No se pudo compartir la información: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }

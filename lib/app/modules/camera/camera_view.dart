@@ -314,36 +314,41 @@ class _CameraViewState extends State<CameraView> {
         child: Container(
           decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3)),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Botón cancelar
-              _buildControlButton(
-                icon: Icons.close,
-                onPressed: _exitToHome,
-                backgroundColor: Colors.black.withValues(alpha: 0.6),
-                size: 45,
-              ),
-              // Botón flash
-              Obx(
-                () => _buildControlButton(
-                  icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
-                  onPressed: controller.toggleFlash,
-                  backgroundColor: controller.isFlashOn.value 
-                      ? Colors.yellow.withValues(alpha: 0.8)
-                      : Colors.black.withValues(alpha: 0.6),
-                  size: 45,
+              // Botones superiores (check y X)
+              Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Column(
+                  children: [
+                    _buildControlButton(
+                      icon: Icons.check,
+                      onPressed: () {
+                        // TODO: Implementar acción de confirmar
+                      },
+                      backgroundColor: Colors.green.withValues(alpha: 0.6),
+                      size: 40,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildControlButton(
+                      icon: Icons.close,
+                      onPressed: () {
+                        // TODO: Implementar acción de cancelar (diferente a _exitToHome)
+                      },
+                      backgroundColor: Colors.red.withValues(alpha: 0.6),
+                      size: 40,
+                    ),
+                  ],
                 ),
               ),
-              // Botón capturar
+              // Botón capturar en el centro
               _buildCaptureButton(),
-              // Botón lado de credencial
-              Obx(
-                () => _buildControlButton(
-                  icon:
-                      controller.isFrontSide.value
-                          ? Icons.person
-                          : Icons.qr_code,
-                  onPressed: controller.switchCredentialSide,
+              // Botón cancelar en la parte inferior
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _buildControlButton(
+                  icon: Icons.arrow_back,
+                  onPressed: _exitToHome,
                   backgroundColor: Colors.black.withValues(alpha: 0.6),
                   size: 45,
                 ),
@@ -447,7 +452,7 @@ class _CameraViewState extends State<CameraView> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                'Coloca la credencial dentro del marco y presiona el botón para capturar',
+                'Coloca la credencial por el lado frontal',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -471,7 +476,7 @@ class _CameraViewState extends State<CameraView> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
               child: const Text(
-                'Coloca la credencial dentro del marco y presiona el botón para capturar',
+                'Coloca la credencial por el lado frontal',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -501,13 +506,13 @@ class _CameraViewState extends State<CameraView> {
         () => Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6),
+            color: Colors.black.withValues(alpha: 0.4),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
           ),
           child: Icon(
             controller.isFrontSide.value ? Icons.person : Icons.qr_code,
-            color: Colors.white,
+            color: Colors.white.withValues(alpha: 0.8),
             size: 32,
           ),
         ),

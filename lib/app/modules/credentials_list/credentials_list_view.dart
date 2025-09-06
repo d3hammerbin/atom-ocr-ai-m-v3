@@ -13,6 +13,13 @@ class CredentialsListView extends GetView<CredentialsListController> {
         title: const Text('Credenciales Procesadas'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Ir al inicio',
+            onPressed: () {
+              Get.offAllNamed('/home');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configuraciones',
             onPressed: () {

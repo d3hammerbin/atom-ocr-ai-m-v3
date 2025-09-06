@@ -24,7 +24,7 @@ android {
         applicationId = "mx.d3c.dev.atom_ocr_ai_m_v3"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 33
+        minSdk = 31
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName

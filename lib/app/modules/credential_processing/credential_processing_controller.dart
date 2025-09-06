@@ -1,9 +1,11 @@
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
 import '../../core/services/mlkit_text_recognition_service.dart';
 import '../../data/models/credencial_ine_model.dart';
+import '../camera/camera_controller.dart';
 
 class CredentialProcessingController extends GetxController {
   // Variables observables para las rutas de las imágenes
@@ -41,17 +43,23 @@ class CredentialProcessingController extends GetxController {
   /// Verifica si ambas imágenes están disponibles
   bool get hasBothImages => frontImagePath.value.isNotEmpty && backImagePath.value.isNotEmpty;
   
-  /// Vuelve a la pantalla de cámara para retomar las fotos
-  void retakePhotos() {
-    // Limpiar las imágenes actuales
-    frontImagePath.value = '';
-    backImagePath.value = '';
-    extractedFrontText.value = null;
-    extractedBackText.value = null;
-    processedCredential.value = null;
-    
-    // Navegar de vuelta a la cámara con el estado inicial
-    Get.offAllNamed('/camera');
+  /// Vuelve a la página inicial para comenzar de nuevo
+  Future<void> retakePhotos() async {
+    try {
+      // Navegar primero para evitar problemas con el controlador
+      Get.offAllNamed('/');
+      
+    } catch (e) {
+      Log.e('CredentialProcessingController', 'Error en retakePhotos', e);
+      // Fallback: intentar navegación directa
+      try {
+        Get.offAndToNamed('/');
+      } catch (fallbackError) {
+        Log.e('CredentialProcessingController', 'Error en fallback navigation', fallbackError);
+        // Último recurso
+        Get.back();
+      }
+    }
   }
   
   /// Procesa la credencial con ambas imágenes
@@ -67,6 +75,15 @@ class CredentialProcessingController extends GetxController {
     try {
       isProcessing.value = true;
       Log.i('CredentialProcessingController', 'Iniciando procesamiento de credencial con ambas imágenes');
+      
+      // Validar que las rutas de imágenes no estén vacías
+      if (frontImagePath.value.isEmpty || backImagePath.value.isEmpty) {
+        SnackbarUtils.showWarning(
+          title: 'Error',
+          message: 'No se encontraron las rutas de las imágenes',
+        );
+        return;
+      }
       
       // Extraer texto de la imagen frontal
       Log.i('CredentialProcessingController', 'Extrayendo texto de imagen frontal');

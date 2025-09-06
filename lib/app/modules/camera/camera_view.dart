@@ -127,10 +127,12 @@ class _CameraViewState extends State<CameraView> {
                         fit: BoxFit.cover,
                         child: SizedBox(
                           width: size.width,
-                          height:
-                              size.width /
-                              controller.cameraController!.value.aspectRatio,
-                          child: CameraPreview(controller.cameraController!),
+                          height: controller.cameraController != null
+                              ? size.width / controller.cameraController!.value.aspectRatio
+                              : size.height,
+                          child: controller.cameraController != null
+                              ? CameraPreview(controller.cameraController!)
+                              : Container(color: Colors.black),
                         ),
                       ),
                     ),
@@ -475,8 +477,8 @@ class _CameraViewState extends State<CameraView> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
-              child: const Text(
-                'Coloca la credencial por el lado frontal',
+              child: Obx(() => Text(
+                _getInstructionMessage(),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -490,7 +492,7 @@ class _CameraViewState extends State<CameraView> {
                   ],
                 ),
                 textAlign: TextAlign.center,
-              ),
+              )),
             ),
           ),
         );

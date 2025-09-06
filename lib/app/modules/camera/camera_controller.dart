@@ -45,6 +45,8 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
+    // Configurar orientación landscape al inicializar la cámara
+    _setLandscapeOrientation();
     _initializeCamera();
     _startInstructionTimer(); // Iniciar temporizador para ocultar mensaje
   }
@@ -451,7 +453,7 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   
   /// Navega a la pantalla de procesamiento de credencial
   Future<void> _navigateToProcessing() async {
-    // Restaurar orientación portrait antes de navegar
+    // Cambiar a orientación portrait solo al finalizar el proceso de captura
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await Future.delayed(const Duration(milliseconds: 300));
     
@@ -467,5 +469,13 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     capturedImagePath.value = '';
     frontImagePath.value = '';
     backImagePath.value = '';
+  }
+  
+  /// Configura la orientación landscape para la cámara
+  Future<void> _setLandscapeOrientation() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 }

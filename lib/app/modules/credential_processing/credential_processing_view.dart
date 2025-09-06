@@ -319,7 +319,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: controller.retakePhotos,
+                      onPressed: () async => await controller.retakePhotos(),
                       icon: const Icon(Icons.refresh),
                       label: const Text('Volver a Tomar'),
                       style: ElevatedButton.styleFrom(

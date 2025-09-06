@@ -260,9 +260,11 @@ class CredencialIneModel {
 
   /// Verifica si la credencial cumple con los requisitos mínimos para ser aceptable
   /// Utiliza la configuración de campos requeridos del servicio de procesamiento
+  /// Sanitiza los datos antes de validar
   bool get isAcceptable {
-    // Importar el servicio para usar la validación
-    return IneCredentialProcessorService.isCredentialAcceptable(this);
+    // Sanitizar los datos antes de validar
+    final sanitizedCredential = IneCredentialProcessorService.sanitizeCredentialData(this);
+    return IneCredentialProcessorService.isCredentialAcceptable(sanitizedCredential);
   }
 
   @override

@@ -137,6 +137,14 @@ class IneCredentialProcessorService {
     return false; // Por defecto no procesar tipos desconocidos
   }
 
+  /// Sanitiza los datos de CURP y clave de elector de una credencial
+  static CredencialIneModel sanitizeCredentialData(CredencialIneModel credential) {
+    return credential.copyWith(
+      curp: credential.curp.isNotEmpty ? _sanitizeCurp(credential.curp) : credential.curp,
+      claveElector: credential.claveElector.isNotEmpty ? _sanitizeClaveElector(credential.claveElector) : credential.claveElector,
+    );
+  }
+
   /// Verifica si una credencial cumple con los requisitos mínimos
   static bool isCredentialAcceptable(CredencialIneModel credential) {
     // Buscar la configuración del tipo de credencial
@@ -179,14 +187,22 @@ class IneCredentialProcessorService {
           }
           break;
         case 'CLAVE DE ELECTOR':
-          if (credential.claveElector.isEmpty ||
-              !ValidationUtils.isValidClaveElector(credential.claveElector)) {
+          if (credential.claveElector.isEmpty) {
+            return false;
+          }
+          // Sanitizar antes de validar
+          final sanitizedClaveElector = _sanitizeClaveElector(credential.claveElector);
+          if (!ValidationUtils.isValidClaveElector(sanitizedClaveElector)) {
             return false;
           }
           break;
         case 'CURP':
-          if (credential.curp.isEmpty ||
-              !ValidationUtils.isValidCurpFormat(credential.curp)) {
+          if (credential.curp.isEmpty) {
+            return false;
+          }
+          // Sanitizar antes de validar
+          final sanitizedCurp = _sanitizeCurp(credential.curp);
+          if (!ValidationUtils.isValidCurpFormat(sanitizedCurp)) {
             return false;
           }
           break;
@@ -1454,6 +1470,70 @@ class IneCredentialProcessorService {
     return false;
   }
 
+  /// Sanitiza texto removiendo todos los símbolos excepto letras y números
+  static String _sanitizeAlphanumeric(String text) {
+    return text.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+  }
+
+  /// Sanitiza CURP corrigiendo caracteres mal interpretados en los últimos 2 dígitos
+  static String _sanitizeCurp(String curp) {
+    print('🧹 SANITIZANDO CURP: "$curp" (longitud: ${curp.length})');
+    
+    // Primero sanitizar alfanumérico para remover guiones y otros caracteres
+    String sanitized = _sanitizeAlphanumeric(curp);
+    print('🧹 CURP después de sanitizar alfanumérico: "$sanitized" (longitud: ${sanitized.length})');
+    
+    // Si después de sanitizar no tiene 18 caracteres, retornar como está
+    if (sanitized.length != 18) {
+      print('⚠️ CURP no tiene 18 caracteres después de sanitizar, retornando: "$sanitized"');
+      return sanitized;
+    }
+    
+    // Corregir los últimos 2 caracteres que deben ser números
+    String corrected = sanitized.substring(0, 16);
+    String lastTwo = sanitized.substring(16);
+    print('🧹 Últimos 2 caracteres antes de corrección OCR: "$lastTwo"');
+    
+    // Aplicar correcciones de OCR para los últimos 2 dígitos
+    lastTwo = lastTwo
+        .replaceAll(RegExp(r'[IiLl]'), '1')
+        .replaceAll(RegExp(r'[AaÁá]'), '4')
+        .replaceAll(RegExp(r'[OoÓó]'), '0')
+        .replaceAll('S', '5')
+        .replaceAll('B', '8')
+        .replaceAll('G', '6')
+        .replaceAll('Z', '2');
+    
+    final result = corrected + lastTwo;
+    print('🧹 CURP sanitizado final: "$result"');
+    return result;
+  }
+
+  /// Sanitiza clave de elector corrigiendo caracteres mal interpretados en los últimos 3 dígitos
+  static String _sanitizeClaveElector(String clave) {
+    // Primero sanitizar alfanumérico para remover guiones y otros caracteres
+    String sanitized = _sanitizeAlphanumeric(clave);
+    
+    // Si después de sanitizar no tiene 18 caracteres, retornar como está
+    if (sanitized.length != 18) return sanitized;
+    
+    // Corregir los últimos 3 caracteres que deben ser números
+    String corrected = sanitized.substring(0, 15);
+    String lastThree = sanitized.substring(15);
+    
+    // Aplicar correcciones de OCR para los últimos 3 dígitos
+    lastThree = lastThree
+        .replaceAll(RegExp(r'[IiLl]'), '1')
+        .replaceAll(RegExp(r'[AaÁá]'), '4')
+        .replaceAll(RegExp(r'[OoÓó]'), '0')
+        .replaceAll('S', '5')
+        .replaceAll('B', '8')
+        .replaceAll('G', '6')
+        .replaceAll('Z', '2');
+    
+    return corrected + lastThree;
+  }
+
   /// Extrae la clave de elector
   static String _extractClaveElector(List<String> lines) {
     for (int i = 0; i < lines.length; i++) {
@@ -1466,13 +1546,13 @@ class IneCredentialProcessorService {
           r'CLAVE\s+DE\s+ELECTOR\s+([A-Z0-9]{18})',
         ).firstMatch(line);
         if (match != null) {
-          return match.group(1) ?? '';
+          return _sanitizeClaveElector(match.group(1) ?? '');
         }
 
         // Fallback: buscar cualquier secuencia de 18 caracteres alfanuméricos en la línea
         final fallbackMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
         if (fallbackMatch != null) {
-          return fallbackMatch.group(0) ?? '';
+          return _sanitizeClaveElector(fallbackMatch.group(0) ?? '');
         }
 
         // Si no está en la misma línea, buscar en las siguientes líneas como fallback
@@ -1480,7 +1560,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].trim().toUpperCase();
           final nextMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(nextLine);
           if (nextMatch != null) {
-            return nextMatch.group(0) ?? '';
+            return _sanitizeClaveElector(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1488,7 +1568,7 @@ class IneCredentialProcessorService {
       // También buscar directamente en la línea actual
       final match = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
       if (match != null && !line.contains('CURP')) {
-        return match.group(0) ?? '';
+        return _sanitizeClaveElector(match.group(0) ?? '');
       }
     }
     return '';
@@ -1508,7 +1588,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (match != null) {
-          return match.group(0) ?? '';
+          return _sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP con guiones o espacios y limpiarlos
@@ -1516,15 +1596,12 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[-\s]*[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (matchWithSeparators != null) {
-          return (matchWithSeparators.group(0) ?? '').replaceAll(
-            RegExp(r'[-\s]'),
-            '',
-          );
+          return _sanitizeCurp(matchWithSeparators.group(0) ?? '');
         }
 
-        // Si la línea siguiente no está vacía pero no coincide con el patrón, devolverla tal como está
+        // Si la línea siguiente no está vacía pero no coincide con el patrón, sanitizarla
         if (nextLine.isNotEmpty) {
-          return nextLine;
+          return _sanitizeCurp(nextLine);
         }
       }
 
@@ -1533,7 +1610,7 @@ class IneCredentialProcessorService {
         r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
       ).firstMatch(line);
       if (match != null) {
-        return match.group(0) ?? '';
+        return _sanitizeCurp(match.group(0) ?? '');
       }
     }
     return '';
@@ -1553,7 +1630,7 @@ class IneCredentialProcessorService {
         // Buscar CURP en la misma línea
         final match = curpPattern.firstMatch(line);
         if (match != null) {
-          return match.group(0) ?? '';
+          return _sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP en las siguientes 2 líneas
@@ -1561,7 +1638,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].toUpperCase();
           final nextMatch = curpPattern.firstMatch(nextLine);
           if (nextMatch != null) {
-            return nextMatch.group(0) ?? '';
+            return _sanitizeCurp(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1577,7 +1654,7 @@ class IneCredentialProcessorService {
             !line.contains('EMISION') &&
             !line.contains('SECCIÓN') &&
             !line.contains('SECCION')) {
-          return curp;
+          return _sanitizeCurp(curp);
         }
       }
 
@@ -1598,7 +1675,7 @@ class IneCredentialProcessorService {
 
         // Verificar si después de las correcciones coincide con el patrón CURP
         if (curpPattern.hasMatch(correctedCurp)) {
-          return correctedCurp;
+          return _sanitizeCurp(correctedCurp);
         }
       }
     }
@@ -1619,7 +1696,7 @@ class IneCredentialProcessorService {
           r'CURP\s+([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9])',
         ).firstMatch(line);
         if (match != null) {
-          return match.group(1) ?? '';
+          return _sanitizeCurp(match.group(1) ?? '');
         }
 
         // Buscar cualquier patrón de CURP en la línea
@@ -1627,7 +1704,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(line);
         if (fallbackMatch != null) {
-          return fallbackMatch.group(0) ?? '';
+          return _sanitizeCurp(fallbackMatch.group(0) ?? '');
         }
       }
     }

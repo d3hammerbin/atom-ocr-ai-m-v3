@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'device_controller.dart';
 import '../../data/models/user_model.dart';
 import '../../core/services/user_session_service.dart';
@@ -16,6 +17,10 @@ class DeviceInfoPage extends GetView<DeviceController> {
       appBar: AppBar(
         title: const Text('Información del Dispositivo'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () => _shareDeviceInfo(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => controller.refreshDeviceInfo(),
@@ -383,5 +388,140 @@ class DeviceInfoPage extends GetView<DeviceController> {
     bool inDebugMode = false;
     assert(inDebugMode = true);
     return inDebugMode;
+  }
+
+  /// Comparte la información completa del dispositivo
+  void _shareDeviceInfo() {
+    final device = controller.currentDevice.value;
+    if (device == null) {
+      Get.snackbar(
+        'Error',
+        'No hay información del dispositivo disponible para compartir',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final userSessionService = Get.find<UserSessionService>();
+    final currentUser = userSessionService.currentUser;
+    
+    final StringBuffer content = StringBuffer();
+    content.writeln('=== INFORMACIÓN DEL DISPOSITIVO ===\n');
+    
+    // Información del usuario
+    if (currentUser != null) {
+      content.writeln('👤 USUARIO:');
+      content.writeln('Identificador: ${currentUser.identifier}');
+      content.writeln('Estado: ${currentUser.enabled ? 'Activo' : 'Inactivo'}');
+      content.writeln('Fecha de registro: ${_formatDateTime(currentUser.createdAt)}');
+      content.writeln('Último acceso: ${_formatDateTime(currentUser.lastLoginAt)}');
+      content.writeln();
+    }
+    
+    // Identificación
+    content.writeln('🔍 IDENTIFICACIÓN:');
+    content.writeln('Número de Serie: ${device.serialNumber ?? 'No disponible'}');
+    content.writeln('ID del Dispositivo: ${device.deviceId ?? 'No disponible'}');
+    content.writeln();
+    
+    // Sistema Operativo
+    content.writeln('📱 SISTEMA OPERATIVO:');
+    content.writeln('Versión Android: ${device.androidVersion ?? 'Desconocida'}');
+    content.writeln('Nivel de API: ${device.sdkInt?.toString() ?? 'Desconocido'}');
+    content.writeln();
+    
+    // Hardware
+    content.writeln('⚙️ HARDWARE:');
+    content.writeln('Modelo: ${device.model ?? 'Desconocido'}');
+    content.writeln('Marca: ${device.brand ?? 'Desconocida'}');
+    content.writeln('Dispositivo de baja RAM: ${device.isLowRamDevice ? 'Sí' : 'No'}');
+    content.writeln();
+    
+    // Arquitecturas
+    content.writeln('🏗️ ARQUITECTURAS SOPORTADAS:');
+    content.writeln('32 bits: ${device.supported32BitAbis ?? 'No disponible'}');
+    content.writeln('64 bits: ${device.supported64BitAbis ?? 'No disponible'}');
+    content.writeln('Todas: ${device.supportedAbis ?? 'No disponible'}');
+    content.writeln();
+    
+    // Almacenamiento
+    content.writeln('💾 ALMACENAMIENTO:');
+    content.writeln('Espacio libre: ${_formatBytes(device.freeDiskSize)}');
+    content.writeln('Espacio total: ${_formatBytes(device.totalDiskSize)}');
+    content.writeln();
+    
+    // Memoria RAM
+    content.writeln('🧠 MEMORIA RAM:');
+    content.writeln('RAM física: ${_formatBytes(device.physicalRamSize)}');
+    content.writeln('RAM disponible: ${_formatBytes(device.availableRamSize)}');
+    content.writeln();
+    
+    // Procesador
+    content.writeln('🔧 PROCESADOR (CPU):');
+    content.writeln('Tipo: ${device.cpuType ?? 'No disponible'}');
+    content.writeln('Núcleos: ${device.cpuCores?.toString() ?? 'No disponible'}');
+    content.writeln('Arquitectura: ${device.cpuArchitecture ?? 'No disponible'}');
+    content.writeln();
+    
+    // Tarjeta Gráfica
+    content.writeln('🎮 TARJETA GRÁFICA (GPU):');
+    content.writeln('Fabricante: ${device.gpuVendor ?? 'No disponible'}');
+    content.writeln('Modelo: ${device.gpuRenderer ?? 'No disponible'}');
+    content.writeln();
+    
+    // Pantalla
+    content.writeln('📺 PANTALLA:');
+    content.writeln('Ancho: ${device.screenWidth != null ? '${device.screenWidth!.toInt()} px' : 'No disponible'}');
+    content.writeln('Alto: ${device.screenHeight != null ? '${device.screenHeight!.toInt()} px' : 'No disponible'}');
+    content.writeln('Densidad: ${device.screenDensity != null ? '${device.screenDensity!.toStringAsFixed(2)} dpi' : 'No disponible'}');
+    content.writeln('Frecuencia: ${device.screenRefreshRate != null ? '${device.screenRefreshRate!.toStringAsFixed(1)} Hz' : 'No disponible'}');
+    content.writeln();
+    
+    // Batería
+    content.writeln('🔋 BATERÍA:');
+    content.writeln('Nivel: ${device.batteryLevel != null ? '${device.batteryLevel}%' : 'No disponible'}');
+    content.writeln('Estado: ${device.batteryStatus ?? 'No disponible'}');
+    content.writeln('Salud: ${device.batteryHealth ?? 'No disponible'}');
+    content.writeln('Temperatura: ${device.batteryTemperature != null ? '${device.batteryTemperature}°C' : 'No disponible'}');
+    content.writeln();
+    
+    // Sensores
+    if (device.availableSensors != null && device.availableSensors!.isNotEmpty) {
+      content.writeln('📡 SENSORES DISPONIBLES:');
+      try {
+        final sensors = jsonDecode(device.availableSensors!);
+        if (sensors is List) {
+          for (final sensor in sensors) {
+            content.writeln('• $sensor');
+          }
+        } else {
+          content.writeln(device.availableSensors!);
+        }
+      } catch (e) {
+        content.writeln(device.availableSensors!);
+      }
+      content.writeln();
+    }
+    
+    // Información de la aplicación
+    content.writeln('📱 INFORMACIÓN DE LA APLICACIÓN:');
+    content.writeln('Modo Debug: ${_isDebugMode()}');
+    content.writeln('Plataforma Flutter: ${Platform.operatingSystem}');
+    content.writeln('Versión del SO: ${Platform.operatingSystemVersion}');
+    content.writeln();
+    
+    // Información de registro
+    content.writeln('📅 INFORMACIÓN DE REGISTRO:');
+    content.writeln('Fecha de registro: ${device.createdAt?.toString() ?? 'No disponible'}');
+    content.writeln('Última actualización: ${device.updatedAt?.toString() ?? 'No disponible'}');
+    content.writeln();
+    
+    content.writeln('Generado el: ${DateTime.now().toString()}');
+    
+    // Compartir el contenido
+    Share.share(
+      content.toString(),
+      subject: 'Información del Dispositivo - ${device.model ?? 'Dispositivo'}',
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:get/get.dart';
+import 'dart:io';
 import 'camera_controller.dart';
 
 class CameraView extends StatefulWidget {
@@ -136,6 +137,11 @@ class _CameraViewState extends State<CameraView> {
                         ),
                       ),
                     ),
+
+                    // Overlay de imagen capturada (pausa la cámara)
+                    Obx(() => controller.showConfirmationButtons.value
+                        ? _buildCapturedImageOverlay(orientation)
+                        : const SizedBox.shrink()),
 
                     // Marco de guía para la credencial
                     _buildCredentialFrame(orientation),
@@ -536,5 +542,77 @@ class _CameraViewState extends State<CameraView> {
       default:
         return 'Coloca la credencial por el lado frontal';
     }
+  }
+
+  /// Construye el overlay de imagen capturada que "pausa" la cámara
+  Widget _buildCapturedImageOverlay(Orientation orientation) {
+    // Obtener la ruta de la imagen actual según el estado
+    String imagePath = '';
+    if (controller.captureState.value == 'front_confirm') {
+      imagePath = controller.frontImagePath.value;
+    } else if (controller.captureState.value == 'back_confirm') {
+      imagePath = controller.backImagePath.value;
+    }
+
+    if (imagePath.isEmpty) return const SizedBox.shrink();
+
+    // Calcular las mismas dimensiones que el marco de referencia
+    const double credentialAspectRatio = 790 / 490;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    double frameWidth, frameHeight;
+
+    if (orientation == Orientation.portrait) {
+      // En portrait, usar 80% del ancho disponible
+      frameWidth = screenWidth * 0.8;
+      frameHeight = frameWidth / credentialAspectRatio;
+
+      // Verificar que no exceda la altura disponible (dejando espacio para controles)
+      final maxHeight = screenHeight * 0.5;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    } else {
+      // En landscape, maximizar área de captura (85% ancho, dejando solo espacio para barra de botones)
+      frameWidth = screenWidth * 0.85;
+      frameHeight = frameWidth / credentialAspectRatio;
+
+      // Verificar que no exceda la altura disponible (dejando espacio para tip superior)
+      final maxHeight = screenHeight * 0.85;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    }
+
+    // Centrar la imagen en la misma posición que el marco
+    return Center(
+      child: Container(
+        width: frameWidth,
+        height: frameHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            File(imagePath),
+            fit: BoxFit.cover,
+            width: frameWidth,
+            height: frameHeight,
+          ),
+        ),
+      ),
+    );
   }
 }

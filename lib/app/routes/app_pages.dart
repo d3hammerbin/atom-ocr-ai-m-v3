@@ -13,6 +13,8 @@ import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
 import '../modules/local_process/local_process_binding.dart';
 import '../modules/local_process/local_process_view.dart';
+import '../modules/credential_processing/credential_processing_binding.dart';
+import '../modules/credential_processing/credential_processing_view.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 import '../modules/auth/views/initial_screen.dart';
 
@@ -68,6 +70,11 @@ class AppPages {
       name: _Paths.CAPTURE_SELECTION,
       page: () => const HomeView(), // Temporal: usar HomeView como selección de captura
       binding: HomeBinding(),
+    ),
+    GetPage(
+      name: _Paths.CREDENTIAL_PROCESSING,
+      page: () => const CredentialProcessingView(),
+      binding: CredentialProcessingBinding(),
     ),
   ];
 }

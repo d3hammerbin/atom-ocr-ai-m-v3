@@ -11,6 +11,7 @@ abstract class Routes {
   static const PROCESSING = _Paths.PROCESSING;
   static const LOCAL_PROCESS = _Paths.LOCAL_PROCESS;
   static const CAPTURE_SELECTION = _Paths.CAPTURE_SELECTION;
+  static const CREDENTIAL_PROCESSING = _Paths.CREDENTIAL_PROCESSING;
 }
 
 abstract class _Paths {
@@ -24,4 +25,5 @@ abstract class _Paths {
   static const PROCESSING = '/processing';
   static const LOCAL_PROCESS = '/local-process';
   static const CAPTURE_SELECTION = '/capture-selection';
+  static const CREDENTIAL_PROCESSING = '/credential-processing';
 }

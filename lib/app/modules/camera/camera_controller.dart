@@ -17,6 +17,8 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   final isInitialized = false.obs;
   final isCapturing = false.obs;
   final capturedImagePath = ''.obs;
+  final frontImagePath = ''.obs; // Ruta de la imagen frontal
+  final backImagePath = ''.obs; // Ruta de la imagen trasera
   final hasPermission = false.obs;
   final errorMessage = ''.obs;
   final isFrontSide = true.obs; // true = frontal (persona), false = reverso (QR)
@@ -343,10 +345,12 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       
       // Actualizar estado según el flujo de captura
       if (captureState.value == 'front') {
+        frontImagePath.value = filePath; // Almacenar ruta de imagen frontal
         frontPhotoTaken.value = true;
         captureState.value = 'front_confirm';
         showConfirmationButtons.value = true;
       } else if (captureState.value == 'back') {
+        backImagePath.value = filePath; // Almacenar ruta de imagen trasera
         backPhotoTaken.value = true;
         captureState.value = 'back_confirm';
         showConfirmationButtons.value = true;
@@ -445,21 +449,23 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     }
   }
   
-  /// Navega a la pantalla de procesamiento
+  /// Navega a la pantalla de procesamiento de credencial
   Future<void> _navigateToProcessing() async {
     // Restaurar orientación portrait antes de navegar
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await Future.delayed(const Duration(milliseconds: 300));
     
-    // Navegar a la pantalla de procesamiento con la imagen capturada
-    Get.toNamed('/processing', arguments: {
-      'imagePath': capturedImagePath.value,
-      'side': 'both', // Indicar que se capturaron ambos lados
+    // Navegar a la nueva pantalla de procesamiento de credencial con ambas imágenes
+    Get.toNamed('/credential-processing', arguments: {
+      'frontImagePath': frontImagePath.value,
+      'backImagePath': backImagePath.value,
     });
   }
   
-  /// Limpia la imagen capturada
+  /// Limpia las imágenes capturadas
   void clearImage() {
     capturedImagePath.value = '';
+    frontImagePath.value = '';
+    backImagePath.value = '';
   }
 }

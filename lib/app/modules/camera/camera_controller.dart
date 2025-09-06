@@ -23,6 +23,12 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   final isFlashOn = false.obs; // Estado del flash
   final showInstructionText = true.obs; // Controla la visibilidad del mensaje de instrucciones
   
+  // Variables para el nuevo flujo de captura
+  final frontPhotoTaken = false.obs; // Indica si se tomó la foto frontal
+  final backPhotoTaken = false.obs; // Indica si se tomó la foto trasera
+  final showConfirmationButtons = false.obs; // Controla la visibilidad de los botones check/cancel
+  final captureState = 'front'.obs; // 'front', 'front_confirm', 'back', 'back_confirm'
+  
   // Controlador de cámara
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
@@ -335,20 +341,16 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       capturedImagePath.value = filePath;
       isCapturing.value = false;
       
-      SnackbarUtils.showSuccess(
-        title: 'Éxito',
-        message: 'Imagen recortada y guardada en la galería',
-      );
-      
-      // Restaurar orientación portrait antes de navegar
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // Navegar a la pantalla de procesamiento con la imagen capturada
-      Get.toNamed('/processing', arguments: {
-        'imagePath': filePath,
-        'side': isFrontSide.value ? 'front' : 'back',
-      });
+      // Actualizar estado según el flujo de captura
+      if (captureState.value == 'front') {
+        frontPhotoTaken.value = true;
+        captureState.value = 'front_confirm';
+        showConfirmationButtons.value = true;
+      } else if (captureState.value == 'back') {
+        backPhotoTaken.value = true;
+        captureState.value = 'back_confirm';
+        showConfirmationButtons.value = true;
+      }
       
     } catch (e) {
       isCapturing.value = false;
@@ -406,6 +408,53 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   void _startInstructionTimer() {
     _instructionTimer = Timer(const Duration(seconds: 5), () {
       showInstructionText.value = false;
+    });
+  }
+  
+  /// Confirma la foto actual y avanza al siguiente estado
+  void confirmPhoto() {
+    if (captureState.value == 'front_confirm') {
+      // Cambiar al estado de captura trasera
+      captureState.value = 'back';
+      isFrontSide.value = false; // Cambiar a lado trasero (QR)
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    } else if (captureState.value == 'back_confirm') {
+      // Navegar a la pantalla de procesamiento
+      _navigateToProcessing();
+    }
+  }
+  
+  /// Cancela la foto actual y permite volver a tomarla
+  void cancelPhoto() {
+    if (captureState.value == 'front_confirm') {
+      // Volver al estado de captura frontal
+      captureState.value = 'front';
+      frontPhotoTaken.value = false;
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    } else if (captureState.value == 'back_confirm') {
+      // Volver al estado de captura trasera
+      captureState.value = 'back';
+      backPhotoTaken.value = false;
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    }
+  }
+  
+  /// Navega a la pantalla de procesamiento
+  Future<void> _navigateToProcessing() async {
+    // Restaurar orientación portrait antes de navegar
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Navegar a la pantalla de procesamiento con la imagen capturada
+    Get.toNamed('/processing', arguments: {
+      'imagePath': capturedImagePath.value,
+      'side': 'both', // Indicar que se capturaron ambos lados
     });
   }
   

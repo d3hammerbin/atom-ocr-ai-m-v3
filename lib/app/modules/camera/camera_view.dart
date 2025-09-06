@@ -281,15 +281,17 @@ class _CameraViewState extends State<CameraView> {
               onPressed: _exitToHome,
               backgroundColor: Colors.red.withValues(alpha: 0.8),
             ),
-            // Botón flash
+            // Botón flash - Solo visible después de capturar la primera foto
             Obx(
-              () => _buildControlButton(
-                icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
-                onPressed: controller.toggleFlash,
-                backgroundColor: controller.isFlashOn.value 
-                    ? Colors.yellow.withValues(alpha: 0.8)
-                    : Colors.grey.withValues(alpha: 0.8),
-              ),
+              () => controller.frontPhotoTaken.value
+                  ? _buildControlButton(
+                      icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
+                      onPressed: controller.toggleFlash,
+                      backgroundColor: controller.isFlashOn.value 
+                          ? Colors.yellow.withValues(alpha: 0.8)
+                          : Colors.grey.withValues(alpha: 0.8),
+                    )
+                  : const SizedBox(width: 60), // Mantener el espacio
             ),
             // Botón capturar
             _buildCaptureButton(),
@@ -316,31 +318,29 @@ class _CameraViewState extends State<CameraView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Botones superiores (check y X)
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Column(
-                  children: [
-                    _buildControlButton(
-                      icon: Icons.check,
-                      onPressed: () {
-                        // TODO: Implementar acción de confirmar
-                      },
-                      backgroundColor: Colors.green.withValues(alpha: 0.6),
-                      size: 40,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildControlButton(
-                      icon: Icons.close,
-                      onPressed: () {
-                        // TODO: Implementar acción de cancelar (diferente a _exitToHome)
-                      },
-                      backgroundColor: Colors.red.withValues(alpha: 0.6),
-                      size: 40,
-                    ),
-                  ],
-                ),
-              ),
+              // Botones superiores (check y X) - Solo visibles después de capturar
+              Obx(() => controller.showConfirmationButtons.value
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Column(
+                        children: [
+                          _buildControlButton(
+                            icon: Icons.check,
+                            onPressed: controller.confirmPhoto,
+                            backgroundColor: Colors.green.withValues(alpha: 0.6),
+                            size: 40,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildControlButton(
+                            icon: Icons.close,
+                            onPressed: controller.cancelPhoto,
+                            backgroundColor: Colors.red.withValues(alpha: 0.6),
+                            size: 40,
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
               // Botón capturar en el centro
               _buildCaptureButton(),
               // Botón cancelar en la parte inferior
@@ -451,15 +451,15 @@ class _CameraViewState extends State<CameraView> {
                 color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'Coloca la credencial por el lado frontal',
+              child: Obx(() => Text(
+                _getInstructionMessage(),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
-              ),
+              )),
             ),
           ),
         );
@@ -518,5 +518,21 @@ class _CameraViewState extends State<CameraView> {
         ),
       ),
     );
+  }
+
+  /// Obtiene el mensaje de instrucciones según el estado actual del flujo
+  String _getInstructionMessage() {
+    switch (controller.captureState.value) {
+      case 'front':
+        return 'Coloca la credencial por el lado frontal';
+      case 'front_confirm':
+        return 'Foto frontal capturada - Confirma o vuelve a tomar';
+      case 'back':
+        return 'Ahora captura el lado trasero de la credencial';
+      case 'back_confirm':
+        return 'Foto trasera capturada - Confirma para procesar';
+      default:
+        return 'Coloca la credencial por el lado frontal';
+    }
   }
 }

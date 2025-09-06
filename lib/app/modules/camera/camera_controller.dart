@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,11 +21,13 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   final errorMessage = ''.obs;
   final isFrontSide = true.obs; // true = frontal (persona), false = reverso (QR)
   final isFlashOn = false.obs; // Estado del flash
+  final showInstructionText = true.obs; // Controla la visibilidad del mensaje de instrucciones
   
   // Controlador de cámara
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
   CameraDescription? _backCamera; // Siempre usar cámara trasera
+  Timer? _instructionTimer; // Temporizador para ocultar el mensaje de instrucciones
   
   // Getters
   CameraController? get cameraController => _cameraController;
@@ -35,11 +38,13 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
+    _startInstructionTimer(); // Iniciar temporizador para ocultar mensaje
   }
 
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    _instructionTimer?.cancel(); // Cancelar temporizador
     _disposeCameraController();
     super.onClose();
   }
@@ -405,6 +410,13 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     isInitialized.value = false;
     errorMessage.value = '';
     await _initializeCamera();
+  }
+  
+  /// Inicia el temporizador para ocultar el mensaje de instrucciones después de 5 segundos
+  void _startInstructionTimer() {
+    _instructionTimer = Timer(const Duration(seconds: 5), () {
+      showInstructionText.value = false;
+    });
   }
   
   /// Limpia la imagen capturada

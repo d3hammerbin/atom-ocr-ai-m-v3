@@ -515,56 +515,66 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _buildInstructionText(Orientation orientation) {
-    if (orientation == Orientation.portrait) {
-      return Positioned(
-        top: 80,
-        left: 20,
-        right: 20,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text(
-            'Coloca la credencial dentro del marco y presiona el botón para capturar',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    } else {
-      // En landscape: tip extendido en la parte superior con más transparencia
-      return Positioned(
-        top: 0,
-        left: 0,
-        right: 60, // Terminar donde comienza el menú lateral
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
-          child: const Text(
-            'Coloca la credencial dentro del marco y presiona el botón para capturar',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              shadows: [
-                Shadow(
-                  offset: Offset(1, 1),
-                  blurRadius: 2,
-                  color: Colors.black54,
+    return Obx(() {
+      if (orientation == Orientation.portrait) {
+        return Positioned(
+          top: 80,
+          left: 20,
+          right: 20,
+          child: AnimatedOpacity(
+            opacity: controller.showInstructionText.value ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Coloca la credencial dentro del marco y presiona el botón para capturar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+                textAlign: TextAlign.center,
+              ),
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-      );
-    }
+        );
+      } else {
+        // En landscape: tip extendido en la parte superior con más transparencia
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 60, // Terminar donde comienza el menú lateral
+          child: AnimatedOpacity(
+            opacity: controller.showInstructionText.value ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
+              child: const Text(
+                'Coloca la credencial dentro del marco y presiona el botón para capturar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(1, 1),
+                      blurRadius: 2,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildSideIndicator() {

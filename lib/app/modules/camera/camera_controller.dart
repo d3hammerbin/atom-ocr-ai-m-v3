@@ -194,19 +194,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       }
     }
     
-    // Calcular posición del marco (centrado)
-    double frameX, frameY;
-    
-    if (orientation == Orientation.portrait) {
-      frameX = (screenWidth - frameWidth) / 2;
-      frameY = (screenHeight - frameHeight) / 2;
-    } else {
-      // En landscape, centrar verticalmente en el espacio disponible
-      const double tipHeight = 60;
-      final double availableHeight = screenHeight - tipHeight;
-      frameX = (screenWidth - frameWidth) / 2;
-      frameY = tipHeight + (availableHeight - frameHeight) / 2 - 20;
-    }
+    // Calcular posición del marco (centrado perfectamente en ambas orientaciones)
+    final double frameX = (screenWidth - frameWidth) / 2;
+    final double frameY = (screenHeight - frameHeight) / 2;
     
     return {
       'x': frameX,

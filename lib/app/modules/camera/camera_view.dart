@@ -192,162 +192,78 @@ class _CameraViewState extends State<CameraView> {
       }
     }
 
-    if (orientation == Orientation.portrait) {
-      return Center(
-        child: Container(
-          width: frameWidth,
-          height: frameHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              // Esquinas del marco
-              Positioned(
-                top: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    // Centrar el frame perfectamente en ambas orientaciones
+    return Center(
+      child: Container(
+        width: frameWidth,
+        height: frameHeight,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white, width: 2),
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
-    } else {
-      // En landscape, centrar verticalmente en el espacio disponible
-      // Calcular altura del tip (aproximadamente 60px incluyendo padding)
-      const double tipHeight = 60;
-      final double availableHeight = screenHeight - tipHeight;
-      final double topPosition =
-          tipHeight +
-          (availableHeight - frameHeight) / 2 -
-          20; // Subir 20px para evitar fusión con parte inferior
-
-      return Positioned(
-        top: topPosition, // Centrar en el espacio disponible
-        left: (screenWidth - frameWidth) / 2, // Centrar horizontalmente
-        child: Container(
-          width: frameWidth,
-          height: frameHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              // Esquinas del marco
-              Positioned(
-                top: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
+        child: Stack(
+          children: [
+            // Esquinas del marco
+            Positioned(
+              top: -1,
+              left: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.blue, width: 4),
+                    left: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              top: -1,
+              right: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.blue, width: 4),
+                    right: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                bottom: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              bottom: -1,
+              left: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.blue, width: 4),
+                    left: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                bottom: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              bottom: -1,
+              right: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.blue, width: 4),
+                    right: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildCameraControls(Orientation orientation) {

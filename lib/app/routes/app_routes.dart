@@ -8,6 +8,7 @@ abstract class Routes {
   static const OCR = _Paths.OCR;
   static const CAMERA = _Paths.CAMERA;
   static const CREDENTIALS_LIST = _Paths.CREDENTIALS_LIST;
+  static const CREDENTIAL_DETAILS = _Paths.CREDENTIAL_DETAILS;
   static const PROCESSING = _Paths.PROCESSING;
   static const LOCAL_PROCESS = _Paths.LOCAL_PROCESS;
   static const CAPTURE_SELECTION = _Paths.CAPTURE_SELECTION;
@@ -22,6 +23,7 @@ abstract class _Paths {
   static const OCR = '/ocr';
   static const CAMERA = '/camera';
   static const CREDENTIALS_LIST = '/credentials-list';
+  static const CREDENTIAL_DETAILS = '/credential-details';
   static const PROCESSING = '/processing';
   static const LOCAL_PROCESS = '/local-process';
   static const CAPTURE_SELECTION = '/capture-selection';

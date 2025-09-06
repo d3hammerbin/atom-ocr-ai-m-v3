@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../data/models/credential_model.dart';
 import 'credentials_list_controller.dart';
 import '../../global_widgets/user_settings_widget.dart';
 
@@ -84,7 +85,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
     );
   }
   
-  Widget _buildCredentialCard(BuildContext context, Map<String, dynamic> credential) {
+  Widget _buildCredentialCard(BuildContext context, CredentialModel credential) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
       child: ListTile(
@@ -97,7 +98,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
           ),
         ),
         title: Text(
-          credential['nombre'] ?? 'Sin nombre',
+          credential.nombre ?? 'Sin nombre',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -108,14 +109,14 @@ class CredentialsListView extends GetView<CredentialsListController> {
           children: [
             const SizedBox(height: 4),
             Text(
-              'CURP: ${credential['curp'] ?? 'N/A'}',
+              'CURP: ${credential.curp ?? 'N/A'}',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              'Capturada: ${credential['fechaCaptura'] ?? 'N/A'}',
+              'Capturada: ${credential.fechaCaptura != null ? credential.fechaCaptura!.toString().split(' ')[0] : 'N/A'}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -164,14 +165,14 @@ class CredentialsListView extends GetView<CredentialsListController> {
     );
   }
   
-  void _showDeleteDialog(BuildContext context, Map<String, dynamic> credential) {
+  void _showDeleteDialog(BuildContext context, CredentialModel credential) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Eliminar Credencial'),
           content: Text(
-            '¿Estás seguro de que quieres eliminar la credencial de ${credential['nombre']}?\n\nEsta acción no se puede deshacer.',
+            '¿Estás seguro de que quieres eliminar la credencial de ${credential.nombre ?? "Sin nombre"}?\n\nEsta acción no se puede deshacer.',
           ),
           actions: [
             TextButton(
@@ -180,7 +181,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
             ),
             ElevatedButton(
               onPressed: () {
-                controller.deleteCredential(credential['id']);
+                controller.deleteCredential(credential.id!);
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(

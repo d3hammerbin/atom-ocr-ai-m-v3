@@ -10,7 +10,7 @@ class DatabaseService {
 
   static Database? _database;
   static const String _databaseName = 'atom_ocr_ai.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 5;
 
   /// Obtiene la instancia de la base de datos
   Future<Database> get database async {
@@ -36,6 +36,7 @@ class DatabaseService {
     await _createUsersTable(db);
     await _createUserGeodataTable(db);
     await _createDeviceTable(db);
+    await _createCredentialsTable(db);
   }
 
   /// Maneja las actualizaciones de la base de datos
@@ -62,6 +63,16 @@ class DatabaseService {
       await db.execute('ALTER TABLE device ADD COLUMN battery_health TEXT');
       await db.execute('ALTER TABLE device ADD COLUMN battery_temperature INTEGER');
       await db.execute('ALTER TABLE device ADD COLUMN available_sensors TEXT');
+    }
+    
+    if (oldVersion < 4) {
+      // Agregar tabla de credenciales
+      await _createCredentialsTable(db);
+    }
+    
+    if (oldVersion < 5) {
+      // Agregar restricción UNIQUE al campo CURP
+      await db.execute('CREATE UNIQUE INDEX idx_credentials_curp_unique ON credentials (curp)');
     }
   }
 
@@ -141,6 +152,63 @@ class DatabaseService {
       await db.close();
       _database = null;
     }
+  }
+
+  /// Crea la tabla de credenciales
+  Future<void> _createCredentialsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        
+        -- Campos principales
+        nombre TEXT,
+        curp TEXT UNIQUE,
+        clave_elector TEXT,
+        fecha_nacimiento TEXT,
+        sexo TEXT,
+        domicilio TEXT,
+        
+        -- Datos electorales
+        estado TEXT,
+        municipio TEXT,
+        localidad TEXT,
+        seccion TEXT,
+        ano_registro TEXT,
+        vigencia TEXT,
+        
+        -- Metadatos
+        tipo TEXT, -- T2 o T3
+        lado TEXT, -- frontal o trasera
+        fecha_captura DATETIME DEFAULT CURRENT_TIMESTAMP,
+        
+        -- Rutas de imágenes
+        photo_path TEXT,
+        signature_path TEXT,
+        qr_image_path TEXT,
+        barcode_image_path TEXT,
+        mrz_image_path TEXT,
+        signature_huella_image_path TEXT,
+        
+        -- Contenidos extraídos
+        qr_content TEXT,
+        barcode_content TEXT,
+        mrz_content TEXT,
+        
+        -- Auditoría
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+    
+    // Crear índices para mejorar el rendimiento
+    await db.execute('CREATE INDEX idx_credentials_user_id ON credentials (user_id)');
+    await db.execute('CREATE INDEX idx_credentials_curp ON credentials (curp)');
+    await db.execute('CREATE INDEX idx_credentials_clave_elector ON credentials (clave_elector)');
+    await db.execute('CREATE INDEX idx_credentials_tipo ON credentials (tipo)');
+    await db.execute('CREATE INDEX idx_credentials_fecha_captura ON credentials (fecha_captura)');
   }
 
   /// Elimina la base de datos (útil para desarrollo y testing)

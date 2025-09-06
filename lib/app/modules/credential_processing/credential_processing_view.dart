@@ -918,19 +918,25 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                           // Botón Guardar
                           SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                // TODO: Implementar guardado
-                                Get.offAllNamed('/credentials-list');
-                              },
-                              icon: const Icon(Icons.save),
-                              label: const Text('Guardar Credencial'),
+                            child: Obx(() => ElevatedButton.icon(
+                              onPressed: controller.isSaving.value ? null : controller.saveCredential,
+                              icon: controller.isSaving.value 
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.save),
+                              label: Text(controller.isSaving.value ? 'Guardando...' : 'Guardar Credencial'),
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(0, 50),
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
                               ),
-                            ),
+                            )),
                           ),
                         ],
                       ),

@@ -5,8 +5,9 @@ import '../modules/ocr/ocr_binding.dart';
 import '../modules/ocr/ocr_view.dart';
 import '../modules/camera/camera_binding.dart';
 import '../modules/camera/camera_view.dart';
-import '../modules/credentials_list/credentials_list_binding.dart';
 import '../modules/credentials_list/credentials_list_view.dart';
+import '../modules/credentials_list/credentials_list_binding.dart';
+import '../presentation/views/credential_details_view.dart';
 import '../modules/processing/processing_binding.dart';
 import '../modules/processing/processing_view.dart';
 import '../modules/splash/splash_binding.dart';
@@ -50,6 +51,10 @@ class AppPages {
       name: _Paths.CREDENTIALS_LIST,
       page: () => const CredentialsListView(),
       binding: CredentialsListBinding(),
+    ),
+    GetPage(
+      name: _Paths.CREDENTIAL_DETAILS,
+      page: () => const CredentialDetailsView(),
     ),
     GetPage(
       name: _Paths.PROCESSING,

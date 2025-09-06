@@ -5,6 +5,9 @@ import '../../core/services/logger_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
 import '../../core/services/mlkit_text_recognition_service.dart';
 import '../../data/models/credencial_ine_model.dart';
+import '../../data/models/credential_model.dart';
+import '../../data/repositories/credential_repository.dart';
+import '../../data/repositories/user_repository.dart';
 import '../camera/camera_controller.dart';
 
 class CredentialProcessingController extends GetxController {
@@ -12,12 +15,17 @@ class CredentialProcessingController extends GetxController {
   final RxString frontImagePath = ''.obs;
   final RxString backImagePath = ''.obs;
   final RxBool isProcessing = false.obs;
+  final RxBool isSaving = false.obs;
   
   // Variables para el procesamiento
   final MLKitTextRecognitionService _mlKitService = MLKitTextRecognitionService();
   final Rxn<CredencialIneModel> processedCredential = Rxn<CredencialIneModel>();
   final RxnString extractedFrontText = RxnString();
   final RxnString extractedBackText = RxnString();
+  
+  // Repositorios
+  final CredentialRepository _credentialRepository = CredentialRepository();
+  final UserRepository _userRepository = UserRepository();
   
   @override
   void onInit() {
@@ -163,6 +171,86 @@ class CredentialProcessingController extends GetxController {
     );
   }
   
+  /// Guarda la credencial procesada en la base de datos
+  Future<void> saveCredential() async {
+    if (processedCredential.value == null) {
+      SnackbarUtils.showWarning(
+        title: 'Advertencia',
+        message: 'No hay credencial procesada para guardar',
+      );
+      return;
+    }
+
+    try {
+      isSaving.value = true;
+      Log.i('CredentialProcessingController', 'Iniciando guardado de credencial');
+
+      // Obtener el usuario actual (asumimos que hay al menos uno)
+      final users = await _userRepository.getAllUsers();
+      if (users.isEmpty) {
+        SnackbarUtils.showError(
+          title: 'Error',
+          message: 'No se encontró usuario activo',
+        );
+        return;
+      }
+
+      final currentUser = users.first;
+      final credential = processedCredential.value!;
+
+      // Convertir CredencialIneModel a CredentialModel
+      final credentialToSave = CredentialModel(
+        userId: currentUser.id!,
+        nombre: credential.nombre,
+        curp: credential.curp,
+        claveElector: credential.claveElector,
+        fechaNacimiento: credential.fechaNacimiento,
+        sexo: credential.sexo,
+        domicilio: credential.domicilio,
+        estado: credential.estado,
+        municipio: credential.municipio,
+        localidad: credential.localidad,
+        seccion: credential.seccion,
+        anoRegistro: credential.anoRegistro,
+        vigencia: credential.vigencia,
+        tipo: credential.tipo,
+        lado: credential.lado,
+        fechaCaptura: DateTime.now(),
+        photoPath: credential.photoPath,
+        signaturePath: credential.signaturePath,
+        qrImagePath: credential.qrImagePath,
+        barcodeImagePath: credential.barcodeImagePath,
+        mrzImagePath: credential.mrzImagePath,
+        signatureHuellaImagePath: credential.signatureHuellaImagePath,
+        qrContent: credential.qrContent,
+        barcodeContent: credential.barcodeContent,
+        mrzContent: credential.mrzContent,
+      );
+
+      // Guardar en la base de datos
+      final credentialId = await _credentialRepository.insertCredential(credentialToSave);
+      
+      Log.i('CredentialProcessingController', 'Credencial guardada con ID: $credentialId');
+      
+      SnackbarUtils.showSuccess(
+        title: 'Éxito',
+        message: 'Credencial guardada correctamente',
+      );
+
+      // Navegar a la lista de credenciales
+      Get.offAllNamed('/credentials-list');
+      
+    } catch (e) {
+      SnackbarUtils.showError(
+        title: 'Error',
+        message: 'No se pudo guardar la credencial: $e',
+      );
+      Log.e('CredentialProcessingController', 'Error guardando credencial', e);
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
   @override
   void onClose() {
     super.onClose();

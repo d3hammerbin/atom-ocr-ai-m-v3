@@ -5,6 +5,9 @@ import 'app/routes/app_pages.dart';
 import 'app/core/user_preferences_controller.dart';
 import 'app/core/app_version_service.dart';
 import 'app/core/services/logger_service.dart';
+import 'app/core/services/hidden_menu_service.dart';
+import 'app/core/services/user_session_service.dart';
+import 'app/data/repositories/user_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +16,9 @@ void main() async {
   // Inicializar servicios
   await LoggerService.instance.initialize();
   Get.put(UserPreferencesController());
+  Get.put(UserRepository());
+  Get.put(HiddenMenuService());
+  Get.put(UserSessionService());
   await Get.putAsync(() => AppVersionService().onInit().then((_) => AppVersionService()));
   
   runApp(const MyApp());

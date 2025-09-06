@@ -4,9 +4,20 @@ import 'package:share_plus/share_plus.dart';
 import '../core/user_preferences_controller.dart';
 import '../core/app_version_service.dart';
 import '../core/services/logger_service.dart';
+import '../core/services/hidden_menu_service.dart';
+import '../modules/device/device_info_page.dart';
+import '../modules/device/device_controller.dart';
+import '../data/repositories/device_repository.dart';
 
-class UserSettingsWidget extends StatelessWidget {
+class UserSettingsWidget extends StatefulWidget {
   const UserSettingsWidget({super.key});
+
+  @override
+  State<UserSettingsWidget> createState() => _UserSettingsWidgetState();
+}
+
+class _UserSettingsWidgetState extends State<UserSettingsWidget> {
+  final HiddenMenuService _hiddenMenuService = Get.put(HiddenMenuService());
 
   @override
   Widget build(BuildContext context) {
@@ -202,11 +213,41 @@ class UserSettingsWidget extends StatelessWidget {
                    title: const Text('Versión'),
                    subtitle: Text(versionService.isLoading ? 'Cargando...' : versionService.fullVersion),
                  )),
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('Autor'),
-                  subtitle: const Text('Ricardo Madrigal Rodriguez'),
-                ),
+                Obx(() => ListTile(
+                   leading: Icon(
+                     Icons.person,
+                     color: _hiddenMenuService.showHeartIndicator.value ? Colors.red : null,
+                   ),
+                   title: Row(
+                     children: [
+                       const Text('Autor'),
+                       if (_hiddenMenuService.showHeartIndicator.value) ...[
+                         const SizedBox(width: 8),
+                         const Text('❤️', style: TextStyle(fontSize: 16)),
+                       ],
+                     ],
+                   ),
+                   subtitle: const Text('Ricardo Madrigal Rodriguez'),
+                   onTap: () {
+                     _hiddenMenuService.registerClick();
+                   },
+                 )),
+                 // Opción del menú oculto
+                 Obx(() => _hiddenMenuService.isHiddenMenuEnabled
+                   ? ListTile(
+                       leading: const Icon(Icons.developer_mode, color: Colors.orange),
+                       title: const Text('Información del Sistema'),
+                       subtitle: const Text('Datos detallados del usuario y dispositivo'),
+                       trailing: const Icon(Icons.arrow_forward_ios),
+                       onTap: () {
+                         // Asegurar que las dependencias estén disponibles
+                         Get.put(DeviceRepository());
+                         Get.put(DeviceController());
+                         Get.to(() => const DeviceInfoPage());
+                       },
+                     )
+                   : const SizedBox.shrink(),
+                 ),
               ],
             ),
           ),

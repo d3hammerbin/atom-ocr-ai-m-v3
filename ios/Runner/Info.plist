@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Esta aplicación necesita acceso a la cámara para capturar imágenes y realizar OCR.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Esta aplicación necesita acceso a la galería de fotos para seleccionar imágenes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Esta aplicación puede usar la ubicación para obtener información del dispositivo.</string>
 </dict>
 </plist>

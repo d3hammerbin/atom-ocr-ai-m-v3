@@ -13,13 +13,15 @@ import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
 import '../modules/local_process/local_process_binding.dart';
 import '../modules/local_process/local_process_view.dart';
+import '../modules/auth/bindings/auth_binding.dart';
+import '../modules/auth/views/initial_screen.dart';
 
 part 'app_routes.dart';
 
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.SPLASH;
+  static const INITIAL = Routes.INITIAL;
 
   static final routes = [
     GetPage(
@@ -56,6 +58,16 @@ class AppPages {
       name: _Paths.LOCAL_PROCESS,
       page: () => const LocalProcessView(),
       binding: LocalProcessBinding(),
+    ),
+    GetPage(
+      name: _Paths.INITIAL,
+      page: () => const InitialScreen(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: _Paths.CAPTURE_SELECTION,
+      page: () => const HomeView(), // Temporal: usar HomeView como selección de captura
+      binding: HomeBinding(),
     ),
   ];
 }

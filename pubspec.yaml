@@ -79,6 +79,15 @@ dependencies:
   
   # Google ML Kit para detección de códigos QR
   google_mlkit_barcode_scanning: ^0.11.0
+  
+  # SQLite para base de datos local
+  sqflite: ^2.3.0
+  
+  # Device info plus para obtener información del dispositivo
+  device_info_plus: ^11.5.0
+  sensors_plus: ^6.0.1
+  battery_plus: ^6.0.2
+  system_info2: ^4.0.0
 
 dev_dependencies:
   flutter_test:

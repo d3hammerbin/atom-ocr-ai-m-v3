@@ -8,6 +8,7 @@ import '../core/services/hidden_menu_service.dart';
 import '../core/services/special_settings_service.dart';
 import '../modules/device/device_info_page.dart';
 import '../modules/device/device_controller.dart';
+import '../modules/special_settings/special_settings_page.dart';
 import '../data/repositories/device_repository.dart';
 
 class UserSettingsWidget extends StatefulWidget {
@@ -258,7 +259,7 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
                        subtitle: const Text('Opciones avanzadas de configuración'),
                        trailing: const Icon(Icons.arrow_forward_ios),
                        onTap: () {
-                         _showSpecialSettingsDialog(context);
+                         Get.to(() => const SpecialSettingsPage());
                        },
                      )
                    : const SizedBox.shrink(),
@@ -574,44 +575,5 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
     );
   }
 
-  /// Muestra el diálogo de configuraciones especiales
-  void _showSpecialSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Configuraciones Especiales'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Estas son configuraciones avanzadas que pueden afectar el comportamiento de la aplicación.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                Obx(() => CheckboxListTile(
-                  title: const Text('Mostrar "Procesar Local"'),
-                  subtitle: const Text('Habilita la opción de procesamiento local en la pantalla principal'),
-                  value: _specialSettingsService.showLocalProcess,
-                  onChanged: (bool? value) {
-                    if (value != null) {
-                      _specialSettingsService.setShowLocalProcess(value);
-                    }
-                  },
-                )),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 }

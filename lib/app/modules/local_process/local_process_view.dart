@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'local_process_controller.dart';
 import '../../core/utils/validation_utils.dart';
+import '../../core/services/special_settings_service.dart';
 
 class LocalProcessView extends GetView<LocalProcessController> {
   const LocalProcessView({super.key});
+  
+  /// Obtiene la instancia del servicio de configuraciones especiales
+  SpecialSettingsService get _specialSettingsService => Get.find<SpecialSettingsService>();
   
   /// Obtiene recomendaciones específicas para cada problema de calidad
   String _getRecommendationForProblem(String problem) {
@@ -268,141 +272,145 @@ class LocalProcessView extends GetView<LocalProcessController> {
                             ),
                             
                             // Análisis de calidad de imagen
-                            Obx(() {
-                              if (controller.isAnalyzingQuality.value) {
-                                return Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16.0),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.05),
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: Colors.blue.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
+            Obx(() {
+              if (!_specialSettingsService.enableImageQualityAnalysis) {
+                return const SizedBox.shrink();
+              }
+              
+              if (controller.isAnalyzingQuality.value) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.blue.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Analizando calidad de imagen...',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              if (controller.qualityMessage.value.isNotEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: controller.hasQualityIssues.value 
+                        ? Colors.orange.withOpacity(0.05)
+                        : Colors.green.withOpacity(0.05),
+                    border: Border(
+                      top: BorderSide(
+                        color: controller.hasQualityIssues.value 
+                            ? Colors.orange.withOpacity(0.2)
+                            : Colors.green.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            controller.hasQualityIssues.value 
+                                ? Icons.warning_amber
+                                : Icons.check_circle,
+                            color: controller.hasQualityIssues.value 
+                                ? Colors.orange
+                                : Colors.green,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Análisis de calidad',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: controller.hasQualityIssues.value 
+                                    ? Colors.orange.shade700
+                                    : Colors.green.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        controller.qualityMessage.value,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: controller.hasQualityIssues.value 
+                              ? Colors.orange.shade600
+                              : Colors.green.shade600,
+                        ),
+                      ),
+                      if (controller.hasQualityIssues.value && controller.qualityProblems.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Recomendaciones:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ...controller.qualityProblems.map((problem) => Padding(
+                          padding: const EdgeInsets.only(left: 8, bottom: 2),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '• ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _getRecommendationForProblem(problem),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade600,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'Analizando calidad de imagen...',
-                                        style: TextStyle(
-                                          color: Colors.blue,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                              
-                              if (controller.qualityMessage.value.isNotEmpty) {
-                                return Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16.0),
-                                  decoration: BoxDecoration(
-                                    color: controller.hasQualityIssues.value 
-                                        ? Colors.orange.withOpacity(0.05)
-                                        : Colors.green.withOpacity(0.05),
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: controller.hasQualityIssues.value 
-                                            ? Colors.orange.withOpacity(0.2)
-                                            : Colors.green.withOpacity(0.2),
-                                        width: 1,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            controller.hasQualityIssues.value 
-                                                ? Icons.warning_amber
-                                                : Icons.check_circle,
-                                            color: controller.hasQualityIssues.value 
-                                                ? Colors.orange
-                                                : Colors.green,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              'Análisis de calidad',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w500,
-                                                color: controller.hasQualityIssues.value 
-                                                    ? Colors.orange.shade700
-                                                    : Colors.green.shade700,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        controller.qualityMessage.value,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: controller.hasQualityIssues.value 
-                                              ? Colors.orange.shade600
-                                              : Colors.green.shade600,
-                                        ),
-                                      ),
-                                      if (controller.hasQualityIssues.value && controller.qualityProblems.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Recomendaciones:',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.orange.shade700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        ...controller.qualityProblems.map((problem) => Padding(
-                                          padding: const EdgeInsets.only(left: 8, bottom: 2),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '• ',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.orange.shade600,
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Text(
-                                                  _getRecommendationForProblem(problem),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.orange.shade600,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )).toList(),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              }
-                              
-                              return const SizedBox.shrink();
-                            }),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ],
+                    ],
+                  ),
+                );
+              }
+              
+              return const SizedBox.shrink();
+            }),
                             
                             // Botones de procesamiento
                             Padding(

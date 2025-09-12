@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:get/get.dart';
 import 'dart:io';
 import 'camera_controller.dart';
+import '../../core/services/special_settings_service.dart';
 
 class CameraView extends StatefulWidget {
   const CameraView({super.key});
@@ -289,9 +290,9 @@ class _CameraViewState extends State<CameraView> {
               onPressed: _exitToHome,
               backgroundColor: Colors.red.withValues(alpha: 0.8),
             ),
-            // Botón flash - Solo visible después de capturar la primera foto
+            // Botón flash - Solo visible después de capturar la primera foto y si está habilitado
             Obx(
-              () => controller.frontPhotoTaken.value
+              () => controller.frontPhotoTaken.value && Get.find<SpecialSettingsService>().enableFlash
                   ? _buildControlButton(
                       icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
                       onPressed: controller.toggleFlash,

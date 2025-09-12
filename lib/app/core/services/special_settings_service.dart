@@ -10,6 +10,7 @@ class SpecialSettingsService extends GetxController {
   // Keys para el almacenamiento
   static const String _showLocalProcessKey = 'show_local_process';
   static const String _enableImageQualityAnalysisKey = 'enable_image_quality_analysis';
+  static const String _enableFlashKey = 'enable_flash';
   
   // Observable para mostrar/ocultar la opción "Procesar Local"
   final RxBool _showLocalProcess = false.obs;
@@ -17,12 +18,18 @@ class SpecialSettingsService extends GetxController {
   // Observable para habilitar/deshabilitar el análisis de calidad de imagen
   final RxBool _enableImageQualityAnalysis = true.obs;
   
+  // Observable para habilitar/deshabilitar el flash
+  final RxBool _enableFlash = false.obs;
+  
   // Getters
   bool get showLocalProcess => _showLocalProcess.value;
   RxBool get showLocalProcessRx => _showLocalProcess;
   
   bool get enableImageQualityAnalysis => _enableImageQualityAnalysis.value;
   RxBool get enableImageQualityAnalysisRx => _enableImageQualityAnalysis;
+  
+  bool get enableFlash => _enableFlash.value;
+  RxBool get enableFlashRx => _enableFlash;
   
   @override
   void onInit() {
@@ -34,6 +41,7 @@ class SpecialSettingsService extends GetxController {
   void _loadSettings() {
     _showLocalProcess.value = _storage.read(_showLocalProcessKey) ?? false;
     _enableImageQualityAnalysis.value = _storage.read(_enableImageQualityAnalysisKey) ?? true;
+    _enableFlash.value = _storage.read(_enableFlashKey) ?? false;
   }
   
   /// Alterna la visibilidad de la opción "Procesar Local"
@@ -60,11 +68,25 @@ class SpecialSettingsService extends GetxController {
     _storage.write(_enableImageQualityAnalysisKey, value);
   }
   
+  /// Alterna el uso del flash
+  void toggleFlash() {
+    _enableFlash.value = !_enableFlash.value;
+    _storage.write(_enableFlashKey, _enableFlash.value);
+  }
+  
+  /// Establece el estado del flash
+  void setFlash(bool value) {
+    _enableFlash.value = value;
+    _storage.write(_enableFlashKey, value);
+  }
+  
   /// Reinicia todas las configuraciones especiales
   void resetSettings() {
     _showLocalProcess.value = false;
     _enableImageQualityAnalysis.value = true;
+    _enableFlash.value = false;
     _storage.remove(_showLocalProcessKey);
     _storage.remove(_enableImageQualityAnalysisKey);
+    _storage.remove(_enableFlashKey);
   }
 }

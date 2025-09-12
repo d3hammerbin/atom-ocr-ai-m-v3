@@ -5,6 +5,7 @@ import '../core/user_preferences_controller.dart';
 import '../core/app_version_service.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/hidden_menu_service.dart';
+import '../core/services/special_settings_service.dart';
 import '../modules/device/device_info_page.dart';
 import '../modules/device/device_controller.dart';
 import '../data/repositories/device_repository.dart';
@@ -18,6 +19,7 @@ class UserSettingsWidget extends StatefulWidget {
 
 class _UserSettingsWidgetState extends State<UserSettingsWidget> {
   final HiddenMenuService _hiddenMenuService = Get.put(HiddenMenuService());
+  final SpecialSettingsService _specialSettingsService = Get.put(SpecialSettingsService());
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +246,19 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
                          Get.put(DeviceRepository());
                          Get.put(DeviceController());
                          Get.to(() => const DeviceInfoPage());
+                       },
+                     )
+                   : const SizedBox.shrink(),
+                 ),
+                 // Opción de configuraciones especiales
+                 Obx(() => _hiddenMenuService.isHiddenMenuEnabled
+                   ? ListTile(
+                       leading: const Icon(Icons.settings_applications, color: Colors.purple),
+                       title: const Text('Configuraciones Especiales'),
+                       subtitle: const Text('Opciones avanzadas de configuración'),
+                       trailing: const Icon(Icons.arrow_forward_ios),
+                       onTap: () {
+                         _showSpecialSettingsDialog(context);
                        },
                      )
                    : const SizedBox.shrink(),
@@ -552,6 +567,47 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
                 foregroundColor: Colors.white,
               ),
               child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Muestra el diálogo de configuraciones especiales
+  void _showSpecialSettingsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Configuraciones Especiales'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Estas son configuraciones avanzadas que pueden afectar el comportamiento de la aplicación.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                Obx(() => CheckboxListTile(
+                  title: const Text('Mostrar "Procesar Local"'),
+                  subtitle: const Text('Habilita la opción de procesamiento local en la pantalla principal'),
+                  value: _specialSettingsService.showLocalProcess,
+                  onChanged: (bool? value) {
+                    if (value != null) {
+                      _specialSettingsService.setShowLocalProcess(value);
+                    }
+                  },
+                )),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
             ),
           ],
         );

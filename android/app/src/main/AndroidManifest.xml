@@ -25,7 +25,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     
     <application
-        android:label="atom_ocr_ai_m_v3"
+        android:label="Atom OCR AI V3"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

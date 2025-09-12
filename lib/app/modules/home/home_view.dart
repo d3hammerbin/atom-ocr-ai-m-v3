@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'home_controller.dart';
 import '../../global_widgets/user_settings_widget.dart';
 import '../../core/app_version_service.dart';
+import '../../core/services/special_settings_service.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -153,8 +154,8 @@ class HomeView extends GetView<HomeController> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Visibility(
-                  visible: false,
+                Obx(() => Visibility(
+                  visible: Get.find<SpecialSettingsService>().showLocalProcess,
                   child: ElevatedButton.icon(
                     onPressed: controller.navigateToLocalProcess,
                     icon: const Icon(Icons.upload_file),
@@ -163,7 +164,7 @@ class HomeView extends GetView<HomeController> {
                       minimumSize: const Size(200, 50),
                     ),
                   ),
-                ),
+                )),
                 const SizedBox(height: 40),
               ],
             ),

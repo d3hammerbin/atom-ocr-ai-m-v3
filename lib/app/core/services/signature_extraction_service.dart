@@ -30,11 +30,15 @@ class SignatureExtractionService {
         return '';
       }
 
-      // Cargar la imagen del rostro para obtener sus dimensiones y posición
-      final faceFile = File(facePhotoPath);
-      if (!faceFile.existsSync()) {
-        print('Error: Archivo de foto del rostro no encontrado: $facePhotoPath');
-        return '';
+      // Cargar la imagen del rostro para obtener sus dimensiones y posición (opcional)
+      if (facePhotoPath.isNotEmpty) {
+        final faceFile = File(facePhotoPath);
+        if (!faceFile.existsSync()) {
+          print('Advertencia: Archivo de foto del rostro no encontrado: $facePhotoPath');
+          print('Continuando con extracción de firma sin referencia de rostro...');
+        }
+      } else {
+        print('Extrayendo firma sin referencia de foto del rostro...');
       }
 
       // Calcular la posición de la firma basándose en referencias de texto OCR

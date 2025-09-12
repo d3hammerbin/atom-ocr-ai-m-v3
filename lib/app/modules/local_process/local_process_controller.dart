@@ -244,15 +244,28 @@ class LocalProcessController extends GetxController {
         return;
       }
 
-      // Usar el procesador mejorado que corrige problemas de sección/domicilio
-      print('🔍 DIAGNÓSTICO CONTROLADOR: Usando procesador mejorado...');
+      // Usar el procesador completo con detección de lado, facial y extracción de firma
+      print('🔍 DIAGNÓSTICO CONTROLADOR: Usando procesador completo con detección de lado...');
       print('🔍 DIAGNÓSTICO CONTROLADOR: Imagen seleccionada: ${selectedImagePath.value.isNotEmpty ? "SÍ" : "NO"}');
       print('🔍 DIAGNÓSTICO CONTROLADOR: Path imagen: ${selectedImagePath.value}');
       print('🔍 DIAGNÓSTICO CONTROLADOR: Texto extraído (${extractedText.value.length} chars): ${extractedText.value.substring(0, extractedText.value.length > 100 ? 100 : extractedText.value.length)}...');
       
-      final credential = EnhancedCredentialProcessor.processWithDetailedLogging(extractedText.value);
+      CredencialIneModel credential;
       
-      print('🔍 DIAGNÓSTICO CONTROLADOR: Procesamiento mejorado completado. Tipo detectado: ${credential.tipo}');
+      // Si hay imagen seleccionada, usar procesamiento completo con detección de lado
+      if (selectedImagePath.value.isNotEmpty) {
+        credential = await IneCredentialProcessorService.processCredentialWithSideDetection(
+          extractedText.value,
+          selectedImagePath.value,
+        );
+        print('🔍 DIAGNÓSTICO CONTROLADOR: Procesamiento completo completado. Tipo: ${credential.tipo}, Lado: ${credential.lado}');
+        print('🔍 DIAGNÓSTICO CONTROLADOR: Foto extraída: ${credential.photoPath.isNotEmpty ? "SÍ" : "NO"}');
+        print('🔍 DIAGNÓSTICO CONTROLADOR: Firma extraída: ${credential.signaturePath.isNotEmpty ? "SÍ" : "NO"}');
+      } else {
+        // Fallback al procesador mejorado si no hay imagen
+        credential = EnhancedCredentialProcessor.processWithDetailedLogging(extractedText.value);
+        print('🔍 DIAGNÓSTICO CONTROLADOR: Procesamiento mejorado (sin imagen) completado. Tipo detectado: ${credential.tipo}');
+      }
 
       // Log de diagnóstico
        if (selectedImagePath.value.isEmpty) {

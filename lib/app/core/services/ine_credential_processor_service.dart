@@ -10,6 +10,7 @@ import 'signature_extraction_service.dart';
 import 'qr_detection_service.dart';
 import 'barcode_detection_service.dart';
 import 'mrz_detection_service.dart';
+import '../../../services/fixes/credential_processing_fixes.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -140,8 +141,8 @@ class IneCredentialProcessorService {
   /// Sanitiza los datos de CURP y clave de elector de una credencial
   static CredencialIneModel sanitizeCredentialData(CredencialIneModel credential) {
     return credential.copyWith(
-      curp: credential.curp.isNotEmpty ? _sanitizeCurp(credential.curp) : credential.curp,
-      claveElector: credential.claveElector.isNotEmpty ? _sanitizeClaveElector(credential.claveElector) : credential.claveElector,
+      curp: credential.curp.isNotEmpty ? ValidationUtils.sanitizeCurp(credential.curp) : credential.curp,
+      claveElector: credential.claveElector.isNotEmpty ? ValidationUtils.sanitizeClaveElector(credential.claveElector) : credential.claveElector,
     );
   }
 
@@ -190,9 +191,9 @@ class IneCredentialProcessorService {
           if (credential.claveElector.isEmpty) {
             return false;
           }
-          // Sanitizar antes de validar
-          final sanitizedClaveElector = _sanitizeClaveElector(credential.claveElector);
-          if (!ValidationUtils.isValidClaveElector(sanitizedClaveElector)) {
+          // Sanitizar antes de validar usando la nueva función granular
+          final sanitizedClaveElector = ValidationUtils.sanitizeClaveElector(credential.claveElector);
+          if (!ValidationUtils.isValidClaveElectorGranular(sanitizedClaveElector)) {
             return false;
           }
           break;
@@ -200,9 +201,9 @@ class IneCredentialProcessorService {
           if (credential.curp.isEmpty) {
             return false;
           }
-          // Sanitizar antes de validar
-          final sanitizedCurp = _sanitizeCurp(credential.curp);
-          if (!ValidationUtils.isValidCurpFormat(sanitizedCurp)) {
+          // Sanitizar antes de validar usando la nueva función granular
+          final sanitizedCurp = ValidationUtils.sanitizeCurp(credential.curp);
+          if (!ValidationUtils.isValidCurpGranular(sanitizedCurp)) {
             return false;
           }
           break;
@@ -435,10 +436,17 @@ class IneCredentialProcessorService {
       signatureHuellaImagePath: reversoData['signatureHuellaImagePath']?.isNotEmpty == true ? reversoData['signatureHuellaImagePath'] : credential.signatureHuellaImagePath,
     );
 
-    print('✅ Procesamiento completado para credencial ${updatedCredential.tipo} lado ${updatedCredential.lado}');
-    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
-    print('🔤 MRZ final en modelo: "${updatedCredential.mrzContent}" (${updatedCredential.mrzContent.length} caracteres)');
-    return updatedCredential;
+    // Aplicar correcciones mejoradas antes de retornar el modelo
+    print('🔧 Aplicando correcciones mejoradas al modelo de credencial...');
+    final correctedCredential = await CredentialProcessingFixes.updateCredentialWithFixes(
+      updatedCredential,
+      imagePath,
+    );
+    
+    print('✅ Procesamiento completado para credencial ${correctedCredential.tipo} lado ${correctedCredential.lado}');
+    print('🏁 Credencial final - photoPath: ${correctedCredential.photoPath}, signaturePath: ${correctedCredential.signaturePath}, qrContent: ${correctedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${correctedCredential.qrImagePath}');
+    print('🔤 MRZ final en modelo: "${correctedCredential.mrzContent}" (${correctedCredential.mrzContent.length} caracteres)');
+    return correctedCredential;
   }
 
   /// Procesa el lado frontal de una credencial (T2, T3)
@@ -465,21 +473,26 @@ class IneCredentialProcessorService {
     }
 
     // Extraer firma solo para credenciales T3 frontales
-    if (credential.tipo == 't3' && frontalData['photoPath']!.isNotEmpty) {
+    if (credential.tipo == 't3') {
       print('🖋️ Iniciando extracción de firma para credencial T3...');
       try {
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+        // La extracción de firma no requiere necesariamente la foto del rostro
+        final facePhotoPath = frontalData['photoPath']!.isNotEmpty ? frontalData['photoPath']! : '';
         frontalData['signaturePath'] = await SignatureExtractionService.extractSignatureFromT3Credential(
           imagePath: imagePath,
-          facePhotoPath: frontalData['photoPath']!,
+          facePhotoPath: facePhotoPath,
           credentialId: credentialId,
         );
-        print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
+        if (frontalData['signaturePath']!.isNotEmpty) {
+          print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
+        } else {
+          print('⚠️ No se pudo extraer la firma de la credencial T3');
+        }
       } catch (e) {
         print('❌ Error en extracción de firma: $e');
+        frontalData['signaturePath'] = '';
       }
-    } else if (credential.tipo == 't3') {
-      print('⚠️ No se puede extraer firma: falta la fotografía del rostro');
     }
 
     return frontalData;
@@ -798,7 +811,7 @@ class IneCredentialProcessorService {
                 : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector:
-            ValidationUtils.isValidClaveElector(claveElector)
+            ValidationUtils.isValidClaveElectorGranular(claveElector)
                 ? ValidationUtils.cleanClaveElector(claveElector)
                 : claveElector,
         curp: _extractCurpT2(filteredLines),
@@ -1010,7 +1023,7 @@ class IneCredentialProcessorService {
                 : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector:
-            ValidationUtils.isValidClaveElector(claveElector)
+            ValidationUtils.isValidClaveElectorGranular(claveElector)
                 ? ValidationUtils.cleanClaveElector(claveElector)
                 : claveElector,
         curp: _extractCurpT2(filteredLines),
@@ -1546,13 +1559,13 @@ class IneCredentialProcessorService {
           r'CLAVE\s+DE\s+ELECTOR\s+([A-Z0-9]{18})',
         ).firstMatch(line);
         if (match != null) {
-          return _sanitizeClaveElector(match.group(1) ?? '');
+          return ValidationUtils.sanitizeClaveElector(match.group(1) ?? '');
         }
 
         // Fallback: buscar cualquier secuencia de 18 caracteres alfanuméricos en la línea
         final fallbackMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
         if (fallbackMatch != null) {
-          return _sanitizeClaveElector(fallbackMatch.group(0) ?? '');
+          return ValidationUtils.sanitizeClaveElector(fallbackMatch.group(0) ?? '');
         }
 
         // Si no está en la misma línea, buscar en las siguientes líneas como fallback
@@ -1560,7 +1573,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].trim().toUpperCase();
           final nextMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(nextLine);
           if (nextMatch != null) {
-            return _sanitizeClaveElector(nextMatch.group(0) ?? '');
+            return ValidationUtils.sanitizeClaveElector(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1568,7 +1581,7 @@ class IneCredentialProcessorService {
       // También buscar directamente en la línea actual
       final match = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
       if (match != null && !line.contains('CURP')) {
-        return _sanitizeClaveElector(match.group(0) ?? '');
+        return ValidationUtils.sanitizeClaveElector(match.group(0) ?? '');
       }
     }
     return '';
@@ -1588,7 +1601,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (match != null) {
-          return _sanitizeCurp(match.group(0) ?? '');
+          return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP con guiones o espacios y limpiarlos
@@ -1596,12 +1609,12 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[-\s]*[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (matchWithSeparators != null) {
-          return _sanitizeCurp(matchWithSeparators.group(0) ?? '');
+          return ValidationUtils.sanitizeCurp(matchWithSeparators.group(0) ?? '');
         }
 
         // Si la línea siguiente no está vacía pero no coincide con el patrón, sanitizarla
         if (nextLine.isNotEmpty) {
-          return _sanitizeCurp(nextLine);
+          return ValidationUtils.sanitizeCurp(nextLine);
         }
       }
 
@@ -1610,7 +1623,7 @@ class IneCredentialProcessorService {
         r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
       ).firstMatch(line);
       if (match != null) {
-        return _sanitizeCurp(match.group(0) ?? '');
+        return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
       }
     }
     return '';
@@ -1630,7 +1643,7 @@ class IneCredentialProcessorService {
         // Buscar CURP en la misma línea
         final match = curpPattern.firstMatch(line);
         if (match != null) {
-          return _sanitizeCurp(match.group(0) ?? '');
+          return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP en las siguientes 2 líneas
@@ -1638,7 +1651,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].toUpperCase();
           final nextMatch = curpPattern.firstMatch(nextLine);
           if (nextMatch != null) {
-            return _sanitizeCurp(nextMatch.group(0) ?? '');
+            return ValidationUtils.sanitizeCurp(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1654,7 +1667,7 @@ class IneCredentialProcessorService {
             !line.contains('EMISION') &&
             !line.contains('SECCIÓN') &&
             !line.contains('SECCION')) {
-          return _sanitizeCurp(curp);
+          return ValidationUtils.sanitizeCurp(curp);
         }
       }
 
@@ -1675,7 +1688,7 @@ class IneCredentialProcessorService {
 
         // Verificar si después de las correcciones coincide con el patrón CURP
         if (curpPattern.hasMatch(correctedCurp)) {
-          return _sanitizeCurp(correctedCurp);
+          return ValidationUtils.sanitizeCurp(correctedCurp);
         }
       }
     }
@@ -1696,7 +1709,7 @@ class IneCredentialProcessorService {
           r'CURP\s+([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9])',
         ).firstMatch(line);
         if (match != null) {
-          return _sanitizeCurp(match.group(1) ?? '');
+          return ValidationUtils.sanitizeCurp(match.group(1) ?? '');
         }
 
         // Buscar cualquier patrón de CURP en la línea
@@ -1704,7 +1717,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(line);
         if (fallbackMatch != null) {
-          return _sanitizeCurp(fallbackMatch.group(0) ?? '');
+          return ValidationUtils.sanitizeCurp(fallbackMatch.group(0) ?? '');
         }
       }
     }

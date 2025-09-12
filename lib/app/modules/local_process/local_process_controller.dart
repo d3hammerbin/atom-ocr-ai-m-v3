@@ -6,6 +6,7 @@ import '../../core/services/enhanced_credential_processor.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/mlkit_text_recognition_service.dart';
 import '../../core/services/image_quality_analysis_service.dart';
+import '../../core/services/memory_management_service.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../data/models/credencial_ine_model.dart';
 
@@ -157,6 +158,9 @@ class LocalProcessController extends GetxController {
     if (!hasSelectedImage) return;
     
     try {
+      // Preparar memoria para análisis intensivo
+      await MemoryManagementService.prepareForIntensiveOperation();
+      
       isAnalyzingQuality.value = true;
       hasQualityIssues.value = false;
       qualityProblems.clear();
@@ -185,6 +189,8 @@ class LocalProcessController extends GetxController {
       qualityMessage.value = 'No se pudo analizar la calidad de la imagen';
     } finally {
       isAnalyzingQuality.value = false;
+      // Limpiar memoria después del análisis
+      await MemoryManagementService.cleanupAfterIntensiveOperation();
     }
   }
   
@@ -193,7 +199,15 @@ class LocalProcessController extends GetxController {
     if (!hasSelectedImage) return 'No hay imagen seleccionada';
     
     try {
-      return await ImageQualityAnalysisService.getQualitySummary(selectedImagePath.value);
+      // Preparar memoria para análisis
+      await MemoryManagementService.prepareForIntensiveOperation();
+      
+      final summary = await ImageQualityAnalysisService.getQualitySummary(selectedImagePath.value);
+      
+      // Limpiar memoria después del análisis
+      await MemoryManagementService.cleanupAfterIntensiveOperation();
+      
+      return summary;
     } catch (e) {
       return 'Error al obtener resumen de calidad';
     }

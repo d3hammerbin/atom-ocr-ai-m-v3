@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:image/image.dart' as img;
 import 'logger_service.dart';
+import 'memory_management_service.dart';
 
 /// Servicio para analizar la calidad de iluminación de imágenes
 /// antes del procesamiento OCR
@@ -20,6 +21,9 @@ class ImageQualityAnalysisService {
   /// Retorna un mapa con información sobre problemas detectados
   static Future<Map<String, dynamic>> analyzeImageQuality(String imagePath) async {
     try {
+      // Preparar memoria para análisis
+      await MemoryManagementService.prepareForIntensiveOperation();
+      
       _logger.info('ImageQualityAnalysisService', '🔍 Analizando calidad de imagen: $imagePath');
       
       final imageFile = File(imagePath);
@@ -34,7 +38,7 @@ class ImageQualityAnalysisService {
       }
       
       final imageBytes = await imageFile.readAsBytes();
-      final image = img.decodeImage(imageBytes);
+      var image = img.decodeImage(imageBytes);
       
       if (image == null) {
         return {
@@ -44,6 +48,23 @@ class ImageQualityAnalysisService {
           'metrics': {},
           'recommendations': ['Use un formato de imagen válido (JPG, PNG)'],
         };
+      }
+      
+      // Optimización: redimensionar imagen para análisis si es muy grande
+      // Esto reduce significativamente el uso de memoria
+      const maxAnalysisSize = 800;
+      if (image.width > maxAnalysisSize || image.height > maxAnalysisSize) {
+        final scale = maxAnalysisSize / math.max(image.width, image.height);
+        final newWidth = (image.width * scale).round();
+        final newHeight = (image.height * scale).round();
+        
+        _logger.info('ImageQualityAnalysisService', 
+          '📏 Redimensionando imagen para análisis: ${image.width}x${image.height} → ${newWidth}x${newHeight}');
+        
+        image = img.copyResize(image, width: newWidth, height: newHeight);
+        
+        // Limpiar memoria después del redimensionamiento
+        await MemoryManagementService.forceGarbageCollection();
       }
       
       // Calcular métricas de calidad
@@ -118,34 +139,46 @@ class ImageQualityAnalysisService {
         'metrics': {},
         'recommendations': ['Intente con otra imagen'],
       };
+    } finally {
+      // Limpiar memoria después del análisis
+      await MemoryManagementService.cleanupAfterIntensiveOperation();
     }
   }
   
-  /// Calcula el brillo promedio de la imagen
+  /// Calcula el brillo promedio de la imagen usando muestreo optimizado
   static double _calculateBrightness(img.Image image) {
     int totalLuminance = 0;
-    final totalPixels = image.width * image.height;
+    int sampleCount = 0;
     
-    for (int y = 0; y < image.height; y++) {
-      for (int x = 0; x < image.width; x++) {
+    // Usar muestreo cada 4 píxeles para reducir carga computacional
+    const step = 4;
+    
+    for (int y = 0; y < image.height; y += step) {
+      for (int x = 0; x < image.width; x += step) {
         final pixel = image.getPixel(x, y);
         totalLuminance += img.getLuminance(pixel).round();
+        sampleCount++;
       }
     }
     
-    return totalLuminance / totalPixels;
+    return sampleCount > 0 ? totalLuminance / sampleCount : 0;
   }
   
-  /// Calcula el contraste usando la diferencia entre percentiles 95 y 5
+  /// Calcula el contraste usando muestreo optimizado
   static double _calculateContrast(img.Image image) {
     final brightnesses = <int>[];
     
-    for (int y = 0; y < image.height; y++) {
-      for (int x = 0; x < image.width; x++) {
+    // Usar muestreo cada 8 píxeles para el cálculo de contraste
+    const step = 8;
+    
+    for (int y = 0; y < image.height; y += step) {
+      for (int x = 0; x < image.width; x += step) {
         final pixel = image.getPixel(x, y);
         brightnesses.add(img.getLuminance(pixel).round());
       }
     }
+    
+    if (brightnesses.length < 2) return 0;
     
     brightnesses.sort();
     final p95Index = (brightnesses.length * 0.95).round().clamp(0, brightnesses.length - 1);
@@ -157,13 +190,16 @@ class ImageQualityAnalysisService {
     return (p95 - p5).toDouble();
   }
   
-  /// Calcula el porcentaje de píxeles con glare (reflejos)
+  /// Calcula el porcentaje de píxeles con glare (reflejos) usando muestreo
   static double _calculateGlarePercentage(img.Image image) {
     int glarePixels = 0;
-    final totalPixels = image.width * image.height;
+    int sampleCount = 0;
     
-    for (int y = 0; y < image.height; y++) {
-      for (int x = 0; x < image.width; x++) {
+    // Usar muestreo cada 6 píxeles para detectar glare
+    const step = 6;
+    
+    for (int y = 0; y < image.height; y += step) {
+      for (int x = 0; x < image.width; x += step) {
         final pixel = image.getPixel(x, y);
         final r = pixel.r;
         final g = pixel.g;
@@ -173,13 +209,14 @@ class ImageQualityAnalysisService {
         if (r > 240 && g > 240 && b > 240) {
           glarePixels++;
         }
+        sampleCount++;
       }
     }
     
-    return (glarePixels / totalPixels) * 100;
+    return sampleCount > 0 ? (glarePixels / sampleCount) * 100 : 0;
   }
   
-  /// Calcula la varianza del Laplaciano para medir nitidez
+  /// Calcula la varianza del Laplaciano para medir nitidez usando muestreo
   static double _calculateLaplacianVariance(img.Image image) {
     // Convertir a escala de grises
     final grayImage = img.grayscale(image);
@@ -193,9 +230,12 @@ class ImageQualityAnalysisService {
     
     final laplacianValues = <double>[];
     
-    // Aplicar filtro Laplaciano
-    for (int y = 1; y < grayImage.height - 1; y++) {
-      for (int x = 1; x < grayImage.width - 1; x++) {
+    // Usar muestreo cada 8 píxeles para el cálculo de nitidez
+    const step = 8;
+    
+    // Aplicar filtro Laplaciano con muestreo
+    for (int y = 1; y < grayImage.height - 1; y += step) {
+      for (int x = 1; x < grayImage.width - 1; x += step) {
         double laplacianValue = 0;
         
         for (int ky = 0; ky < 3; ky++) {
@@ -221,32 +261,39 @@ class ImageQualityAnalysisService {
     return variance;
   }
   
-  /// Calcula el porcentaje de píxeles en sombra
+  /// Calcula el porcentaje de píxeles en sombra usando muestreo
   static double _calculateShadowPercentage(img.Image image) {
     int shadowPixels = 0;
-    final totalPixels = image.width * image.height;
+    int sampleCount = 0;
     const shadowThreshold = 50; // Umbral para considerar un píxel como sombra
     
-    for (int y = 0; y < image.height; y++) {
-      for (int x = 0; x < image.width; x++) {
+    // Usar muestreo cada 6 píxeles para detectar sombras
+    const step = 6;
+    
+    for (int y = 0; y < image.height; y += step) {
+      for (int x = 0; x < image.width; x += step) {
         final pixel = image.getPixel(x, y);
         final luminance = img.getLuminance(pixel);
         
         if (luminance < shadowThreshold) {
           shadowPixels++;
         }
+        sampleCount++;
       }
     }
     
-    return (shadowPixels / totalPixels) * 100;
+    return sampleCount > 0 ? (shadowPixels / sampleCount) * 100 : 0;
   }
   
-  /// Calcula la uniformidad de la iluminación
+  /// Calcula la uniformidad de la iluminación usando muestreo optimizado
   static double _calculateIlluminationUniformity(img.Image image) {
     // Dividir la imagen en una grilla de 3x3 y calcular el brillo de cada región
     final regionWidth = image.width ~/ 3;
     final regionHeight = image.height ~/ 3;
     final regionBrightnesses = <double>[];
+    
+    // Usar muestreo dentro de cada región para reducir carga computacional
+    const step = 8;
     
     for (int regionY = 0; regionY < 3; regionY++) {
       for (int regionX = 0; regionX < 3; regionX++) {
@@ -258,8 +305,9 @@ class ImageQualityAnalysisService {
         int totalLuminance = 0;
         int pixelCount = 0;
         
-        for (int y = startY; y < endY; y++) {
-          for (int x = startX; x < endX; x++) {
+        // Muestrear píxeles dentro de la región
+        for (int y = startY; y < endY; y += step) {
+          for (int x = startX; x < endX; x += step) {
             final pixel = image.getPixel(x, y);
             totalLuminance += img.getLuminance(pixel).round();
             pixelCount++;

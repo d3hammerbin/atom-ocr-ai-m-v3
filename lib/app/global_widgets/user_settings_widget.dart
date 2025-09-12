@@ -192,7 +192,7 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
                        ],
                      ],
                    ),
-                   subtitle: const Text('Ricardo Madrigal Rodriguez'),
+                   subtitle: const Text('D3 Catalyst'),
                    onTap: () {
                      _hiddenMenuService.registerClick();
                    },

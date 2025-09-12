@@ -20,12 +20,46 @@ class CredentialsListView extends GetView<CredentialsListController> {
               Get.offAllNamed('/home');
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Configuraciones',
-            onPressed: () {
-              Get.to(() => const UserSettingsWidget());
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Más opciones',
+            onSelected: (String value) {
+              switch (value) {
+                case 'settings':
+                  Get.to(() => const UserSettingsWidget());
+                  break;
+                case 'export':
+                  // TODO: Implementar funcionalidad de exportar
+                  Get.snackbar(
+                    'Exportar',
+                    'Funcionalidad de exportar en desarrollo',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                  break;
+              }
             },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Configuraciones'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.file_download, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Exportar'),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
         ],
@@ -116,7 +150,7 @@ class CredentialsListView extends GetView<CredentialsListController> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Capturada: ${credential.fechaCaptura != null ? credential.fechaCaptura!.toString().split(' ')[0] : 'N/A'}',
+              'Capturada: ${credential.fechaCaptura != null ? _formatDateTime(credential.fechaCaptura!) : 'N/A'}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -127,32 +161,19 @@ class CredentialsListView extends GetView<CredentialsListController> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
-              case 'view':
-                controller.viewCredentialDetails(credential);
-                break;
-              case 'delete':
-                _showDeleteDialog(context, credential);
+              case 'edit':
+                controller.editCredential(credential);
                 break;
             }
           },
           itemBuilder: (BuildContext context) => [
             const PopupMenuItem<String>(
-              value: 'view',
+              value: 'edit',
               child: Row(
                 children: [
-                  Icon(Icons.visibility),
+                  Icon(Icons.edit),
                   SizedBox(width: 8),
-                  Text('Ver detalles'),
-                ],
-              ),
-            ),
-            const PopupMenuItem<String>(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Eliminar', style: TextStyle(color: Colors.red)),
+                  Text('Editar'),
                 ],
               ),
             ),
@@ -165,34 +186,14 @@ class CredentialsListView extends GetView<CredentialsListController> {
     );
   }
   
-  void _showDeleteDialog(BuildContext context, CredentialModel credential) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Eliminar Credencial'),
-          content: Text(
-            '¿Estás seguro de que quieres eliminar la credencial de ${credential.nombre ?? "Sin nombre"}?\n\nEsta acción no se puede deshacer.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                controller.deleteCredential(credential.id!);
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
-    );
+  /// Formatea la fecha y hora de captura
+  String _formatDateTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year;
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    
+    return '$day/$month/$year $hour:$minute';
   }
 }

@@ -18,6 +18,9 @@ import '../modules/credential_processing/credential_processing_binding.dart';
 import '../modules/credential_processing/credential_processing_view.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 import '../modules/auth/views/initial_screen.dart';
+import '../presentation/views/credential_edit_view.dart';
+import '../modules/logs/logs_binding.dart';
+import '../modules/logs/logs_page.dart';
 
 part 'app_routes.dart';
 
@@ -80,6 +83,15 @@ class AppPages {
       name: _Paths.CREDENTIAL_PROCESSING,
       page: () => const CredentialProcessingView(),
       binding: CredentialProcessingBinding(),
+    ),
+    GetPage(
+      name: _Paths.CREDENTIAL_EDIT,
+      page: () => const CredentialEditView(),
+    ),
+    GetPage(
+      name: _Paths.LOGS,
+      page: () => const LogsPage(),
+      binding: LogsBinding(),
     ),
   ];
 }

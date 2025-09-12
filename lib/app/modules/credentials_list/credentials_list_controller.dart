@@ -4,6 +4,7 @@ import '../../core/services/logger_service.dart';
 import '../../data/models/credential_model.dart';
 import '../../data/repositories/credential_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../routes/app_pages.dart';
 
 class CredentialsListController extends GetxController {
   // Lista observable de credenciales procesadas
@@ -92,5 +93,12 @@ class CredentialsListController extends GetxController {
   /// Navega a los detalles de una credencial
   void viewCredentialDetails(CredentialModel credential) {
     Get.toNamed('/credential-details', arguments: credential.id);
+  }
+  
+  /// Navegar a la pantalla de edición de credencial
+  void editCredential(CredentialModel credential) {
+    Get.toNamed(Routes.CREDENTIAL_EDIT, arguments: {
+      'credentialId': credential.id,
+    });
   }
 }

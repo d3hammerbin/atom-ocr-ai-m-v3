@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'database_service.dart';
 
 /// Servicio para manejar configuraciones especiales de la aplicación
 class SpecialSettingsService extends GetxController {
@@ -88,5 +90,28 @@ class SpecialSettingsService extends GetxController {
     _storage.remove(_showLocalProcessKey);
     _storage.remove(_enableImageQualityAnalysisKey);
     _storage.remove(_enableFlashKey);
+  }
+  
+  /// Limpia completamente la base de datos
+  Future<void> clearDatabase() async {
+    try {
+      final DatabaseService databaseService = DatabaseService();
+      await databaseService.deleteDatabase();
+      Get.snackbar(
+        'Base de Datos Limpiada',
+        'Todos los datos han sido eliminados exitosamente',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo limpiar la base de datos: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 }

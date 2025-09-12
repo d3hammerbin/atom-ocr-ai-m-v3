@@ -32,6 +32,10 @@ class CredentialModel {
   final String? mrzImagePath;
   final String? signatureHuellaImagePath;
   
+  // Rutas de imágenes completas de la credencial
+  final String? frontImagePath;
+  final String? backImagePath;
+  
   // Contenidos extraídos
   final String? qrContent;
   final String? barcodeContent;
@@ -65,6 +69,8 @@ class CredentialModel {
     this.barcodeImagePath,
     this.mrzImagePath,
     this.signatureHuellaImagePath,
+    this.frontImagePath,
+    this.backImagePath,
     this.qrContent,
     this.barcodeContent,
     this.mrzContent,
@@ -107,6 +113,8 @@ class CredentialModel {
       barcodeImagePath: map['barcode_image_path'],
       mrzImagePath: map['mrz_image_path'],
       signatureHuellaImagePath: map['signature_huella_image_path'],
+      frontImagePath: map['front_image_path'],
+      backImagePath: map['back_image_path'],
       qrContent: map['qr_content'],
       barcodeContent: map['barcode_content'],
       mrzContent: map['mrz_content'],
@@ -145,6 +153,8 @@ class CredentialModel {
       'barcode_image_path': barcodeImagePath,
       'mrz_image_path': mrzImagePath,
       'signature_huella_image_path': signatureHuellaImagePath,
+      'front_image_path': frontImagePath,
+      'back_image_path': backImagePath,
       'qr_content': qrContent,
       'barcode_content': barcodeContent,
       'mrz_content': mrzContent,
@@ -178,6 +188,8 @@ class CredentialModel {
     String? barcodeImagePath,
     String? mrzImagePath,
     String? signatureHuellaImagePath,
+    String? frontImagePath,
+    String? backImagePath,
     String? qrContent,
     String? barcodeContent,
     String? mrzContent,
@@ -208,6 +220,8 @@ class CredentialModel {
       barcodeImagePath: barcodeImagePath ?? this.barcodeImagePath,
       mrzImagePath: mrzImagePath ?? this.mrzImagePath,
       signatureHuellaImagePath: signatureHuellaImagePath ?? this.signatureHuellaImagePath,
+      frontImagePath: frontImagePath ?? this.frontImagePath,
+      backImagePath: backImagePath ?? this.backImagePath,
       qrContent: qrContent ?? this.qrContent,
       barcodeContent: barcodeContent ?? this.barcodeContent,
       mrzContent: mrzContent ?? this.mrzContent,

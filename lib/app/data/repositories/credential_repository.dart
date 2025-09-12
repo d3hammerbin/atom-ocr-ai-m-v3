@@ -9,6 +9,9 @@ class CredentialRepository {
 
   /// Inserta una nueva credencial en la base de datos
   Future<int> insertCredential(CredentialModel credential) async {
+    // Asegurar que las columnas de imágenes existan
+    await _databaseService.ensureCredentialImageColumns();
+    
     final db = await _databaseService.database;
     final credentialWithTimestamp = credential.copyWith(
       createdAt: DateTime.now(),
@@ -99,6 +102,9 @@ class CredentialRepository {
 
   /// Actualiza una credencial existente
   Future<int> updateCredential(CredentialModel credential) async {
+    // Asegurar que las columnas de imágenes existan
+    await _databaseService.ensureCredentialImageColumns();
+    
     final db = await _databaseService.database;
     final credentialWithTimestamp = credential.copyWith(
       updatedAt: DateTime.now(),

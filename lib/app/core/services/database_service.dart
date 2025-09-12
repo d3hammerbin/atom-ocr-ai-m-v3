@@ -10,7 +10,7 @@ class DatabaseService {
 
   static Database? _database;
   static const String _databaseName = 'atom_ocr_ai.db';
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   /// Obtiene la instancia de la base de datos
   Future<Database> get database async {
@@ -73,6 +73,12 @@ class DatabaseService {
     if (oldVersion < 5) {
       // Agregar restricción UNIQUE al campo CURP
       await db.execute('CREATE UNIQUE INDEX idx_credentials_curp_unique ON credentials (curp)');
+    }
+    
+    if (oldVersion < 6) {
+      // Agregar columnas para imágenes completas de credencial
+      await db.execute('ALTER TABLE credentials ADD COLUMN front_image_path TEXT');
+      await db.execute('ALTER TABLE credentials ADD COLUMN back_image_path TEXT');
     }
   }
 
@@ -217,5 +223,50 @@ class DatabaseService {
     final path = join(databasesPath, _databaseName);
     await databaseFactory.deleteDatabase(path);
     _database = null;
+  }
+
+  /// Fuerza la actualización de la base de datos recreándola
+  Future<void> forceUpgrade() async {
+    await deleteDatabase();
+    _database = await _initDatabase();
+  }
+
+  /// Verifica si las columnas front_image_path y back_image_path existen
+  Future<bool> checkCredentialImageColumns() async {
+    try {
+      final db = await database;
+      final result = await db.rawQuery("PRAGMA table_info(credentials)");
+      
+      bool hasFrontImagePath = false;
+      bool hasBackImagePath = false;
+      
+      for (final column in result) {
+        final columnName = column['name'] as String;
+        if (columnName == 'front_image_path') hasFrontImagePath = true;
+        if (columnName == 'back_image_path') hasBackImagePath = true;
+      }
+      
+      return hasFrontImagePath && hasBackImagePath;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Agrega las columnas de imágenes si no existen
+  Future<void> ensureCredentialImageColumns() async {
+    final hasColumns = await checkCredentialImageColumns();
+    if (!hasColumns) {
+      final db = await database;
+      try {
+        await db.execute('ALTER TABLE credentials ADD COLUMN front_image_path TEXT');
+      } catch (e) {
+        // La columna ya existe o hay otro error
+      }
+      try {
+        await db.execute('ALTER TABLE credentials ADD COLUMN back_image_path TEXT');
+      } catch (e) {
+        // La columna ya existe o hay otro error
+      }
+    }
   }
 }

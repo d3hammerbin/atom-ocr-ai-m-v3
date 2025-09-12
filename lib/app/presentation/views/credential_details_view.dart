@@ -336,6 +336,8 @@ class CredentialDetailsView extends StatelessWidget {
 
   Widget _buildImageGrid(CredentialModel credential) {
     final images = [
+      {'path': credential.frontImagePath, 'label': 'Credencial Frontal', 'icon': Icons.credit_card},
+      {'path': credential.backImagePath, 'label': 'Credencial Trasera', 'icon': Icons.credit_card_off},
       {'path': credential.photoPath, 'label': 'Foto', 'icon': Icons.face},
       {'path': credential.signaturePath, 'label': 'Firma', 'icon': Icons.draw},
       {'path': credential.qrImagePath, 'label': 'QR', 'icon': Icons.qr_code},

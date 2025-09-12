@@ -13,6 +13,8 @@ abstract class Routes {
   static const LOCAL_PROCESS = _Paths.LOCAL_PROCESS;
   static const CAPTURE_SELECTION = _Paths.CAPTURE_SELECTION;
   static const CREDENTIAL_PROCESSING = _Paths.CREDENTIAL_PROCESSING;
+  static const CREDENTIAL_EDIT = _Paths.CREDENTIAL_EDIT;
+  static const LOGS = _Paths.LOGS;
 }
 
 abstract class _Paths {
@@ -28,4 +30,6 @@ abstract class _Paths {
   static const LOCAL_PROCESS = '/local-process';
   static const CAPTURE_SELECTION = '/capture-selection';
   static const CREDENTIAL_PROCESSING = '/credential-processing';
+  static const CREDENTIAL_EDIT = '/credential-edit';
+  static const LOGS = '/logs';
 }

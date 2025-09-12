@@ -244,6 +244,81 @@ class SpecialSettingsPage extends StatelessWidget {
               
               const SizedBox(height: 32),
               
+              // Sección de Administración de Datos
+              Text(
+                'Administración de Datos',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Botón para limpiar base de datos
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.delete_forever, color: Colors.red),
+                        title: const Text(
+                          'Limpiar Base de Datos',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: const Text(
+                          'Elimina permanentemente todos los datos almacenados en la aplicación',
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            _showClearDatabaseDialog(context, settingsService);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Limpiar'),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      
+                      // Advertencia
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning,
+                              color: Colors.red.shade700,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Esta acción es irreversible. Se eliminarán todas las credenciales, usuarios y datos del dispositivo.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
               // Botón para reiniciar configuraciones
               Center(
                 child: OutlinedButton.icon(
@@ -298,6 +373,71 @@ class SpecialSettingsPage extends StatelessWidget {
                 foregroundColor: Colors.red,
               ),
               child: const Text('Reiniciar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  /// Muestra el diálogo de confirmación para limpiar la base de datos
+  void _showClearDatabaseDialog(BuildContext context, SpecialSettingsService settingsService) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+             children: [
+               Icon(Icons.warning, color: Colors.red),
+               SizedBox(width: 8),
+               Expanded(
+                 child: Text(
+                   'Limpiar Base de Datos',
+                   overflow: TextOverflow.ellipsis,
+                 ),
+               ),
+             ],
+           ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Estás seguro de que quieres eliminar TODOS los datos de la aplicación?',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('Esta acción eliminará:'),
+              SizedBox(height: 8),
+              Text('• Todas las credenciales procesadas'),
+              Text('• Todos los usuarios registrados'),
+              Text('• Todos los datos del dispositivo'),
+              Text('• Todos los geodatos'),
+              SizedBox(height: 12),
+              Text(
+                'Esta acción NO se puede deshacer.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await settingsService.clearDatabase();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Eliminar Todo'),
             ),
           ],
         );

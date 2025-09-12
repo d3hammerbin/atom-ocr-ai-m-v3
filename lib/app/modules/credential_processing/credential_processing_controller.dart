@@ -23,6 +23,9 @@ class CredentialProcessingController extends GetxController {
   final RxnString extractedFrontText = RxnString();
   final RxnString extractedBackText = RxnString();
   
+  // Variable para credencial existente (modo edición)
+  final Rxn<CredentialModel> existingCredential = Rxn<CredentialModel>();
+  
   // Repositorios
   final CredentialRepository _credentialRepository = CredentialRepository();
   final UserRepository _userRepository = UserRepository();
@@ -35,17 +38,62 @@ class CredentialProcessingController extends GetxController {
   
   /// Carga las imágenes desde los argumentos de navegación
   void _loadImagesFromArguments() {
-    final arguments = Get.arguments as Map<String, dynamic>?;
+    final arguments = Get.arguments;
     
     if (arguments != null) {
-      frontImagePath.value = arguments['frontImagePath'] ?? '';
-      backImagePath.value = arguments['backImagePath'] ?? '';
-      
-      Log.i('CredentialProcessingController', 
-        'Imágenes cargadas - Frontal: ${frontImagePath.value}, Trasera: ${backImagePath.value}');
+      // Verificar si es una credencial existente (modo edición)
+      if (arguments is CredentialModel) {
+        existingCredential.value = arguments;
+        _loadExistingCredentialData(arguments);
+        Log.i('CredentialProcessingController', 
+          'Modo edición - Credencial cargada: ${arguments.nombre}');
+      }
+      // Verificar si son rutas de imágenes nuevas (modo procesamiento)
+      else if (arguments is Map<String, dynamic>) {
+        frontImagePath.value = arguments['frontImagePath'] ?? '';
+        backImagePath.value = arguments['backImagePath'] ?? '';
+        
+        Log.i('CredentialProcessingController', 
+          'Modo procesamiento - Imágenes cargadas - Frontal: ${frontImagePath.value}, Trasera: ${backImagePath.value}');
+      }
     } else {
       Log.w('CredentialProcessingController', 'No se recibieron argumentos de navegación');
     }
+  }
+  
+  /// Carga los datos de una credencial existente para edición
+  void _loadExistingCredentialData(CredentialModel credential) {
+    // Cargar los datos de la credencial existente en el modelo CredencialIneModel
+    processedCredential.value = CredencialIneModel(
+      nombre: credential.nombre ?? '',
+      curp: credential.curp ?? '',
+      claveElector: credential.claveElector ?? '',
+      fechaNacimiento: credential.fechaNacimiento ?? '',
+      sexo: credential.sexo ?? '',
+      domicilio: credential.domicilio ?? '',
+      estado: credential.estado ?? '',
+      municipio: credential.municipio ?? '',
+      localidad: credential.localidad ?? '',
+      seccion: credential.seccion ?? '',
+      anoRegistro: credential.anoRegistro ?? '',
+      vigencia: credential.vigencia ?? '',
+      tipo: credential.tipo ?? '',
+      lado: credential.lado ?? '',
+      photoPath: credential.photoPath ?? '',
+      signaturePath: credential.signaturePath ?? '',
+      qrImagePath: credential.qrImagePath ?? '',
+      barcodeImagePath: credential.barcodeImagePath ?? '',
+      mrzImagePath: credential.mrzImagePath ?? '',
+      signatureHuellaImagePath: credential.signatureHuellaImagePath ?? '',
+      qrContent: credential.qrContent ?? '',
+      barcodeContent: credential.barcodeContent ?? '',
+      mrzContent: credential.mrzContent ?? '',
+      mrzDocumentNumber: '',
+      mrzNationality: '',
+      mrzBirthDate: '',
+      mrzExpiryDate: '',
+      mrzSex: '',
+    );
   }
   
   /// Verifica si ambas imágenes están disponibles
@@ -183,7 +231,10 @@ class CredentialProcessingController extends GetxController {
 
     try {
       isSaving.value = true;
-      Log.i('CredentialProcessingController', 'Iniciando guardado de credencial');
+      
+      final isEditMode = existingCredential.value != null;
+      Log.i('CredentialProcessingController', 
+        isEditMode ? 'Iniciando actualización de credencial' : 'Iniciando guardado de credencial');
 
       // Obtener el usuario actual (asumimos que hay al menos uno)
       final users = await _userRepository.getAllUsers();
@@ -199,53 +250,67 @@ class CredentialProcessingController extends GetxController {
       final credential = processedCredential.value!;
 
       // Convertir CredencialIneModel a CredentialModel
-      final credentialToSave = CredentialModel(
-        userId: currentUser.id!,
-        nombre: credential.nombre,
-        curp: credential.curp,
-        claveElector: credential.claveElector,
-        fechaNacimiento: credential.fechaNacimiento,
-        sexo: credential.sexo,
-        domicilio: credential.domicilio,
-        estado: credential.estado,
-        municipio: credential.municipio,
-        localidad: credential.localidad,
-        seccion: credential.seccion,
-        anoRegistro: credential.anoRegistro,
-        vigencia: credential.vigencia,
-        tipo: credential.tipo,
-        lado: credential.lado,
-        fechaCaptura: DateTime.now(),
-        photoPath: credential.photoPath,
-        signaturePath: credential.signaturePath,
-        qrImagePath: credential.qrImagePath,
-        barcodeImagePath: credential.barcodeImagePath,
-        mrzImagePath: credential.mrzImagePath,
-        signatureHuellaImagePath: credential.signatureHuellaImagePath,
-        qrContent: credential.qrContent,
-        barcodeContent: credential.barcodeContent,
-        mrzContent: credential.mrzContent,
-      );
+         final credentialToSave = CredentialModel(
+           id: isEditMode ? existingCredential.value!.id : null,
+           userId: currentUser.id!,
+           nombre: credential.nombre,
+           curp: credential.curp,
+           claveElector: credential.claveElector,
+           fechaNacimiento: credential.fechaNacimiento,
+           sexo: credential.sexo,
+           domicilio: credential.domicilio,
+           estado: credential.estado,
+           municipio: credential.municipio,
+           localidad: credential.localidad,
+           seccion: credential.seccion,
+           anoRegistro: credential.anoRegistro,
+           vigencia: credential.vigencia,
+           tipo: credential.tipo,
+           lado: credential.lado,
+           fechaCaptura: isEditMode ? existingCredential.value!.fechaCaptura : DateTime.now(),
+           photoPath: credential.photoPath,
+           signaturePath: credential.signaturePath,
+           qrImagePath: credential.qrImagePath,
+           barcodeImagePath: credential.barcodeImagePath,
+           mrzImagePath: credential.mrzImagePath,
+           signatureHuellaImagePath: credential.signatureHuellaImagePath,
+           frontImagePath: frontImagePath.value.isNotEmpty ? frontImagePath.value : null,
+           backImagePath: backImagePath.value.isNotEmpty ? backImagePath.value : null,
+           qrContent: credential.qrContent,
+           barcodeContent: credential.barcodeContent,
+           mrzContent: credential.mrzContent,
+         );
 
-      // Guardar en la base de datos
-      final credentialId = await _credentialRepository.insertCredential(credentialToSave);
-      
-      Log.i('CredentialProcessingController', 'Credencial guardada con ID: $credentialId');
-      
-      SnackbarUtils.showSuccess(
-        title: 'Éxito',
-        message: 'Credencial guardada correctamente',
-      );
+      if (isEditMode) {
+        // Actualizar credencial existente
+        await _credentialRepository.updateCredential(credentialToSave);
+        Log.i('CredentialProcessingController', 'Credencial actualizada con ID: ${credentialToSave.id}');
+        
+        SnackbarUtils.showSuccess(
+          title: 'Éxito',
+          message: 'Credencial actualizada correctamente',
+        );
+      } else {
+        // Crear nueva credencial
+        final credentialId = await _credentialRepository.insertCredential(credentialToSave);
+        Log.i('CredentialProcessingController', 'Credencial guardada con ID: $credentialId');
+        
+        SnackbarUtils.showSuccess(
+          title: 'Éxito',
+          message: 'Credencial guardada correctamente',
+        );
+      }
 
       // Navegar a la lista de credenciales
       Get.offAllNamed('/credentials-list');
       
     } catch (e) {
+      final isEditMode = existingCredential.value != null;
       SnackbarUtils.showError(
         title: 'Error',
-        message: 'No se pudo guardar la credencial: $e',
+        message: isEditMode ? 'No se pudo actualizar la credencial: $e' : 'No se pudo guardar la credencial: $e',
       );
-      Log.e('CredentialProcessingController', 'Error guardando credencial', e);
+      Log.e('CredentialProcessingController', 'Error guardando/actualizando credencial', e);
     } finally {
       isSaving.value = false;
     }

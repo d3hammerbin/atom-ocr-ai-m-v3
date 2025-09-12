@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../../data/models/credential_model.dart';
 import '../../data/repositories/credential_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../routes/app_pages.dart';
 
 class CredentialDetailsController extends GetxController {
   final CredentialRepository _credentialRepository = CredentialRepository();
@@ -64,10 +65,12 @@ class CredentialDetailsController extends GetxController {
     }
   }
   
-  /// Navega a la pantalla de edición
+  /// Navegar a la pantalla de edición de credencial
   void editCredential() {
-    if (credential.value?.id != null) {
-      Get.toNamed('/credential-processing', arguments: credential.value);
+    if (credential.value != null) {
+      Get.toNamed(Routes.CREDENTIAL_EDIT, arguments: {
+        'credentialId': credential.value!.id,
+      });
     }
   }
   

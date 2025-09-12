@@ -187,14 +187,32 @@ class CredentialsListView extends GetView<CredentialsListController> {
                 onRefresh: () async {
                   controller.refreshCredentials();
                 },
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: controller.filteredCredentialsList.length,
-                  itemBuilder: (context, index) {
-                    final credential =
-                        controller.filteredCredentialsList[index];
-                    return _buildCredentialCard(context, credential);
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification scrollInfo) {
+                    // Detectar cuando se llega cerca del final de la lista
+                    if (scrollInfo.metrics.pixels >=
+                            scrollInfo.metrics.maxScrollExtent - 200 &&
+                        !controller.isLoadingMore.value &&
+                        controller.hasMoreData.value) {
+                      controller.loadMoreCredentials();
+                    }
+                    return false;
                   },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: controller.filteredCredentialsList.length +
+                        (controller.hasMoreData.value || controller.isLoadingMore.value ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      // Si es el último elemento y hay más datos o se está cargando
+                      if (index == controller.filteredCredentialsList.length) {
+                        return _buildLoadingIndicator(context);
+                      }
+                      
+                      final credential =
+                          controller.filteredCredentialsList[index];
+                      return _buildCredentialCard(context, credential);
+                    },
+                  ),
                 ),
               );
             }),
@@ -272,6 +290,59 @@ class CredentialsListView extends GetView<CredentialsListController> {
         },
       ),
     );
+  }
+
+  Widget _buildLoadingIndicator(BuildContext context) {
+    return Obx(() {
+      if (controller.isLoadingMore.value) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Cargando más credenciales...',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else if (!controller.hasMoreData.value) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'No hay más credenciales',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    });
   }
 
   /// Formatea la fecha y hora de captura

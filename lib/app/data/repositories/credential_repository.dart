@@ -39,6 +39,27 @@ class CredentialRepository {
     });
   }
 
+  /// Obtiene credenciales de un usuario con paginación
+  Future<List<CredentialModel>> getCredentialsByUserIdPaginated(
+    int userId, {
+    required int offset,
+    required int limit,
+  }) async {
+    final db = await _databaseService.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tableName,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'fecha_captura DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    return List.generate(maps.length, (i) {
+      return CredentialModel.fromMap(maps[i]);
+    });
+  }
+
   /// Obtiene una credencial por su ID
   Future<CredentialModel?> getCredentialById(int id) async {
     final db = await _databaseService.database;
@@ -179,6 +200,38 @@ class CredentialRepository {
     return List.generate(maps.length, (i) {
       return CredentialModel.fromMap(maps[i]);
     });
+  }
+
+  /// Busca credenciales por nombre o CURP con paginación
+  Future<List<CredentialModel>> searchCredentialsPaginated(
+    int userId,
+    String searchTerm, {
+    required int offset,
+    required int limit,
+  }) async {
+    final db = await _databaseService.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tableName,
+      where: 'user_id = ? AND (nombre LIKE ? OR curp LIKE ?)',
+      whereArgs: [userId, '%$searchTerm%', '%$searchTerm%'],
+      orderBy: 'fecha_captura DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    return List.generate(maps.length, (i) {
+      return CredentialModel.fromMap(maps[i]);
+    });
+  }
+
+  /// Obtiene el conteo total de credenciales que coinciden con la búsqueda
+  Future<int> getSearchCredentialsCount(int userId, String searchTerm) async {
+    final db = await _databaseService.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $_tableName WHERE user_id = ? AND (nombre LIKE ? OR curp LIKE ?)',
+      [userId, '%$searchTerm%', '%$searchTerm%'],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   /// Obtiene las credenciales más recientes de un usuario

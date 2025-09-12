@@ -18,6 +18,14 @@ class CredentialsListController extends GetxController {
   
   // Estado de carga
   final RxBool isLoading = false.obs;
+  final RxBool isLoadingMore = false.obs;
+  final RxBool hasMoreData = true.obs;
+  
+  // Paginación
+  static const int _pageSize = 4;
+  int _currentOffset = 0;
+  int? _currentUserId;
+  int _totalCount = 0;
   
   // Repositorios
   final CredentialRepository _credentialRepository = CredentialRepository();
@@ -31,10 +39,13 @@ class CredentialsListController extends GetxController {
 
 
   
-  /// Cargar credenciales desde la base de datos
+  /// Cargar credenciales desde la base de datos (primera página)
   Future<void> loadCredentials() async {
     try {
       isLoading.value = true;
+      _currentOffset = 0;
+      hasMoreData.value = true;
+      
       Log.i('CredentialsListController', 'Cargando credenciales desde base de datos');
       
       // Obtener el usuario actual
@@ -42,30 +53,25 @@ class CredentialsListController extends GetxController {
       if (users.isEmpty) {
         Log.w('CredentialsListController', 'No se encontró usuario activo');
         credentialsList.clear();
+        filteredCredentialsList.clear();
         return;
       }
       
       final currentUser = users.first;
+      _currentUserId = currentUser.id!;
       
-      // Cargar credenciales del usuario actual
-      final credentials = await _credentialRepository.getCredentialsByUserId(currentUser.id!);
-      credentialsList.value = credentials;
-      
-      // Siempre actualizar filteredCredentialsList aplicando el filtro actual
+      // Obtener el conteo total
       if (searchQuery.value.isEmpty) {
-        filteredCredentialsList.assignAll(credentials);
+        _totalCount = await _credentialRepository.getCredentialsCount(_currentUserId!);
       } else {
-        // Reaplicar el filtro con los nuevos datos
-        final lowercaseQuery = searchQuery.value.toLowerCase();
-        final filtered = credentials.where((credential) {
-          final nombre = credential.nombre?.toLowerCase() ?? '';
-          final curp = credential.curp?.toLowerCase() ?? '';
-          return nombre.contains(lowercaseQuery) || curp.contains(lowercaseQuery);
-        }).toList();
-        filteredCredentialsList.assignAll(filtered);
+        _totalCount = await _credentialRepository.getSearchCredentialsCount(_currentUserId!, searchQuery.value.trim());
       }
       
-      Log.i('CredentialsListController', 'Cargadas ${credentials.length} credenciales');
+      // Cargar primera página
+      await _loadPage(reset: true);
+      
+      Log.i('CredentialsListController', 'Total de credenciales: $_totalCount');
+      Log.i('CredentialsListController', 'Credenciales cargadas: ${credentialsList.length}');
       
     } catch (e) {
       Log.e('CredentialsListController', 'Error cargando credenciales', e);
@@ -75,6 +81,69 @@ class CredentialsListController extends GetxController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+  
+  /// Cargar una página de credenciales
+  Future<void> _loadPage({bool reset = false}) async {
+    if (_currentUserId == null) return;
+    
+    try {
+      List<CredentialModel> newCredentials;
+      
+      if (searchQuery.value.isEmpty) {
+        // Cargar credenciales sin filtro
+        newCredentials = await _credentialRepository.getCredentialsByUserIdPaginated(
+          _currentUserId!,
+          offset: _currentOffset,
+          limit: _pageSize,
+        );
+      } else {
+        // Cargar credenciales con búsqueda
+        newCredentials = await _credentialRepository.searchCredentialsPaginated(
+          _currentUserId!,
+          searchQuery.value.trim(),
+          offset: _currentOffset,
+          limit: _pageSize,
+        );
+      }
+      
+      if (reset) {
+        credentialsList.value = newCredentials;
+        filteredCredentialsList.assignAll(credentialsList);
+      } else {
+        credentialsList.addAll(newCredentials);
+        filteredCredentialsList.assignAll(credentialsList);
+      }
+      
+      // Actualizar estado de paginación
+      _currentOffset += _pageSize;
+      hasMoreData.value = newCredentials.length == _pageSize && credentialsList.length < _totalCount;
+      
+      Log.i('CredentialsListController', 'Página cargada: ${newCredentials.length} elementos');
+      Log.i('CredentialsListController', 'Total cargado: ${credentialsList.length}/$_totalCount');
+      
+    } catch (e) {
+      Log.e('CredentialsListController', 'Error al cargar página: $e');
+    }
+  }
+  
+  /// Cargar más credenciales (lazy loading)
+  Future<void> loadMoreCredentials() async {
+    if (isLoadingMore.value || !hasMoreData.value || isLoading.value) {
+      return;
+    }
+    
+    try {
+      isLoadingMore.value = true;
+      Log.i('CredentialsListController', 'Cargando más credenciales...');
+      
+      await _loadPage();
+      
+    } catch (e) {
+      Log.e('CredentialsListController', 'Error al cargar más credenciales: $e');
+    } finally {
+      isLoadingMore.value = false;
     }
   }
   
@@ -114,45 +183,24 @@ class CredentialsListController extends GetxController {
   /// Filtrar credenciales por nombre y CURP
   void filterCredentials(String query) {
     final trimmedQuery = query.trim();
+    final previousQuery = searchQuery.value;
     searchQuery.value = trimmedQuery;
     
     Log.i('CredentialsListController', 'Filtrando con query: "$trimmedQuery"');
-    Log.i('CredentialsListController', 'credentialsList.length: ${credentialsList.length}');
     
-    if (trimmedQuery.isEmpty) {
-      Log.i('CredentialsListController', 'Antes de assignAll - credentialsList: ${credentialsList.length}');
-      filteredCredentialsList.assignAll(credentialsList);
-      Log.i('CredentialsListController', 'Después de assignAll - filteredCredentialsList: ${filteredCredentialsList.length}');
-      Log.i('CredentialsListController', 'credentialsList contenido: ${credentialsList.map((c) => c.nombre).toList()}');
-      Log.i('CredentialsListController', 'Query vacío - mostrando todas las credenciales: ${filteredCredentialsList.length}');
-    } else {
-      final lowercaseQuery = trimmedQuery.toLowerCase();
-      final filtered = credentialsList.where((credential) {
-        final nombre = credential.nombre?.toLowerCase() ?? '';
-        final curp = credential.curp?.toLowerCase() ?? '';
-        return nombre.contains(lowercaseQuery) || curp.contains(lowercaseQuery);
-      }).toList();
-      filteredCredentialsList.assignAll(filtered);
-      Log.i('CredentialsListController', 'Filtrado completado - resultados: ${filteredCredentialsList.length}');
+    // Si la query cambió, recargar desde el inicio
+    if (previousQuery != trimmedQuery) {
+      loadCredentials();
     }
-    
-    // Forzar actualización de la UI
-    filteredCredentialsList.refresh();
   }
   
   /// Limpiar búsqueda
   void clearSearch() {
-    Log.i('CredentialsListController', 'Limpiando búsqueda');
-    Log.i('CredentialsListController', 'credentialsList.length antes de limpiar: ${credentialsList.length}');
-    
     searchQuery.value = '';
-    filteredCredentialsList.assignAll(credentialsList);
+    Log.i('CredentialsListController', 'Búsqueda limpiada');
     
-    Log.i('CredentialsListController', 'Búsqueda limpiada - filteredCredentialsList.length: ${filteredCredentialsList.length}');
-    Log.i('CredentialsListController', 'searchQuery después de limpiar: "${searchQuery.value}"');
-    
-    // Forzar actualización de la UI
-    filteredCredentialsList.refresh();
+    // Recargar credenciales sin filtro
+    loadCredentials();
   }
   
   /// Navega a los detalles de una credencial

@@ -1,13 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:atom_ocr_ai_m_v3/app/modules/credential_processing/credential_processing_controller.dart';
 import 'package:atom_ocr_ai_m_v3/app/core/utils/validation_utils.dart';
-import '../../core/services/credential_image_service.dart';
 import '../../core/services/app_config_service.dart';
-import '../../data/models/credential_model.dart';
 
 class CredentialProcessingView extends GetView<CredentialProcessingController> {
   const CredentialProcessingView({super.key});
@@ -88,15 +84,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
         ),
-        actions: [
-          Obx(() => controller.processedCredential.value != null
-              ? IconButton(
-                  icon: const Icon(Icons.share),
-                  onPressed: () => _shareCredentialInfo(controller.processedCredential.value!),
-                  tooltip: 'Compartir información',
-                )
-              : const SizedBox.shrink()),
-        ],
+        // Opción de compartir removida
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -957,171 +945,5 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
     );
   }
   
-  /// Método para compartir la información de la credencial procesada
-  void _shareCredentialInfo(dynamic credential) async {
-    try {
-      // Verificar si el modo demo está habilitado
-      final bool isDemoMode = AppConfigService.isDemoEnabled ?? false;
-      
-      // Construir el texto con la información de la credencial
-      final StringBuffer info = StringBuffer();
-      info.writeln('=== INFORMACIÓN DE CREDENCIAL PROCESADA ===\n');
-      
-      // Información básica (siempre se incluye)
-      info.writeln('📋 DATOS GENERALES:');
-      info.writeln('• Nombre: ${credential.nombre.isNotEmpty ? credential.nombre : "No disponible"}');
-      info.writeln('• CURP: ${credential.curp.isNotEmpty ? credential.curp : "No disponible"}');
-      info.writeln('• Clave de Elector: ${credential.claveElector.isNotEmpty ? credential.claveElector : "No disponible"}');
-      info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento.isNotEmpty ? credential.fechaNacimiento : "No disponible"}');
-      info.writeln('• Sexo: ${credential.sexo.isNotEmpty ? credential.sexo : "No disponible"}');
-      info.writeln('• Domicilio: ${credential.domicilio.isNotEmpty ? credential.domicilio : "No disponible"}');
-      info.writeln('• Año de Registro: ${credential.anoRegistro.isNotEmpty ? credential.anoRegistro : "No disponible"}');
-      info.writeln('• Sección: ${credential.seccion.isNotEmpty ? credential.seccion : "No disponible"}');
-      info.writeln('• Vigencia: ${credential.vigencia.isNotEmpty ? credential.vigencia : "No disponible"}');
-      info.writeln('• Tipo: ${credential.tipo.isNotEmpty ? credential.tipo.toUpperCase() : "No disponible"}');
-      info.writeln('• Lado: ${credential.lado.isNotEmpty ? credential.lado : "No detectado"}\n');
-      
-      // Solo incluir información adicional si NO está en modo demo
-      if (!isDemoMode) {
-        // Información específica para T2 y T3
-        if (credential.tipo == 't2' || credential.tipo == 't3') {
-          info.writeln('📍 DATOS DE UBICACIÓN:');
-          info.writeln('• Estado: ${credential.estado.isNotEmpty ? credential.estado : "No disponible"}');
-          info.writeln('• Municipio: ${credential.municipio.isNotEmpty ? credential.municipio : "No disponible"}');
-          info.writeln('• Localidad: ${credential.localidad.isNotEmpty ? credential.localidad : "No disponible"}\n');
-          
-          // Información de códigos
-          if (credential.qrContent.isNotEmpty) {
-            info.writeln('🔲 CÓDIGO QR:');
-            info.writeln('${credential.qrContent}\n');
-          }
-          
-          if (credential.barcodeContent.isNotEmpty) {
-            info.writeln('📊 CÓDIGO DE BARRAS:');
-            info.writeln('${credential.barcodeContent}\n');
-          }
-          
-          if (credential.mrzContent.isNotEmpty) {
-            info.writeln('📄 CÓDIGO MRZ:');
-            info.writeln('${credential.mrzContent}\n');
-          }
-        }
-        
-        // Información de imágenes extraídas (metadatos)
-        info.writeln('🖼️ IMÁGENES EXTRAÍDAS:');
-        if (credential.photoPath.isNotEmpty) {
-          info.writeln('• ✅ Fotografía del rostro');
-        }
-        if (credential.signaturePath.isNotEmpty) {
-          info.writeln('• ✅ Firma (T3)');
-        }
-        if (credential.qrImagePath.isNotEmpty) {
-          info.writeln('• ✅ Imagen del código QR');
-        }
-        if (credential.barcodeImagePath.isNotEmpty) {
-          info.writeln('• ✅ Imagen del código de barras');
-        }
-      }
-      
-      info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
-      info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
-      if (isDemoMode) {
-        info.writeln('\n🔒 Modo Demo - Información limitada por privacidad');
-      }
-      
-      // Preparar lista de archivos temporales para limpiar
-      final List<String> tempFilesToCleanup = [];
-      
-      // Crear imagen combinada de frontal y trasera con bordes
-      String? mergedImagePath;
-      if (controller.frontImagePath.value.isNotEmpty && controller.backImagePath.value.isNotEmpty) {
-        // Crear un modelo temporal para usar el servicio
-        final tempCredential = CredentialModel(
-          id: null,
-          userId: 0,
-          nombre: '',
-          curp: '',
-          claveElector: '',
-          fechaNacimiento: '',
-          sexo: '',
-          domicilio: '',
-          estado: '',
-          municipio: '',
-          localidad: '',
-          seccion: '',
-          anoRegistro: '',
-          vigencia: '',
-          tipo: '',
-          lado: '',
-          fechaCaptura: DateTime.now(),
-          frontImagePath: controller.frontImagePath.value,
-          backImagePath: controller.backImagePath.value,
-        );
-        
-        mergedImagePath = await CredentialImageService.createMergedCredentialImage(
-          tempCredential,
-          borderSize: 15,
-        );
-        
-        if (mergedImagePath != null) {
-          tempFilesToCleanup.add(mergedImagePath);
-        }
-      }
-      
-      // Construir texto completo con información y OCR
-      final StringBuffer textContent = StringBuffer();
-      textContent.writeln(info.toString());
-      
-      // Agregar texto OCR del lado frontal si existe
-      String? frontOcrText = controller.extractedFrontText.value;
-      if (frontOcrText != null && frontOcrText.isNotEmpty) {
-        textContent.writeln('\n=== TEXTO OCR - LADO FRONTAL ===\n');
-        textContent.writeln(frontOcrText);
-      }
-      
-      // Agregar texto OCR del lado trasero si existe
-      String? backOcrText = controller.extractedBackText.value;
-      if (backOcrText != null && backOcrText.isNotEmpty) {
-        textContent.writeln('\n=== TEXTO OCR - LADO TRASERO ===\n');
-        textContent.writeln(backOcrText);
-      }
-      
-      if (mergedImagePath != null) {
-        // Compartir solo la imagen combinada con el texto como contenido del mensaje
-        await Share.shareXFiles(
-          [XFile(mergedImagePath)],
-          text: textContent.toString(),
-          subject: 'Credencial - ${credential.nombre}',
-        );
-      } else {
-        // Si no se pudo crear la imagen combinada, compartir solo el texto
-        await Share.share(
-          textContent.toString(),
-          subject: 'Credencial procesada - ${credential.nombre}',
-        );
-      }
-      
-      // Limpiar archivos temporales
-      for (String tempFilePath in tempFilesToCleanup) {
-        try {
-          final File tempFile = File(tempFilePath);
-          if (await tempFile.exists()) {
-            await tempFile.delete();
-          }
-        } catch (e) {
-          print('Error eliminando archivo temporal $tempFilePath: $e');
-        }
-      }
-      
-    } catch (e) {
-      // Mostrar error si falla el compartir
-      Get.snackbar(
-        'Error',
-        'No se pudo compartir la información: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
+
 }

@@ -655,146 +655,112 @@ class CredentialDetailsView extends StatelessWidget {
   /// Método para compartir la información de la credencial
   void _shareCredentialInfo(CredentialModel credential) async {
     try {
-      // Construir el texto con la información de la credencial
-      final StringBuffer info = StringBuffer();
-      info.writeln('=== INFORMACIÓN DE CREDENCIAL ===\n');
+      List<String> filesToShare = [];
       
-      // Información básica
-      info.writeln('📋 DATOS GENERALES:');
-      info.writeln('• Nombre: ${credential.nombre?.isNotEmpty == true ? credential.nombre : "No disponible"}');
-      info.writeln('• CURP: ${credential.curp?.isNotEmpty == true ? credential.curp : "No disponible"}');
-      info.writeln('• Clave de Elector: ${credential.claveElector?.isNotEmpty == true ? credential.claveElector : "No disponible"}');
-      info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento?.isNotEmpty == true ? credential.fechaNacimiento : "No disponible"}');
-      info.writeln('• Sexo: ${credential.sexo?.isNotEmpty == true ? credential.sexo : "No disponible"}');
-      info.writeln('• Domicilio: ${credential.domicilio?.isNotEmpty == true ? credential.domicilio : "No disponible"}');
-      info.writeln('• Año de Registro: ${credential.anoRegistro?.isNotEmpty == true ? credential.anoRegistro : "No disponible"}');
-      info.writeln('• Sección: ${credential.seccion?.isNotEmpty == true ? credential.seccion : "No disponible"}');
-      info.writeln('• Vigencia: ${credential.vigencia?.isNotEmpty == true ? credential.vigencia : "No disponible"}');
-      info.writeln('• Tipo: ${credential.tipo?.isNotEmpty == true ? credential.tipo!.toUpperCase() : "No disponible"}');
-      info.writeln('• Lado: ${credential.lado?.isNotEmpty == true ? credential.lado : "No detectado"}\n');
-      
-      // Información específica para T2 y T3
-      if (credential.tipo == 't2' || credential.tipo == 't3') {
-        info.writeln('📍 DATOS DE UBICACIÓN:');
-        info.writeln('• Estado: ${credential.estado?.isNotEmpty == true ? credential.estado : "No disponible"}');
-        info.writeln('• Municipio: ${credential.municipio?.isNotEmpty == true ? credential.municipio : "No disponible"}');
-        info.writeln('• Localidad: ${credential.localidad?.isNotEmpty == true ? credential.localidad : "No disponible"}\n');
-        
-        // Información de códigos
-        if (credential.qrContent?.isNotEmpty == true) {
-          info.writeln('🔲 CÓDIGO QR:');
-          info.writeln('${credential.qrContent}\n');
-        }
-        
-        if (credential.barcodeContent?.isNotEmpty == true) {
-          info.writeln('📊 CÓDIGO DE BARRAS:');
-          info.writeln('${credential.barcodeContent}\n');
-        }
-        
-        if (credential.mrzContent?.isNotEmpty == true) {
-          info.writeln('📄 CÓDIGO MRZ:');
-          info.writeln('${credential.mrzContent}\n');
-        }
+      // Solo agregar las fotos delantera y trasera
+      if (credential.frontImagePath != null && credential.frontImagePath!.isNotEmpty) {
+        filesToShare.add(credential.frontImagePath!);
+      }
+      if (credential.backImagePath != null && credential.backImagePath!.isNotEmpty) {
+        filesToShare.add(credential.backImagePath!);
       }
       
-      // Información de imágenes extraídas
-      info.writeln('🖼️ IMÁGENES EXTRAÍDAS:');
-      if (credential.photoPath?.isNotEmpty == true) {
-        info.writeln('• ✅ Fotografía del rostro');
-      }
-      if (credential.signaturePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Firma');
-      }
-      if (credential.qrImagePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Imagen del código QR');
-      }
-      if (credential.barcodeImagePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Imagen del código de barras');
-      }
-      
-      // Información de metadatos
-      info.writeln('\n📅 METADATOS:');
-      info.writeln('• Fecha de captura: ${credential.fechaCaptura?.toString().split('.')[0] ?? "No disponible"}');
-      if (credential.createdAt != null) {
-        info.writeln('• Fecha de creación: ${credential.createdAt!.toString().split('.')[0]}');
-      }
-      if (credential.updatedAt != null) {
-        info.writeln('• Última actualización: ${credential.updatedAt!.toString().split('.')[0]}');
-      }
-      info.writeln('• ID de credencial: ${credential.id ?? "No disponible"}');
-      
-      info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
-      info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
-      
-      // Preparar lista de archivos para compartir
-      final List<String> filesToShare = [];
-      
-      // Agregar imágenes extraídas disponibles
-      if (credential.photoPath?.isNotEmpty == true && File(credential.photoPath!).existsSync()) {
-        filesToShare.add(credential.photoPath!);
-      }
-      if (credential.signaturePath?.isNotEmpty == true && File(credential.signaturePath!).existsSync()) {
-        filesToShare.add(credential.signaturePath!);
-      }
-      if (credential.qrImagePath?.isNotEmpty == true && File(credential.qrImagePath!).existsSync()) {
-        filesToShare.add(credential.qrImagePath!);
-      }
-      if (credential.barcodeImagePath?.isNotEmpty == true && File(credential.barcodeImagePath!).existsSync()) {
-        filesToShare.add(credential.barcodeImagePath!);
-      }
-      if (credential.mrzImagePath?.isNotEmpty == true && File(credential.mrzImagePath!).existsSync()) {
-        filesToShare.add(credential.mrzImagePath!);
-      }
-      if (credential.signatureHuellaImagePath?.isNotEmpty == true && File(credential.signatureHuellaImagePath!).existsSync()) {
-        filesToShare.add(credential.signatureHuellaImagePath!);
-      }
-      
-      // Compartir información de la credencial
-      String shareText = info.toString();
+      // Crear el texto de información de la credencial
+      String credentialText = _buildCredentialText(credential);
       
       if (filesToShare.isNotEmpty) {
-        shareText += '\n\n📎 ARCHIVOS ADJUNTOS:';
-        shareText += '\n• ${filesToShare.length} imagen(es) extraída(s) de la credencial';
-        
-        // Crear archivo temporal con el texto para incluirlo junto con las imágenes
+        // Crear un archivo temporal con el texto
         final tempDir = await getTemporaryDirectory();
-        final textFile = File('${tempDir.path}/credential_info_${DateTime.now().millisecondsSinceEpoch}.txt');
-        await textFile.writeAsString(shareText);
+        final curpForFilename = credential.curp?.isNotEmpty == true ? credential.curp!.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sin_curp';
+        final textFile = File('${tempDir.path}/credencial_${curpForFilename}.txt');
+        await textFile.writeAsString(credentialText);
+        filesToShare.add(textFile.path);
         
-        // Agregar el archivo de texto a la lista de archivos
-        List<XFile> allFiles = [XFile(textFile.path)];
-        allFiles.addAll(filesToShare.map((path) => XFile(path)));
-        
-        // Compartir todo junto en un solo correo
         await Share.shareXFiles(
-          allFiles,
-          subject: 'Información de Credencial',
+          filesToShare.map((path) => XFile(path)).toList(),
+          text: 'Información de Credencial - Solo fotos delantera y trasera',
         );
         
-        // Limpiar archivo temporal después de un delay
+        // Limpiar el archivo temporal después de un delay
         Future.delayed(const Duration(seconds: 5), () {
           if (textFile.existsSync()) {
             textFile.deleteSync();
           }
         });
       } else {
-        // Si no hay imágenes, compartir solo el texto
         await Share.share(
-          shareText,
+          credentialText,
           subject: 'Información de Credencial',
         );
       }
-      
     } catch (e) {
-      // Mostrar error si falla el compartir
       Get.snackbar(
         'Error',
         'No se pudo compartir la información: $e',
+        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+
+  String _buildCredentialText(CredentialModel credential) {
+    final StringBuffer info = StringBuffer();
+    info.writeln('=== INFORMACIÓN DE CREDENCIAL ===\n');
+    
+    // Información básica
+    info.writeln('📋 DATOS GENERALES:');
+    info.writeln('• Nombre: ${credential.nombre?.isNotEmpty == true ? credential.nombre : "No disponible"}');
+    info.writeln('• CURP: ${credential.curp?.isNotEmpty == true ? credential.curp : "No disponible"}');
+    info.writeln('• Clave de Elector: ${credential.claveElector?.isNotEmpty == true ? credential.claveElector : "No disponible"}');
+    info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento?.isNotEmpty == true ? credential.fechaNacimiento : "No disponible"}');
+    info.writeln('• Sexo: ${credential.sexo?.isNotEmpty == true ? credential.sexo : "No disponible"}');
+    info.writeln('• Domicilio: ${credential.domicilio?.isNotEmpty == true ? credential.domicilio : "No disponible"}');
+    info.writeln('• Año de Registro: ${credential.anoRegistro?.isNotEmpty == true ? credential.anoRegistro : "No disponible"}');
+    info.writeln('• Sección: ${credential.seccion?.isNotEmpty == true ? credential.seccion : "No disponible"}');
+    info.writeln('• Vigencia: ${credential.vigencia?.isNotEmpty == true ? credential.vigencia : "No disponible"}');
+    info.writeln('• Tipo: ${credential.tipo?.isNotEmpty == true ? credential.tipo!.toUpperCase() : "No disponible"}');
+    info.writeln('• Lado: ${credential.lado?.isNotEmpty == true ? credential.lado : "No detectado"}\n');
+    
+    // Información específica para T2 y T3
+    if (credential.tipo == 't2' || credential.tipo == 't3') {
+      info.writeln('📍 DATOS DE UBICACIÓN:');
+      info.writeln('• Estado: ${credential.estado?.isNotEmpty == true ? credential.estado : "No disponible"}');
+      info.writeln('• Municipio: ${credential.municipio?.isNotEmpty == true ? credential.municipio : "No disponible"}');
+      info.writeln('• Localidad: ${credential.localidad?.isNotEmpty == true ? credential.localidad : "No disponible"}\n');
+      
+      // Información de códigos
+      if (credential.qrContent?.isNotEmpty == true) {
+        info.writeln('🔲 CÓDIGO QR:');
+        info.writeln('${credential.qrContent}\n');
+      }
+      
+      if (credential.barcodeContent?.isNotEmpty == true) {
+        info.writeln('📊 CÓDIGO DE BARRAS:');
+        info.writeln('${credential.barcodeContent}\n');
+      }
+      
+      if (credential.mrzContent?.isNotEmpty == true) {
+        info.writeln('📄 CÓDIGO MRZ:');
+        info.writeln('${credential.mrzContent}\n');
+      }
+    }
+    
+    // Información de metadatos
+    info.writeln('📅 METADATOS:');
+    info.writeln('• Fecha de captura: ${credential.fechaCaptura?.toString().split('.')[0] ?? "No disponible"}');
+    if (credential.createdAt != null) {
+      info.writeln('• Fecha de creación: ${credential.createdAt!.toString().split('.')[0]}');
+    }
+    if (credential.updatedAt != null) {
+      info.writeln('• Última actualización: ${credential.updatedAt!.toString().split('.')[0]}');
+    }
+    info.writeln('• ID de credencial: ${credential.id ?? "No disponible"}');
+    
+    info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
+    info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
+    
+    return info.toString();
   }
 
   void _showDeleteDialog(BuildContext context, CredentialDetailsController controller) {

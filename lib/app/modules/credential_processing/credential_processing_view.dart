@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:atom_ocr_ai_m_v3/app/modules/credential_processing/credential_processing_controller.dart';
 import 'package:atom_ocr_ai_m_v3/app/core/utils/validation_utils.dart';
 
@@ -1043,13 +1044,27 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
         filesToShare.add(credential.barcodeImagePath);
       }
       
+      // Crear archivo temporal con el texto
+      final tempDir = await getTemporaryDirectory();
+      final curpForFilename = credential.curp.isNotEmpty ? credential.curp.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sin_curp';
+      final textFile = File('${tempDir.path}/credencial_procesada_${curpForFilename}.txt');
+      await textFile.writeAsString(info.toString());
+      filesToShare.add(textFile.path);
+      
       // Usar Share.shareXFiles para compartir texto e imágenes
       if (filesToShare.isNotEmpty) {
         await Share.shareXFiles(
           filesToShare.map((path) => XFile(path)).toList(),
-          text: info.toString(),
+          text: 'Información de Credencial Procesada - ${credential.nombre}',
           subject: 'Información de Credencial Procesada',
         );
+        
+        // Limpiar el archivo temporal después de un delay
+        Future.delayed(const Duration(seconds: 5), () {
+          if (textFile.existsSync()) {
+            textFile.deleteSync();
+          }
+        });
       } else {
         // Si no hay imágenes, compartir solo el texto
         await Share.share(

@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../controllers/credential_details_controller.dart';
 import '../../data/models/credential_model.dart';
+import '../../modules/credential_processing/credential_processing_controller.dart';
 
 class CredentialDetailsView extends StatelessWidget {
   const CredentialDetailsView({Key? key}) : super(key: key);
@@ -656,38 +657,68 @@ class CredentialDetailsView extends StatelessWidget {
   void _shareCredentialInfo(CredentialModel credential) async {
     try {
       List<String> filesToShare = [];
+      List<String> tempFilesToCleanup = [];
       
-      // Solo agregar las fotos delantera y trasera
+      // Agregar imágenes originales
       if (credential.frontImagePath != null && credential.frontImagePath!.isNotEmpty) {
         filesToShare.add(credential.frontImagePath!);
       }
+      
       if (credential.backImagePath != null && credential.backImagePath!.isNotEmpty) {
         filesToShare.add(credential.backImagePath!);
       }
       
-      // Crear el texto de información de la credencial
-      String credentialText = _buildCredentialText(credential);
-      
       if (filesToShare.isNotEmpty) {
-        // Crear un archivo temporal con el texto
-        final tempDir = await getTemporaryDirectory();
-        final curpForFilename = credential.curp?.isNotEmpty == true ? credential.curp!.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sin_curp';
-        final textFile = File('${tempDir.path}/credencial_${curpForFilename}.txt');
-        await textFile.writeAsString(credentialText);
-        filesToShare.add(textFile.path);
+        // Crear timestamp para nombres únicos de archivos
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        
+        // Crear archivo con información general de la credencial
+        final Directory tempDir = await getTemporaryDirectory();
+        final String infoFilePath = '${tempDir.path}/credencial_info_$timestamp.txt';
+        final File infoFile = File(infoFilePath);
+        await infoFile.writeAsString(_buildCredentialText(credential));
+        filesToShare.add(infoFilePath);
+        tempFilesToCleanup.add(infoFilePath);
+        
+        // Crear archivo con texto OCR del lado frontal si existe
+        String? frontOcrText = _getExtractedFrontText();
+        if (frontOcrText != null && frontOcrText.isNotEmpty) {
+          final String frontOcrFilePath = '${tempDir.path}/ocr_frontal_$timestamp.txt';
+          final File frontOcrFile = File(frontOcrFilePath);
+          await frontOcrFile.writeAsString('=== TEXTO OCR - LADO FRONTAL ===\n\n$frontOcrText');
+          filesToShare.add(frontOcrFilePath);
+          tempFilesToCleanup.add(frontOcrFilePath);
+        }
+        
+        // Crear archivo con texto OCR del lado trasero si existe
+        String? backOcrText = _getExtractedBackText();
+        if (backOcrText != null && backOcrText.isNotEmpty) {
+          final String backOcrFilePath = '${tempDir.path}/ocr_trasero_$timestamp.txt';
+          final File backOcrFile = File(backOcrFilePath);
+          await backOcrFile.writeAsString('=== TEXTO OCR - LADO TRASERO ===\n\n$backOcrText');
+          filesToShare.add(backOcrFilePath);
+          tempFilesToCleanup.add(backOcrFilePath);
+        }
         
         await Share.shareXFiles(
           filesToShare.map((path) => XFile(path)).toList(),
-          text: 'Información de Credencial - Solo fotos delantera y trasera',
+          subject: 'Credencial con archivos OCR',
         );
         
-        // Limpiar el archivo temporal después de un delay
-        Future.delayed(const Duration(seconds: 5), () {
-          if (textFile.existsSync()) {
-            textFile.deleteSync();
+        // Limpiar archivos temporales después de compartir
+        for (String tempFilePath in tempFilesToCleanup) {
+          try {
+            final File tempFile = File(tempFilePath);
+            if (await tempFile.exists()) {
+              await tempFile.delete();
+            }
+          } catch (e) {
+            print('Error eliminando archivo temporal $tempFilePath: $e');
           }
-        });
+        }
       } else {
+        // Fallback: compartir solo texto si no hay imágenes
+        String credentialText = _buildCredentialText(credential);
         await Share.share(
           credentialText,
           subject: 'Información de Credencial',
@@ -702,6 +733,34 @@ class CredentialDetailsView extends StatelessWidget {
         colorText: Colors.white,
       );
     }
+  }
+
+  /// Obtiene el texto OCR extraído del lado frontal
+  String? _getExtractedFrontText() {
+    try {
+      // Intentar obtener el controlador de procesamiento si existe
+      if (Get.isRegistered<CredentialProcessingController>()) {
+        final processingController = Get.find<CredentialProcessingController>();
+        return processingController.extractedFrontText.value;
+      }
+    } catch (e) {
+      print('Error obteniendo texto frontal: $e');
+    }
+    return null;
+  }
+  
+  /// Obtiene el texto OCR extraído del lado trasero
+  String? _getExtractedBackText() {
+    try {
+      // Intentar obtener el controlador de procesamiento si existe
+      if (Get.isRegistered<CredentialProcessingController>()) {
+        final processingController = Get.find<CredentialProcessingController>();
+        return processingController.extractedBackText.value;
+      }
+    } catch (e) {
+      print('Error obteniendo texto trasero: $e');
+    }
+    return null;
   }
 
   String _buildCredentialText(CredentialModel credential) {

@@ -1019,6 +1019,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
       
       // Preparar lista de archivos para compartir
       final List<String> filesToShare = [];
+      final List<String> tempFilesToCleanup = [];
       
       // Agregar imagen frontal de la credencial
       if (controller.frontImagePath.value.isNotEmpty && File(controller.frontImagePath.value).existsSync()) {
@@ -1044,27 +1045,55 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
         filesToShare.add(credential.barcodeImagePath);
       }
       
-      // Crear archivo temporal con el texto
-      final tempDir = await getTemporaryDirectory();
-      final curpForFilename = credential.curp.isNotEmpty ? credential.curp.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sin_curp';
-      final textFile = File('${tempDir.path}/credencial_procesada_${curpForFilename}.txt');
-      await textFile.writeAsString(info.toString());
-      filesToShare.add(textFile.path);
-      
-      // Usar Share.shareXFiles para compartir texto e imágenes
+      // Usar Share.shareXFiles para compartir imágenes con archivos de texto OCR
       if (filesToShare.isNotEmpty) {
+        // Crear timestamp para nombres únicos de archivos
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        
+        // Crear archivo con información general de la credencial
+        final Directory tempDir = await getTemporaryDirectory();
+        final String infoFilePath = '${tempDir.path}/credencial_procesada_$timestamp.txt';
+        final File infoFile = File(infoFilePath);
+        await infoFile.writeAsString(info.toString());
+        filesToShare.add(infoFilePath);
+        tempFilesToCleanup.add(infoFilePath);
+        
+        // Crear archivo con texto OCR del lado frontal si existe
+        String? frontOcrText = controller.extractedFrontText.value;
+        if (frontOcrText != null && frontOcrText.isNotEmpty) {
+          final String frontOcrFilePath = '${tempDir.path}/ocr_frontal_$timestamp.txt';
+          final File frontOcrFile = File(frontOcrFilePath);
+          await frontOcrFile.writeAsString('=== TEXTO OCR - LADO FRONTAL ===\n\n$frontOcrText');
+          filesToShare.add(frontOcrFilePath);
+          tempFilesToCleanup.add(frontOcrFilePath);
+        }
+        
+        // Crear archivo con texto OCR del lado trasero si existe
+        String? backOcrText = controller.extractedBackText.value;
+        if (backOcrText != null && backOcrText.isNotEmpty) {
+          final String backOcrFilePath = '${tempDir.path}/ocr_trasero_$timestamp.txt';
+          final File backOcrFile = File(backOcrFilePath);
+          await backOcrFile.writeAsString('=== TEXTO OCR - LADO TRASERO ===\n\n$backOcrText');
+          filesToShare.add(backOcrFilePath);
+          tempFilesToCleanup.add(backOcrFilePath);
+        }
+        
         await Share.shareXFiles(
           filesToShare.map((path) => XFile(path)).toList(),
-          text: 'Información de Credencial Procesada - ${credential.nombre}',
-          subject: 'Información de Credencial Procesada',
+          subject: 'Credencial procesada con archivos OCR - ${credential.nombre}',
         );
         
-        // Limpiar el archivo temporal después de un delay
-        Future.delayed(const Duration(seconds: 5), () {
-          if (textFile.existsSync()) {
-            textFile.deleteSync();
+        // Limpiar archivos temporales después de compartir
+        for (String tempFilePath in tempFilesToCleanup) {
+          try {
+            final File tempFile = File(tempFilePath);
+            if (await tempFile.exists()) {
+              await tempFile.delete();
+            }
+          } catch (e) {
+            print('Error eliminando archivo temporal $tempFilePath: $e');
           }
-        });
+        }
       } else {
         // Si no hay imágenes, compartir solo el texto
         await Share.share(

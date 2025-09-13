@@ -82,8 +82,8 @@ class MrzDetectionService {
     String credentialType
   ) async {
     try {
-      // Definir región inferior para MRZ (aproximadamente 20% inferior de la imagen)
-      final regionHeight = (originalImage.height * 0.2).round();
+      // Definir región inferior para MRZ (aproximadamente 65% inferior de la imagen)
+      final regionHeight = (originalImage.height * 0.65).round();
       final regionY = originalImage.height - regionHeight;
       
       // Extraer región inferior

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:get/get.dart';
+import 'dart:io';
 import 'camera_controller.dart';
+import '../../core/services/special_settings_service.dart';
 
 class CameraView extends StatefulWidget {
   const CameraView({super.key});
@@ -127,13 +129,20 @@ class _CameraViewState extends State<CameraView> {
                         fit: BoxFit.cover,
                         child: SizedBox(
                           width: size.width,
-                          height:
-                              size.width /
-                              controller.cameraController!.value.aspectRatio,
-                          child: CameraPreview(controller.cameraController!),
+                          height: controller.cameraController != null
+                              ? size.width / controller.cameraController!.value.aspectRatio
+                              : size.height,
+                          child: controller.cameraController != null
+                              ? CameraPreview(controller.cameraController!)
+                              : Container(color: Colors.black),
                         ),
                       ),
                     ),
+
+                    // Overlay de imagen capturada (pausa la cámara)
+                    Obx(() => controller.showConfirmationButtons.value
+                        ? _buildCapturedImageOverlay(orientation)
+                        : const SizedBox.shrink()),
 
                     // Marco de guía para la credencial
                     _buildCredentialFrame(orientation),
@@ -192,162 +201,78 @@ class _CameraViewState extends State<CameraView> {
       }
     }
 
-    if (orientation == Orientation.portrait) {
-      return Center(
-        child: Container(
-          width: frameWidth,
-          height: frameHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              // Esquinas del marco
-              Positioned(
-                top: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    // Centrar el frame perfectamente en ambas orientaciones
+    return Center(
+      child: Container(
+        width: frameWidth,
+        height: frameHeight,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white, width: 2),
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
-    } else {
-      // En landscape, centrar verticalmente en el espacio disponible
-      // Calcular altura del tip (aproximadamente 60px incluyendo padding)
-      const double tipHeight = 60;
-      final double availableHeight = screenHeight - tipHeight;
-      final double topPosition =
-          tipHeight +
-          (availableHeight - frameHeight) / 2 -
-          20; // Subir 20px para evitar fusión con parte inferior
-
-      return Positioned(
-        top: topPosition, // Centrar en el espacio disponible
-        left: (screenWidth - frameWidth) / 2, // Centrar horizontalmente
-        child: Container(
-          width: frameWidth,
-          height: frameHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              // Esquinas del marco
-              Positioned(
-                top: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
+        child: Stack(
+          children: [
+            // Esquinas del marco
+            Positioned(
+              top: -1,
+              left: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.blue, width: 4),
+                    left: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              top: -1,
+              right: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.blue, width: 4),
+                    right: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                bottom: -1,
-                left: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      left: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              bottom: -1,
+              left: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.blue, width: 4),
+                    left: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-              Positioned(
-                bottom: -1,
-                right: -1,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.blue, width: 4),
-                      right: BorderSide(color: Colors.blue, width: 4),
-                    ),
+            ),
+            Positioned(
+              bottom: -1,
+              right: -1,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.blue, width: 4),
+                    right: BorderSide(color: Colors.blue, width: 4),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildCameraControls(Orientation orientation) {
@@ -365,15 +290,17 @@ class _CameraViewState extends State<CameraView> {
               onPressed: _exitToHome,
               backgroundColor: Colors.red.withValues(alpha: 0.8),
             ),
-            // Botón flash
+            // Botón flash - Solo visible después de capturar la primera foto y si está habilitado
             Obx(
-              () => _buildControlButton(
-                icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
-                onPressed: controller.toggleFlash,
-                backgroundColor: controller.isFlashOn.value 
-                    ? Colors.yellow.withValues(alpha: 0.8)
-                    : Colors.grey.withValues(alpha: 0.8),
-              ),
+              () => controller.frontPhotoTaken.value && Get.find<SpecialSettingsService>().enableFlash
+                  ? _buildControlButton(
+                      icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
+                      onPressed: controller.toggleFlash,
+                      backgroundColor: controller.isFlashOn.value 
+                          ? Colors.yellow.withValues(alpha: 0.8)
+                          : Colors.grey.withValues(alpha: 0.8),
+                    )
+                  : const SizedBox(width: 60), // Mantener el espacio
             ),
             // Botón capturar
             _buildCaptureButton(),
@@ -398,36 +325,39 @@ class _CameraViewState extends State<CameraView> {
         child: Container(
           decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3)),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Botón cancelar
-              _buildControlButton(
-                icon: Icons.close,
-                onPressed: _exitToHome,
-                backgroundColor: Colors.black.withValues(alpha: 0.6),
-                size: 45,
-              ),
-              // Botón flash
-              Obx(
-                () => _buildControlButton(
-                  icon: controller.isFlashOn.value ? Icons.flash_on : Icons.flash_off,
-                  onPressed: controller.toggleFlash,
-                  backgroundColor: controller.isFlashOn.value 
-                      ? Colors.yellow.withValues(alpha: 0.8)
-                      : Colors.black.withValues(alpha: 0.6),
-                  size: 45,
-                ),
-              ),
-              // Botón capturar
+              // Botones superiores (check y X) - Solo visibles después de capturar
+              Obx(() => controller.showConfirmationButtons.value
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Column(
+                        children: [
+                          _buildControlButton(
+                            icon: Icons.check,
+                            onPressed: controller.confirmPhoto,
+                            backgroundColor: Colors.green.withValues(alpha: 0.6),
+                            size: 40,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildControlButton(
+                            icon: Icons.close,
+                            onPressed: controller.cancelPhoto,
+                            backgroundColor: Colors.red.withValues(alpha: 0.6),
+                            size: 40,
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink()),
+              // Botón capturar en el centro
               _buildCaptureButton(),
-              // Botón lado de credencial
-              Obx(
-                () => _buildControlButton(
-                  icon:
-                      controller.isFrontSide.value
-                          ? Icons.person
-                          : Icons.qr_code,
-                  onPressed: controller.switchCredentialSide,
+              // Botón cancelar en la parte inferior
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _buildControlButton(
+                  icon: Icons.arrow_back,
+                  onPressed: _exitToHome,
                   backgroundColor: Colors.black.withValues(alpha: 0.6),
                   size: 45,
                 ),
@@ -515,56 +445,66 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _buildInstructionText(Orientation orientation) {
-    if (orientation == Orientation.portrait) {
-      return Positioned(
-        top: 80,
-        left: 20,
-        right: 20,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text(
-            'Coloca la credencial dentro del marco y presiona el botón para capturar',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    } else {
-      // En landscape: tip extendido en la parte superior con más transparencia
-      return Positioned(
-        top: 0,
-        left: 0,
-        right: 60, // Terminar donde comienza el menú lateral
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
-          child: const Text(
-            'Coloca la credencial dentro del marco y presiona el botón para capturar',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              shadows: [
-                Shadow(
-                  offset: Offset(1, 1),
-                  blurRadius: 2,
-                  color: Colors.black54,
+    return Obx(() {
+      if (orientation == Orientation.portrait) {
+        return Positioned(
+          top: 80,
+          left: 20,
+          right: 20,
+          child: AnimatedOpacity(
+            opacity: controller.showInstructionText.value ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Obx(() => Text(
+                _getInstructionMessage(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+                textAlign: TextAlign.center,
+              )),
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-      );
-    }
+        );
+      } else {
+        // En landscape: tip extendido en la parte superior con más transparencia
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 60, // Terminar donde comienza el menú lateral
+          child: AnimatedOpacity(
+            opacity: controller.showInstructionText.value ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4)),
+              child: Obx(() => Text(
+                _getInstructionMessage(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(1, 1),
+                      blurRadius: 2,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              )),
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildSideIndicator() {
@@ -575,14 +515,102 @@ class _CameraViewState extends State<CameraView> {
         () => Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6),
+            color: Colors.black.withValues(alpha: 0.4),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
           ),
           child: Icon(
             controller.isFrontSide.value ? Icons.person : Icons.qr_code,
-            color: Colors.white,
+            color: Colors.white.withValues(alpha: 0.8),
             size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Obtiene el mensaje de instrucciones según el estado actual del flujo
+  String _getInstructionMessage() {
+    switch (controller.captureState.value) {
+      case 'front':
+        return 'Coloca la credencial por el lado frontal';
+      case 'front_confirm':
+        return 'Foto frontal capturada - Confirma o vuelve a tomar';
+      case 'back':
+        return 'Ahora captura el lado trasero de la credencial';
+      case 'back_confirm':
+        return 'Foto trasera capturada - Confirma para procesar';
+      default:
+        return 'Coloca la credencial por el lado frontal';
+    }
+  }
+
+  /// Construye el overlay de imagen capturada que "pausa" la cámara
+  Widget _buildCapturedImageOverlay(Orientation orientation) {
+    // Obtener la ruta de la imagen actual según el estado
+    String imagePath = '';
+    if (controller.captureState.value == 'front_confirm') {
+      imagePath = controller.frontImagePath.value;
+    } else if (controller.captureState.value == 'back_confirm') {
+      imagePath = controller.backImagePath.value;
+    }
+
+    if (imagePath.isEmpty) return const SizedBox.shrink();
+
+    // Calcular las mismas dimensiones que el marco de referencia
+    const double credentialAspectRatio = 790 / 490;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    double frameWidth, frameHeight;
+
+    if (orientation == Orientation.portrait) {
+      // En portrait, usar 80% del ancho disponible
+      frameWidth = screenWidth * 0.8;
+      frameHeight = frameWidth / credentialAspectRatio;
+
+      // Verificar que no exceda la altura disponible (dejando espacio para controles)
+      final maxHeight = screenHeight * 0.5;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    } else {
+      // En landscape, maximizar área de captura (85% ancho, dejando solo espacio para barra de botones)
+      frameWidth = screenWidth * 0.85;
+      frameHeight = frameWidth / credentialAspectRatio;
+
+      // Verificar que no exceda la altura disponible (dejando espacio para tip superior)
+      final maxHeight = screenHeight * 0.85;
+      if (frameHeight > maxHeight) {
+        frameHeight = maxHeight;
+        frameWidth = frameHeight * credentialAspectRatio;
+      }
+    }
+
+    // Centrar la imagen en la misma posición que el marco
+    return Center(
+      child: Container(
+        width: frameWidth,
+        height: frameHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            File(imagePath),
+            fit: BoxFit.cover,
+            width: frameWidth,
+            height: frameHeight,
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,15 +17,25 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   final isInitialized = false.obs;
   final isCapturing = false.obs;
   final capturedImagePath = ''.obs;
+  final frontImagePath = ''.obs; // Ruta de la imagen frontal
+  final backImagePath = ''.obs; // Ruta de la imagen trasera
   final hasPermission = false.obs;
   final errorMessage = ''.obs;
   final isFrontSide = true.obs; // true = frontal (persona), false = reverso (QR)
   final isFlashOn = false.obs; // Estado del flash
+  final showInstructionText = true.obs; // Controla la visibilidad del mensaje de instrucciones
+  
+  // Variables para el nuevo flujo de captura
+  final frontPhotoTaken = false.obs; // Indica si se tomó la foto frontal
+  final backPhotoTaken = false.obs; // Indica si se tomó la foto trasera
+  final showConfirmationButtons = false.obs; // Controla la visibilidad de los botones check/cancel
+  final captureState = 'front'.obs; // 'front', 'front_confirm', 'back', 'back_confirm'
   
   // Controlador de cámara
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
   CameraDescription? _backCamera; // Siempre usar cámara trasera
+  Timer? _instructionTimer; // Temporizador para ocultar el mensaje de instrucciones
   
   // Getters
   CameraController? get cameraController => _cameraController;
@@ -34,12 +45,16 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
+    // Configurar orientación landscape al inicializar la cámara
+    _setLandscapeOrientation();
     _initializeCamera();
+    _startInstructionTimer(); // Iniciar temporizador para ocultar mensaje
   }
 
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    _instructionTimer?.cancel(); // Cancelar temporizador
     _disposeCameraController();
     super.onClose();
   }
@@ -189,19 +204,9 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       }
     }
     
-    // Calcular posición del marco (centrado)
-    double frameX, frameY;
-    
-    if (orientation == Orientation.portrait) {
-      frameX = (screenWidth - frameWidth) / 2;
-      frameY = (screenHeight - frameHeight) / 2;
-    } else {
-      // En landscape, centrar verticalmente en el espacio disponible
-      const double tipHeight = 60;
-      final double availableHeight = screenHeight - tipHeight;
-      frameX = (screenWidth - frameWidth) / 2;
-      frameY = tipHeight + (availableHeight - frameHeight) / 2 - 20;
-    }
+    // Calcular posición del marco (centrado perfectamente en ambas orientaciones)
+    final double frameX = (screenWidth - frameWidth) / 2;
+    final double frameY = (screenHeight - frameHeight) / 2;
     
     return {
       'x': frameX,
@@ -340,20 +345,18 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
       capturedImagePath.value = filePath;
       isCapturing.value = false;
       
-      SnackbarUtils.showSuccess(
-        title: 'Éxito',
-        message: 'Imagen recortada y guardada en la galería',
-      );
-      
-      // Restaurar orientación portrait antes de navegar
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // Navegar a la pantalla de procesamiento con la imagen capturada
-      Get.toNamed('/processing', arguments: {
-        'imagePath': filePath,
-        'side': isFrontSide.value ? 'front' : 'back',
-      });
+      // Actualizar estado según el flujo de captura
+      if (captureState.value == 'front') {
+        frontImagePath.value = filePath; // Almacenar ruta de imagen frontal
+        frontPhotoTaken.value = true;
+        captureState.value = 'front_confirm';
+        showConfirmationButtons.value = true;
+      } else if (captureState.value == 'back') {
+        backImagePath.value = filePath; // Almacenar ruta de imagen trasera
+        backPhotoTaken.value = true;
+        captureState.value = 'back_confirm';
+        showConfirmationButtons.value = true;
+      }
       
     } catch (e) {
       isCapturing.value = false;
@@ -407,8 +410,72 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
     await _initializeCamera();
   }
   
-  /// Limpia la imagen capturada
+  /// Inicia el temporizador para ocultar el mensaje de instrucciones después de 5 segundos
+  void _startInstructionTimer() {
+    _instructionTimer = Timer(const Duration(seconds: 5), () {
+      showInstructionText.value = false;
+    });
+  }
+  
+  /// Confirma la foto actual y avanza al siguiente estado
+  void confirmPhoto() {
+    if (captureState.value == 'front_confirm') {
+      // Cambiar al estado de captura trasera
+      captureState.value = 'back';
+      isFrontSide.value = false; // Cambiar a lado trasero (QR)
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    } else if (captureState.value == 'back_confirm') {
+      // Navegar a la pantalla de procesamiento
+      _navigateToProcessing();
+    }
+  }
+  
+  /// Cancela la foto actual y permite volver a tomarla
+  void cancelPhoto() {
+    if (captureState.value == 'front_confirm') {
+      // Volver al estado de captura frontal
+      captureState.value = 'front';
+      frontPhotoTaken.value = false;
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    } else if (captureState.value == 'back_confirm') {
+      // Volver al estado de captura trasera
+      captureState.value = 'back';
+      backPhotoTaken.value = false;
+      showConfirmationButtons.value = false;
+      showInstructionText.value = true;
+      _startInstructionTimer();
+    }
+  }
+  
+  /// Navega a la pantalla de procesamiento de credencial
+  Future<void> _navigateToProcessing() async {
+    // Cambiar a orientación portrait solo al finalizar el proceso de captura
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Navegar a la nueva pantalla de procesamiento de credencial con ambas imágenes
+    Get.toNamed('/credential-processing', arguments: {
+      'frontImagePath': frontImagePath.value,
+      'backImagePath': backImagePath.value,
+    });
+  }
+  
+  /// Limpia las imágenes capturadas
   void clearImage() {
     capturedImagePath.value = '';
+    frontImagePath.value = '';
+    backImagePath.value = '';
+  }
+  
+  /// Configura la orientación landscape para la cámara
+  Future<void> _setLandscapeOrientation() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 }

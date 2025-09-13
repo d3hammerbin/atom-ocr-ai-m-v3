@@ -1,83 +1,231 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../data/models/credential_model.dart';
 import 'credentials_list_controller.dart';
 import '../../global_widgets/user_settings_widget.dart';
 
 class CredentialsListView extends GetView<CredentialsListController> {
   const CredentialsListView({super.key});
 
+  static final TextEditingController _searchController =
+      TextEditingController();
+
   @override
   Widget build(BuildContext context) {
+    return _buildScaffold(context);
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Credenciales Procesadas'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Configuraciones',
+            icon: const Icon(Icons.home),
+            tooltip: 'Ir al inicio',
             onPressed: () {
-              Get.to(() => const UserSettingsWidget());
+              Get.offAllNamed('/home');
             },
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Más opciones',
+            onSelected: (String value) {
+              switch (value) {
+                case 'settings':
+                  Get.to(() => const UserSettingsWidget());
+                  break;
+                case 'export':
+                  // TODO: Implementar funcionalidad de exportar
+                  Get.snackbar(
+                    'Exportar',
+                    'Funcionalidad de exportar en desarrollo',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                  break;
+              }
+            },
+            itemBuilder:
+                (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Configuraciones'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        Icon(Icons.file_download, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Exportar'),
+                      ],
+                    ),
+                  ),
+                ],
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-        
-        if (controller.credentialsList.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.credit_card_off,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'No hay credenciales procesadas',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Las credenciales que captures aparecerán aquí',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        }
-        
-        return RefreshIndicator(
-          onRefresh: () async {
-            controller.refreshCredentials();
-          },
-          child: ListView.builder(
+      body: Column(
+        children: [
+          // Barra de búsqueda
+          Container(
             padding: const EdgeInsets.all(16.0),
-            itemCount: controller.credentialsList.length,
-            itemBuilder: (context, index) {
-              final credential = controller.credentialsList[index];
-              return _buildCredentialCard(context, credential);
-            },
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                print('TextField onChanged: "$value"');
+                controller.filterCredentials(value);
+              },
+              decoration: InputDecoration(
+                hintText: 'Buscar por Nombre o CURP...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: Obx(() {
+                  if (controller.searchQuery.value.isNotEmpty) {
+                    return IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        controller.clearSearch();
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+            ),
           ),
-        );      }),
+          // Lista de credenciales
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.credentialsList.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.credit_card_off,
+                        size: 80,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No hay credenciales procesadas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Las credenciales que captures aparecerán aquí',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (controller.filteredCredentialsList.isEmpty &&
+                  controller.searchQuery.value.isNotEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No se encontraron resultados',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Intenta con otro término de búsqueda',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  controller.refreshCredentials();
+                },
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification scrollInfo) {
+                    // Detectar cuando se llega cerca del final de la lista
+                    if (scrollInfo.metrics.pixels >=
+                            scrollInfo.metrics.maxScrollExtent - 200 &&
+                        !controller.isLoadingMore.value &&
+                        controller.hasMoreData.value) {
+                      controller.loadMoreCredentials();
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: controller.filteredCredentialsList.length +
+                        (controller.hasMoreData.value || controller.isLoadingMore.value ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      // Si es el último elemento y hay más datos o se está cargando
+                      if (index == controller.filteredCredentialsList.length) {
+                        return _buildLoadingIndicator(context);
+                      }
+                      
+                      final credential =
+                          controller.filteredCredentialsList[index];
+                      return _buildCredentialCard(context, credential);
+                    },
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
-  
-  Widget _buildCredentialCard(BuildContext context, Map<String, dynamic> credential) {
+
+  Widget _buildCredentialCard(
+    BuildContext context,
+    CredentialModel credential,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
       child: ListTile(
@@ -90,28 +238,27 @@ class CredentialsListView extends GetView<CredentialsListController> {
           ),
         ),
         title: Text(
-          credential['nombre'] ?? 'Sin nombre',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          credential.nombre ?? 'Sin nombre',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
             Text(
-              'CURP: ${credential['curp'] ?? 'N/A'}',
+              'CURP: ${credential.curp ?? 'N/A'}',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              'Capturada: ${credential['fechaCaptura'] ?? 'N/A'}',
+              'Capturada: ${credential.fechaCaptura != null ? _formatDateTime(credential.fechaCaptura!) : 'N/A'}',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -119,36 +266,24 @@ class CredentialsListView extends GetView<CredentialsListController> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {
-              case 'view':
-                controller.viewCredentialDetails(credential);
-                break;
-              case 'delete':
-                _showDeleteDialog(context, credential);
+              case 'edit':
+                controller.editCredential(credential);
                 break;
             }
           },
-          itemBuilder: (BuildContext context) => [
-            const PopupMenuItem<String>(
-              value: 'view',
-              child: Row(
-                children: [
-                  Icon(Icons.visibility),
-                  SizedBox(width: 8),
-                  Text('Ver detalles'),
-                ],
-              ),
-            ),
-            const PopupMenuItem<String>(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Eliminar', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
+          itemBuilder:
+              (BuildContext context) => [
+                const PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('Editar'),
+                    ],
+                  ),
+                ),
+              ],
         ),
         onTap: () {
           controller.viewCredentialDetails(credential);
@@ -156,35 +291,68 @@ class CredentialsListView extends GetView<CredentialsListController> {
       ),
     );
   }
-  
-  void _showDeleteDialog(BuildContext context, Map<String, dynamic> credential) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Eliminar Credencial'),
-          content: Text(
-            '¿Estás seguro de que quieres eliminar la credencial de ${credential['nombre']}?\n\nEsta acción no se puede deshacer.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                controller.deleteCredential(credential['id']);
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+
+  Widget _buildLoadingIndicator(BuildContext context) {
+    return Obx(() {
+      if (controller.isLoadingMore.value) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              child: const Text('Eliminar'),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                'Cargando más credenciales...',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         );
-      },
-    );
+      } else if (!controller.hasMoreData.value) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'No hay más credenciales',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    });
+  }
+
+  /// Formatea la fecha y hora de captura
+  String _formatDateTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year;
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+
+    return '$day/$month/$year $hour:$minute';
   }
 }

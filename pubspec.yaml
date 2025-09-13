@@ -79,6 +79,15 @@ dependencies:
   
   # Google ML Kit para detección de códigos QR
   google_mlkit_barcode_scanning: ^0.11.0
+  
+  # SQLite para base de datos local
+  sqflite: ^2.3.0
+  
+  # Device info plus para obtener información del dispositivo
+  device_info_plus: ^11.5.0
+  sensors_plus: ^6.0.1
+  battery_plus: ^6.0.2
+  system_info2: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -90,6 +99,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
+  # Flutter Launcher Icons para generar iconos de la aplicación
+  flutter_launcher_icons: ^0.13.1
+  
+  # Flutter Native Splash para generar splash screen
+  flutter_native_splash: ^2.3.10
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -132,3 +147,26 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Configuración para flutter_launcher_icons
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/logo.png"
+  image_path_android: "assets/logo.png"
+  min_sdk_android: 21
+  adaptive_icon_foreground: "assets/logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground_inset: 25
+
+# Configuración para flutter_native_splash
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/logo.png"
+  color_dark: "#FFFFFF"
+  image_dark: "assets/logo.png"
+  android_12:
+    image: "assets/logo.png"
+    icon_background_color: "#FFFFFF"
+    image_dark: "assets/logo.png"
+    icon_background_color_dark: "#FFFFFF"

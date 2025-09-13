@@ -52,7 +52,15 @@ class PermissionService {
       if (!cameraGranted || !storageGranted || !galleryGranted) {
         List<Permission> deniedPermissions = [];
         if (!cameraGranted) deniedPermissions.add(Permission.camera);
-        if (!storageGranted) deniedPermissions.add(Permission.storage);
+        if (!storageGranted) {
+          // Verificar qué permiso específico de almacenamiento falló
+          final manageStorageStatus = await Permission.manageExternalStorage.status;
+          if (Platform.isAndroid && !manageStorageStatus.isGranted) {
+            deniedPermissions.add(Permission.manageExternalStorage);
+          } else {
+            deniedPermissions.add(Permission.storage);
+          }
+        }
         if (!galleryGranted) deniedPermissions.add(Permission.photos);
         
         await _handleDeniedPermissions(deniedPermissions);
@@ -81,20 +89,28 @@ class PermissionService {
   static Future<bool> requestStoragePermissions() async {
     try {
       if (Platform.isAndroid) {
-        // Para Android 11+ intentar MANAGE_EXTERNAL_STORAGE
-        final manageStorageStatus = await Permission.manageExternalStorage.request();
-        if (manageStorageStatus.isGranted) {
+        // Intentar primero el permiso especial MANAGE_EXTERNAL_STORAGE
+        bool manageStorageGranted = await handleManageExternalStoragePermission();
+        
+        if (manageStorageGranted) {
           return true;
         }
         
-        // Fallback a storage tradicional
+        // Si no se pudo obtener MANAGE_EXTERNAL_STORAGE, usar storage tradicional
+        await Log.i('PermissionService', 'MANAGE_EXTERNAL_STORAGE no disponible, usando storage tradicional');
         final storageStatus = await Permission.storage.request();
         return storageStatus.isGranted;
       }
       return true; // iOS no necesita permisos de almacenamiento explícitos
     } catch (e) {
       await Log.e('PermissionService', 'Error solicitando permisos de almacenamiento', e);
-      return false;
+      // En caso de error, intentar con storage tradicional
+      try {
+        final storageStatus = await Permission.storage.request();
+        return storageStatus.isGranted;
+      } catch (fallbackError) {
+        return false;
+      }
     }
   }
 
@@ -161,16 +177,24 @@ class PermissionService {
   static Future<void> _handleDeniedPermissions(List<Permission> deniedPermissions) async {
     String permissionNames = _getPermissionNames(deniedPermissions);
     
+    // Verificar si incluye MANAGE_EXTERNAL_STORAGE para dar instrucciones específicas
+    bool hasManageStorage = deniedPermissions.contains(Permission.manageExternalStorage);
+    
+    String additionalInfo = '';
+    if (hasManageStorage) {
+      additionalInfo = '\n\nNota importante: Para el permiso de "Acceso a todos los archivos", busca esta aplicación en Configuración > Aplicaciones > Permisos especiales > Acceso a todos los archivos.';
+    }
+    
     await Get.dialog(
       AlertDialog(
         title: const Text('Permisos Requeridos'),
         content: Text(
-          'La aplicación necesita los siguientes permisos para funcionar correctamente:\n\n$permissionNames\n\nPor favor, concede estos permisos en la configuración de la aplicación.',
+          'La aplicación necesita los siguientes permisos para funcionar correctamente:\n\n$permissionNames\n\nPor favor, concede estos permisos en la configuración de la aplicación.$additionalInfo',
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancelar'),
+            child: const Text('Continuar sin permisos'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -195,8 +219,10 @@ class PermissionService {
           names.add('• Cámara: Para capturar imágenes de credenciales');
           break;
         case Permission.storage:
+          names.add('• Almacenamiento: Para acceder al almacenamiento del dispositivo');
+          break;
         case Permission.manageExternalStorage:
-          names.add('• Almacenamiento: Para guardar imágenes procesadas');
+          names.add('• Acceso completo a archivos: Para gestionar todos los archivos (Android 11+)');
           break;
         case Permission.photos:
         case Permission.mediaLibrary:
@@ -249,6 +275,93 @@ class PermissionService {
       return true;
     } catch (e) {
       await Log.e('PermissionService', 'Error verificando permisos de galería', e);
+      return false;
+    }
+  }
+
+  /// Muestra un diálogo específico para el permiso MANAGE_EXTERNAL_STORAGE
+  static Future<void> _showManageStoragePermissionDialog() async {
+    await Get.dialog(
+      AlertDialog(
+        title: const Text('Permiso Especial Requerido'),
+        content: const Text(
+          'Esta aplicación necesita un permiso especial de Android para acceder a todos los archivos.\n\n'
+          'Pasos a seguir:\n'
+          '1. Se abrirá la configuración de Android\n'
+          '2. Busca "Acceso especial a aplicaciones" o "Permisos especiales"\n'
+          '3. Selecciona "Acceso a todos los archivos"\n'
+          '4. Encuentra esta aplicación y activa el permiso\n\n'
+          'Si no encuentras estas opciones, puedes continuar sin este permiso.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Continuar sin permiso'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              await openAppSettings();
+            },
+            child: const Text('Abrir Configuración'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  /// Verifica y maneja específicamente el permiso MANAGE_EXTERNAL_STORAGE
+  static Future<bool> handleManageExternalStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      final status = await Permission.manageExternalStorage.status;
+      
+      if (status.isGranted) {
+        return true;
+      }
+      
+      if (status.isDenied) {
+        await _showManageStoragePermissionDialog();
+        final result = await Permission.manageExternalStorage.request();
+        return result.isGranted;
+      }
+      
+      if (status.isPermanentlyDenied) {
+        await Get.dialog(
+          AlertDialog(
+            title: const Text('Permiso Denegado Permanentemente'),
+            content: const Text(
+              'El permiso de acceso a todos los archivos ha sido denegado permanentemente.\n\n'
+              'Para habilitarlo:\n'
+              '1. Ve a Configuración > Aplicaciones\n'
+              '2. Busca esta aplicación\n'
+              '3. Ve a Permisos > Permisos especiales\n'
+              '4. Activa "Acceso a todos los archivos"',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Entendido'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Get.back();
+                  await openAppSettings();
+                },
+                child: const Text('Ir a Configuración'),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+        return false;
+      }
+      
+      return false;
+    } catch (e) {
+      await Log.e('PermissionService', 'Error manejando permiso MANAGE_EXTERNAL_STORAGE', e);
       return false;
     }
   }

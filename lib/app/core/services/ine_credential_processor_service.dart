@@ -10,6 +10,7 @@ import 'signature_extraction_service.dart';
 import 'qr_detection_service.dart';
 import 'barcode_detection_service.dart';
 import 'mrz_detection_service.dart';
+import '../../../services/fixes/credential_processing_fixes.dart';
 
 class IneCredentialProcessorService {
   /// Palabras clave que indican que es una credencial INE
@@ -85,7 +86,45 @@ class IneCredentialProcessorService {
   /// Verifica si el texto extraído corresponde a una credencial INE
   static bool isIneCredential(String extractedText) {
     final upperText = extractedText.toUpperCase();
-    return _ineKeywords.any((keyword) => upperText.contains(keyword));
+    
+    // Verificar palabras clave tradicionales
+    if (_ineKeywords.any((keyword) => upperText.contains(keyword))) {
+      return true;
+    }
+    
+    // Verificar patrones MRZ para credenciales T3 traseras
+    if (_isMrzPattern(upperText)) {
+      print('🔍 DIAGNÓSTICO: Credencial INE detectada por patrón MRZ');
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /// Verifica si el texto contiene patrones MRZ típicos de credenciales INE T3
+  static bool _isMrzPattern(String upperText) {
+    // Patrones típicos de MRZ en credenciales INE T3:
+    // - Líneas que terminan con <<< o contienen << 
+    // - Códigos de país MEX
+    // - Patrones de fecha con formato específico
+    // - Líneas con números de documento y checksums
+    
+    final lines = upperText.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    
+    // Verificar patrones MRZ específicos
+    bool hasMexCode = upperText.contains('MEX');
+    bool hasTripleAngleBrackets = upperText.contains('<<<');
+    bool hasDoubleAngleBrackets = upperText.contains('<<');
+    bool hasNumericPatterns = RegExp(r'\d{10,}').hasMatch(upperText);
+    
+    // Si tiene al menos 2 de estos patrones, probablemente es MRZ
+    int mrzPatternCount = 0;
+    if (hasMexCode) mrzPatternCount++;
+    if (hasTripleAngleBrackets) mrzPatternCount++;
+    if (hasDoubleAngleBrackets) mrzPatternCount++;
+    if (hasNumericPatterns) mrzPatternCount++;
+    
+    return mrzPatternCount >= 2;
   }
 
   /// Verifica si un tipo de credencial debe ser procesado
@@ -97,6 +136,14 @@ class IneCredentialProcessorService {
       }
     }
     return false; // Por defecto no procesar tipos desconocidos
+  }
+
+  /// Sanitiza los datos de CURP y clave de elector de una credencial
+  static CredencialIneModel sanitizeCredentialData(CredencialIneModel credential) {
+    return credential.copyWith(
+      curp: credential.curp.isNotEmpty ? ValidationUtils.sanitizeCurp(credential.curp) : credential.curp,
+      claveElector: credential.claveElector.isNotEmpty ? ValidationUtils.sanitizeClaveElector(credential.claveElector) : credential.claveElector,
+    );
   }
 
   /// Verifica si una credencial cumple con los requisitos mínimos
@@ -141,14 +188,22 @@ class IneCredentialProcessorService {
           }
           break;
         case 'CLAVE DE ELECTOR':
-          if (credential.claveElector.isEmpty ||
-              !ValidationUtils.isValidClaveElector(credential.claveElector)) {
+          if (credential.claveElector.isEmpty) {
+            return false;
+          }
+          // Sanitizar antes de validar usando la nueva función granular
+          final sanitizedClaveElector = ValidationUtils.sanitizeClaveElector(credential.claveElector);
+          if (!ValidationUtils.isValidClaveElectorGranular(sanitizedClaveElector)) {
             return false;
           }
           break;
         case 'CURP':
-          if (credential.curp.isEmpty ||
-              !ValidationUtils.isValidCurpFormat(credential.curp)) {
+          if (credential.curp.isEmpty) {
+            return false;
+          }
+          // Sanitizar antes de validar usando la nueva función granular
+          final sanitizedCurp = ValidationUtils.sanitizeCurp(credential.curp);
+          if (!ValidationUtils.isValidCurpGranular(sanitizedCurp)) {
             return false;
           }
           break;
@@ -232,6 +287,8 @@ class IneCredentialProcessorService {
   static Future<CredencialIneModel> processCredentialWithSideDetection(
       String extractedText, String imagePath) async {
     print('🎯 Iniciando procesamiento con detección de lado');
+    print('DIAGNÓSTICO T3: Texto extraído para análisis: ${extractedText.substring(0, extractedText.length > 100 ? 100 : extractedText.length)}...');
+    print('DIAGNÓSTICO T3: Imagen path: $imagePath');
     
     // Detectar lado PRIMERO para determinar el método de procesamiento
     String detectedSide = 'frontal';
@@ -239,10 +296,12 @@ class IneCredentialProcessorService {
       final sideResult = CredentialSideDetector.detectSide(extractedText);
       detectedSide = sideResult['lado'] as String;
       print('📍 Lado detectado: $detectedSide');
+      print('DIAGNÓSTICO T3: Resultado completo de detección de lado: $sideResult');
     } catch (e) {
       // En caso de error, mantener lado como frontal por defecto
       detectedSide = 'frontal';
       print('⚠️ Error detectando lado, usando frontal por defecto: $e');
+      print('DIAGNÓSTICO T3: Error en detección de lado: $e');
     }
     
     // Crear modelo base según el lado detectado
@@ -250,13 +309,16 @@ class IneCredentialProcessorService {
     if (detectedSide == 'reverso' || detectedSide == 'trasero') {
       // Para lado reverso: usar SOLO conteo de QRs sin análisis OCR previo
       print('🔍 Lado reverso detectado - usando SOLO conteo de QRs para clasificación');
+      print('DIAGNÓSTICO T3: Iniciando conteo de QRs en imagen');
       Map<String, dynamic> qrCountResult = await QrDetectionService.countAllQrCodesInImage(imagePath);
       int qrCount = qrCountResult['qrCount'] ?? 0;
       print('📊 Códigos QR detectados: $qrCount');
+      print('DIAGNÓSTICO T3: Resultado completo del conteo QR: $qrCountResult');
       
       // Detectar tipo usando SOLO conteo de QRs (sin análisis de texto)
       String credentialType = _detectCredentialTypeByQrCount(qrCount);
       print('🔍 Tipo de credencial detectado por QR: $credentialType');
+      print('DIAGNÓSTICO T3: Tipo final asignado: $credentialType');
       
       // Crear modelo básico con solo el tipo detectado por QRs
       credential = CredencialIneModel(
@@ -374,10 +436,17 @@ class IneCredentialProcessorService {
       signatureHuellaImagePath: reversoData['signatureHuellaImagePath']?.isNotEmpty == true ? reversoData['signatureHuellaImagePath'] : credential.signatureHuellaImagePath,
     );
 
-    print('✅ Procesamiento completado para credencial ${updatedCredential.tipo} lado ${updatedCredential.lado}');
-    print('🏁 Credencial final - photoPath: ${updatedCredential.photoPath}, signaturePath: ${updatedCredential.signaturePath}, qrContent: ${updatedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${updatedCredential.qrImagePath}');
-    print('🔤 MRZ final en modelo: "${updatedCredential.mrzContent}" (${updatedCredential.mrzContent.length} caracteres)');
-    return updatedCredential;
+    // Aplicar correcciones mejoradas antes de retornar el modelo
+    print('🔧 Aplicando correcciones mejoradas al modelo de credencial...');
+    final correctedCredential = await CredentialProcessingFixes.updateCredentialWithFixes(
+      updatedCredential,
+      imagePath,
+    );
+    
+    print('✅ Procesamiento completado para credencial ${correctedCredential.tipo} lado ${correctedCredential.lado}');
+    print('🏁 Credencial final - photoPath: ${correctedCredential.photoPath}, signaturePath: ${correctedCredential.signaturePath}, qrContent: ${correctedCredential.qrContent.isNotEmpty ? 'Presente' : 'Ausente'}, qrImagePath: ${correctedCredential.qrImagePath}');
+    print('🔤 MRZ final en modelo: "${correctedCredential.mrzContent}" (${correctedCredential.mrzContent.length} caracteres)');
+    return correctedCredential;
   }
 
   /// Procesa el lado frontal de una credencial (T2, T3)
@@ -404,21 +473,26 @@ class IneCredentialProcessorService {
     }
 
     // Extraer firma solo para credenciales T3 frontales
-    if (credential.tipo == 't3' && frontalData['photoPath']!.isNotEmpty) {
+    if (credential.tipo == 't3') {
       print('🖋️ Iniciando extracción de firma para credencial T3...');
       try {
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
+        // La extracción de firma no requiere necesariamente la foto del rostro
+        final facePhotoPath = frontalData['photoPath']!.isNotEmpty ? frontalData['photoPath']! : '';
         frontalData['signaturePath'] = await SignatureExtractionService.extractSignatureFromT3Credential(
           imagePath: imagePath,
-          facePhotoPath: frontalData['photoPath']!,
+          facePhotoPath: facePhotoPath,
           credentialId: credentialId,
         );
-        print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
+        if (frontalData['signaturePath']!.isNotEmpty) {
+          print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
+        } else {
+          print('⚠️ No se pudo extraer la firma de la credencial T3');
+        }
       } catch (e) {
         print('❌ Error en extracción de firma: $e');
+        frontalData['signaturePath'] = '';
       }
-    } else if (credential.tipo == 't3') {
-      print('⚠️ No se puede extraer firma: falta la fotografía del rostro');
     }
 
     return frontalData;
@@ -535,6 +609,7 @@ class IneCredentialProcessorService {
     // Detectar y extraer código QR para credenciales T2 y T3 traseras
     if (processingType == 't2' || processingType == 't3') {
       print('🔍 Iniciando detección de código QR para credencial ${processingType.toUpperCase()} trasera...');
+      print('DIAGNÓSTICO: Ejecutando detecciones porque el tipo es ${processingType} (válido para detecciones)');
       try {
         final credentialId = DateTime.now().millisecondsSinceEpoch.toString();
         final qrResult = await QrDetectionService.detectQrFromT2Credential(
@@ -577,6 +652,9 @@ class IneCredentialProcessorService {
         print('❌ Error en detección de código de barras: $e');
       }
 
+    } else {
+      print('DIAGNÓSTICO: Saltando detecciones de QR y códigos de barras - tipo no válido: ${processingType}');
+      print('DIAGNÓSTICO: Las detecciones solo se ejecutan para tipos t2 y t3, pero se detectó tipo: ${processingType}');
     }
 
     // Detectar y extraer código MRZ para credenciales T2 y T3
@@ -733,7 +811,7 @@ class IneCredentialProcessorService {
                 : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector:
-            ValidationUtils.isValidClaveElector(claveElector)
+            ValidationUtils.isValidClaveElectorGranular(claveElector)
                 ? ValidationUtils.cleanClaveElector(claveElector)
                 : claveElector,
         curp: _extractCurpT2(filteredLines),
@@ -945,7 +1023,7 @@ class IneCredentialProcessorService {
                 : nombreNormalizado,
         domicilio: _extractDomicilio(filteredLines),
         claveElector:
-            ValidationUtils.isValidClaveElector(claveElector)
+            ValidationUtils.isValidClaveElectorGranular(claveElector)
                 ? ValidationUtils.cleanClaveElector(claveElector)
                 : claveElector,
         curp: _extractCurpT2(filteredLines),
@@ -1405,6 +1483,70 @@ class IneCredentialProcessorService {
     return false;
   }
 
+  /// Sanitiza texto removiendo todos los símbolos excepto letras y números
+  static String _sanitizeAlphanumeric(String text) {
+    return text.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+  }
+
+  /// Sanitiza CURP corrigiendo caracteres mal interpretados en los últimos 2 dígitos
+  static String _sanitizeCurp(String curp) {
+    print('🧹 SANITIZANDO CURP: "$curp" (longitud: ${curp.length})');
+    
+    // Primero sanitizar alfanumérico para remover guiones y otros caracteres
+    String sanitized = _sanitizeAlphanumeric(curp);
+    print('🧹 CURP después de sanitizar alfanumérico: "$sanitized" (longitud: ${sanitized.length})');
+    
+    // Si después de sanitizar no tiene 18 caracteres, retornar como está
+    if (sanitized.length != 18) {
+      print('⚠️ CURP no tiene 18 caracteres después de sanitizar, retornando: "$sanitized"');
+      return sanitized;
+    }
+    
+    // Corregir los últimos 2 caracteres que deben ser números
+    String corrected = sanitized.substring(0, 16);
+    String lastTwo = sanitized.substring(16);
+    print('🧹 Últimos 2 caracteres antes de corrección OCR: "$lastTwo"');
+    
+    // Aplicar correcciones de OCR para los últimos 2 dígitos
+    lastTwo = lastTwo
+        .replaceAll(RegExp(r'[IiLl]'), '1')
+        .replaceAll(RegExp(r'[AaÁá]'), '4')
+        .replaceAll(RegExp(r'[OoÓó]'), '0')
+        .replaceAll('S', '5')
+        .replaceAll('B', '8')
+        .replaceAll('G', '6')
+        .replaceAll('Z', '2');
+    
+    final result = corrected + lastTwo;
+    print('🧹 CURP sanitizado final: "$result"');
+    return result;
+  }
+
+  /// Sanitiza clave de elector corrigiendo caracteres mal interpretados en los últimos 3 dígitos
+  static String _sanitizeClaveElector(String clave) {
+    // Primero sanitizar alfanumérico para remover guiones y otros caracteres
+    String sanitized = _sanitizeAlphanumeric(clave);
+    
+    // Si después de sanitizar no tiene 18 caracteres, retornar como está
+    if (sanitized.length != 18) return sanitized;
+    
+    // Corregir los últimos 3 caracteres que deben ser números
+    String corrected = sanitized.substring(0, 15);
+    String lastThree = sanitized.substring(15);
+    
+    // Aplicar correcciones de OCR para los últimos 3 dígitos
+    lastThree = lastThree
+        .replaceAll(RegExp(r'[IiLl]'), '1')
+        .replaceAll(RegExp(r'[AaÁá]'), '4')
+        .replaceAll(RegExp(r'[OoÓó]'), '0')
+        .replaceAll('S', '5')
+        .replaceAll('B', '8')
+        .replaceAll('G', '6')
+        .replaceAll('Z', '2');
+    
+    return corrected + lastThree;
+  }
+
   /// Extrae la clave de elector
   static String _extractClaveElector(List<String> lines) {
     for (int i = 0; i < lines.length; i++) {
@@ -1417,13 +1559,13 @@ class IneCredentialProcessorService {
           r'CLAVE\s+DE\s+ELECTOR\s+([A-Z0-9]{18})',
         ).firstMatch(line);
         if (match != null) {
-          return match.group(1) ?? '';
+          return ValidationUtils.sanitizeClaveElector(match.group(1) ?? '');
         }
 
         // Fallback: buscar cualquier secuencia de 18 caracteres alfanuméricos en la línea
         final fallbackMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
         if (fallbackMatch != null) {
-          return fallbackMatch.group(0) ?? '';
+          return ValidationUtils.sanitizeClaveElector(fallbackMatch.group(0) ?? '');
         }
 
         // Si no está en la misma línea, buscar en las siguientes líneas como fallback
@@ -1431,7 +1573,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].trim().toUpperCase();
           final nextMatch = RegExp(r'[A-Z0-9]{18}').firstMatch(nextLine);
           if (nextMatch != null) {
-            return nextMatch.group(0) ?? '';
+            return ValidationUtils.sanitizeClaveElector(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1439,7 +1581,7 @@ class IneCredentialProcessorService {
       // También buscar directamente en la línea actual
       final match = RegExp(r'[A-Z0-9]{18}').firstMatch(line);
       if (match != null && !line.contains('CURP')) {
-        return match.group(0) ?? '';
+        return ValidationUtils.sanitizeClaveElector(match.group(0) ?? '');
       }
     }
     return '';
@@ -1459,7 +1601,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (match != null) {
-          return match.group(0) ?? '';
+          return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP con guiones o espacios y limpiarlos
@@ -1467,15 +1609,12 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[-\s]*[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(nextLine);
         if (matchWithSeparators != null) {
-          return (matchWithSeparators.group(0) ?? '').replaceAll(
-            RegExp(r'[-\s]'),
-            '',
-          );
+          return ValidationUtils.sanitizeCurp(matchWithSeparators.group(0) ?? '');
         }
 
-        // Si la línea siguiente no está vacía pero no coincide con el patrón, devolverla tal como está
+        // Si la línea siguiente no está vacía pero no coincide con el patrón, sanitizarla
         if (nextLine.isNotEmpty) {
-          return nextLine;
+          return ValidationUtils.sanitizeCurp(nextLine);
         }
       }
 
@@ -1484,7 +1623,7 @@ class IneCredentialProcessorService {
         r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
       ).firstMatch(line);
       if (match != null) {
-        return match.group(0) ?? '';
+        return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
       }
     }
     return '';
@@ -1504,7 +1643,7 @@ class IneCredentialProcessorService {
         // Buscar CURP en la misma línea
         final match = curpPattern.firstMatch(line);
         if (match != null) {
-          return match.group(0) ?? '';
+          return ValidationUtils.sanitizeCurp(match.group(0) ?? '');
         }
 
         // Buscar CURP en las siguientes 2 líneas
@@ -1512,7 +1651,7 @@ class IneCredentialProcessorService {
           final nextLine = lines[j].toUpperCase();
           final nextMatch = curpPattern.firstMatch(nextLine);
           if (nextMatch != null) {
-            return nextMatch.group(0) ?? '';
+            return ValidationUtils.sanitizeCurp(nextMatch.group(0) ?? '');
           }
         }
       }
@@ -1528,7 +1667,7 @@ class IneCredentialProcessorService {
             !line.contains('EMISION') &&
             !line.contains('SECCIÓN') &&
             !line.contains('SECCION')) {
-          return curp;
+          return ValidationUtils.sanitizeCurp(curp);
         }
       }
 
@@ -1549,7 +1688,7 @@ class IneCredentialProcessorService {
 
         // Verificar si después de las correcciones coincide con el patrón CURP
         if (curpPattern.hasMatch(correctedCurp)) {
-          return correctedCurp;
+          return ValidationUtils.sanitizeCurp(correctedCurp);
         }
       }
     }
@@ -1570,7 +1709,7 @@ class IneCredentialProcessorService {
           r'CURP\s+([A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9])',
         ).firstMatch(line);
         if (match != null) {
-          return match.group(1) ?? '';
+          return ValidationUtils.sanitizeCurp(match.group(1) ?? '');
         }
 
         // Buscar cualquier patrón de CURP en la línea
@@ -1578,7 +1717,7 @@ class IneCredentialProcessorService {
           r'[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9A-Z][0-9]',
         ).firstMatch(line);
         if (fallbackMatch != null) {
-          return fallbackMatch.group(0) ?? '';
+          return ValidationUtils.sanitizeCurp(fallbackMatch.group(0) ?? '');
         }
       }
     }

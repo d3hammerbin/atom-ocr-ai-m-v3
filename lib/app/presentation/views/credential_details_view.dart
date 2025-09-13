@@ -5,6 +5,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../controllers/credential_details_controller.dart';
 import '../../data/models/credential_model.dart';
+import '../../modules/credential_processing/credential_processing_controller.dart';
+import '../../core/services/credential_image_service.dart';
+import '../../core/services/app_config_service.dart';
 
 class CredentialDetailsView extends StatelessWidget {
   const CredentialDetailsView({Key? key}) : super(key: key);
@@ -655,24 +658,138 @@ class CredentialDetailsView extends StatelessWidget {
   /// Método para compartir la información de la credencial
   void _shareCredentialInfo(CredentialModel credential) async {
     try {
-      // Construir el texto con la información de la credencial
-      final StringBuffer info = StringBuffer();
-      info.writeln('=== INFORMACIÓN DE CREDENCIAL ===\n');
+      List<String> tempFilesToCleanup = [];
       
-      // Información básica
-      info.writeln('📋 DATOS GENERALES:');
-      info.writeln('• Nombre: ${credential.nombre?.isNotEmpty == true ? credential.nombre : "No disponible"}');
-      info.writeln('• CURP: ${credential.curp?.isNotEmpty == true ? credential.curp : "No disponible"}');
-      info.writeln('• Clave de Elector: ${credential.claveElector?.isNotEmpty == true ? credential.claveElector : "No disponible"}');
-      info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento?.isNotEmpty == true ? credential.fechaNacimiento : "No disponible"}');
-      info.writeln('• Sexo: ${credential.sexo?.isNotEmpty == true ? credential.sexo : "No disponible"}');
-      info.writeln('• Domicilio: ${credential.domicilio?.isNotEmpty == true ? credential.domicilio : "No disponible"}');
-      info.writeln('• Año de Registro: ${credential.anoRegistro?.isNotEmpty == true ? credential.anoRegistro : "No disponible"}');
-      info.writeln('• Sección: ${credential.seccion?.isNotEmpty == true ? credential.seccion : "No disponible"}');
-      info.writeln('• Vigencia: ${credential.vigencia?.isNotEmpty == true ? credential.vigencia : "No disponible"}');
-      info.writeln('• Tipo: ${credential.tipo?.isNotEmpty == true ? credential.tipo!.toUpperCase() : "No disponible"}');
-      info.writeln('• Lado: ${credential.lado?.isNotEmpty == true ? credential.lado : "No detectado"}\n');
+      // Crear imagen combinada de frontal y trasera con bordes
+      final mergedImagePath = await CredentialImageService.createMergedCredentialImage(
+        credential,
+        borderSize: 15,
+      );
       
+      if (mergedImagePath != null) {
+        tempFilesToCleanup.add(mergedImagePath);
+        
+        // Construir texto completo con información y OCR
+        final StringBuffer textContent = StringBuffer();
+        textContent.writeln(_buildCredentialText(credential));
+        
+        // Agregar texto OCR del lado frontal si existe
+        String? frontOcrText = _getExtractedFrontText();
+        if (frontOcrText != null && frontOcrText.isNotEmpty) {
+          textContent.writeln('\n=== TEXTO OCR - LADO FRONTAL ===\n');
+          textContent.writeln(frontOcrText);
+        }
+        
+        // Agregar texto OCR del lado trasero si existe
+        String? backOcrText = _getExtractedBackText();
+        if (backOcrText != null && backOcrText.isNotEmpty) {
+          textContent.writeln('\n=== TEXTO OCR - LADO TRASERO ===\n');
+          textContent.writeln(backOcrText);
+        }
+        
+        // Compartir solo la imagen combinada con el texto como contenido del mensaje
+        await Share.shareXFiles(
+          [XFile(mergedImagePath)],
+          text: textContent.toString(),
+          subject: 'Credencial - ${credential.nombre}',
+        );
+        
+        // Limpiar archivos temporales
+        for (String filePath in tempFilesToCleanup) {
+          try {
+            final file = File(filePath);
+            if (await file.exists()) {
+              await file.delete();
+            }
+          } catch (e) {
+            print('Error eliminando archivo temporal: $filePath - $e');
+          }
+        }
+      } else {
+        // Si no se pudo crear la imagen combinada, compartir solo el texto
+        final StringBuffer textContent = StringBuffer();
+        textContent.writeln(_buildCredentialText(credential));
+        
+        // Agregar texto OCR si existe
+        String? frontOcrText = _getExtractedFrontText();
+        if (frontOcrText != null && frontOcrText.isNotEmpty) {
+          textContent.writeln('\n=== TEXTO OCR - LADO FRONTAL ===\n');
+          textContent.writeln(frontOcrText);
+        }
+        
+        String? backOcrText = _getExtractedBackText();
+        if (backOcrText != null && backOcrText.isNotEmpty) {
+          textContent.writeln('\n=== TEXTO OCR - LADO TRASERO ===\n');
+          textContent.writeln(backOcrText);
+        }
+        
+        await Share.share(
+          textContent.toString(),
+          subject: 'Información de Credencial - ${credential.nombre}',
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo compartir la información: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  /// Obtiene el texto OCR extraído del lado frontal
+  String? _getExtractedFrontText() {
+    try {
+      // Intentar obtener el controlador de procesamiento si existe
+      if (Get.isRegistered<CredentialProcessingController>()) {
+        final processingController = Get.find<CredentialProcessingController>();
+        return processingController.extractedFrontText.value;
+      }
+    } catch (e) {
+      print('Error obteniendo texto frontal: $e');
+    }
+    return null;
+  }
+  
+  /// Obtiene el texto OCR extraído del lado trasero
+  String? _getExtractedBackText() {
+    try {
+      // Intentar obtener el controlador de procesamiento si existe
+      if (Get.isRegistered<CredentialProcessingController>()) {
+        final processingController = Get.find<CredentialProcessingController>();
+        return processingController.extractedBackText.value;
+      }
+    } catch (e) {
+      print('Error obteniendo texto trasero: $e');
+    }
+    return null;
+  }
+
+  String _buildCredentialText(CredentialModel credential) {
+    // Verificar si el modo demo está habilitado
+    final bool isDemoMode = AppConfigService.isDemoEnabled ?? false;
+    
+    final StringBuffer info = StringBuffer();
+    info.writeln('=== INFORMACIÓN DE CREDENCIAL ===\n');
+    
+    // Información básica (siempre se incluye)
+    info.writeln('📋 DATOS GENERALES:');
+    info.writeln('• Nombre: ${credential.nombre?.isNotEmpty == true ? credential.nombre : "No disponible"}');
+    info.writeln('• CURP: ${credential.curp?.isNotEmpty == true ? credential.curp : "No disponible"}');
+    info.writeln('• Clave de Elector: ${credential.claveElector?.isNotEmpty == true ? credential.claveElector : "No disponible"}');
+    info.writeln('• Fecha de Nacimiento: ${credential.fechaNacimiento?.isNotEmpty == true ? credential.fechaNacimiento : "No disponible"}');
+    info.writeln('• Sexo: ${credential.sexo?.isNotEmpty == true ? credential.sexo : "No disponible"}');
+    info.writeln('• Domicilio: ${credential.domicilio?.isNotEmpty == true ? credential.domicilio : "No disponible"}');
+    info.writeln('• Año de Registro: ${credential.anoRegistro?.isNotEmpty == true ? credential.anoRegistro : "No disponible"}');
+    info.writeln('• Sección: ${credential.seccion?.isNotEmpty == true ? credential.seccion : "No disponible"}');
+    info.writeln('• Vigencia: ${credential.vigencia?.isNotEmpty == true ? credential.vigencia : "No disponible"}');
+    info.writeln('• Tipo: ${credential.tipo?.isNotEmpty == true ? credential.tipo!.toUpperCase() : "No disponible"}');
+    info.writeln('• Lado: ${credential.lado?.isNotEmpty == true ? credential.lado : "No detectado"}\n');
+    
+    // Solo incluir información adicional si NO está en modo demo
+    if (!isDemoMode) {
       // Información específica para T2 y T3
       if (credential.tipo == 't2' || credential.tipo == 't3') {
         info.writeln('📍 DATOS DE UBICACIÓN:');
@@ -697,23 +814,8 @@ class CredentialDetailsView extends StatelessWidget {
         }
       }
       
-      // Información de imágenes extraídas
-      info.writeln('🖼️ IMÁGENES EXTRAÍDAS:');
-      if (credential.photoPath?.isNotEmpty == true) {
-        info.writeln('• ✅ Fotografía del rostro');
-      }
-      if (credential.signaturePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Firma');
-      }
-      if (credential.qrImagePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Imagen del código QR');
-      }
-      if (credential.barcodeImagePath?.isNotEmpty == true) {
-        info.writeln('• ✅ Imagen del código de barras');
-      }
-      
       // Información de metadatos
-      info.writeln('\n📅 METADATOS:');
+      info.writeln('📅 METADATOS:');
       info.writeln('• Fecha de captura: ${credential.fechaCaptura?.toString().split('.')[0] ?? "No disponible"}');
       if (credential.createdAt != null) {
         info.writeln('• Fecha de creación: ${credential.createdAt!.toString().split('.')[0]}');
@@ -722,79 +824,15 @@ class CredentialDetailsView extends StatelessWidget {
         info.writeln('• Última actualización: ${credential.updatedAt!.toString().split('.')[0]}');
       }
       info.writeln('• ID de credencial: ${credential.id ?? "No disponible"}');
-      
-      info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
-      info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
-      
-      // Preparar lista de archivos para compartir
-      final List<String> filesToShare = [];
-      
-      // Agregar imágenes extraídas disponibles
-      if (credential.photoPath?.isNotEmpty == true && File(credential.photoPath!).existsSync()) {
-        filesToShare.add(credential.photoPath!);
-      }
-      if (credential.signaturePath?.isNotEmpty == true && File(credential.signaturePath!).existsSync()) {
-        filesToShare.add(credential.signaturePath!);
-      }
-      if (credential.qrImagePath?.isNotEmpty == true && File(credential.qrImagePath!).existsSync()) {
-        filesToShare.add(credential.qrImagePath!);
-      }
-      if (credential.barcodeImagePath?.isNotEmpty == true && File(credential.barcodeImagePath!).existsSync()) {
-        filesToShare.add(credential.barcodeImagePath!);
-      }
-      if (credential.mrzImagePath?.isNotEmpty == true && File(credential.mrzImagePath!).existsSync()) {
-        filesToShare.add(credential.mrzImagePath!);
-      }
-      if (credential.signatureHuellaImagePath?.isNotEmpty == true && File(credential.signatureHuellaImagePath!).existsSync()) {
-        filesToShare.add(credential.signatureHuellaImagePath!);
-      }
-      
-      // Compartir información de la credencial
-      String shareText = info.toString();
-      
-      if (filesToShare.isNotEmpty) {
-        shareText += '\n\n📎 ARCHIVOS ADJUNTOS:';
-        shareText += '\n• ${filesToShare.length} imagen(es) extraída(s) de la credencial';
-        
-        // Crear archivo temporal con el texto para incluirlo junto con las imágenes
-        final tempDir = await getTemporaryDirectory();
-        final textFile = File('${tempDir.path}/credential_info_${DateTime.now().millisecondsSinceEpoch}.txt');
-        await textFile.writeAsString(shareText);
-        
-        // Agregar el archivo de texto a la lista de archivos
-        List<XFile> allFiles = [XFile(textFile.path)];
-        allFiles.addAll(filesToShare.map((path) => XFile(path)));
-        
-        // Compartir todo junto en un solo correo
-        await Share.shareXFiles(
-          allFiles,
-          subject: 'Información de Credencial',
-        );
-        
-        // Limpiar archivo temporal después de un delay
-        Future.delayed(const Duration(seconds: 5), () {
-          if (textFile.existsSync()) {
-            textFile.deleteSync();
-          }
-        });
-      } else {
-        // Si no hay imágenes, compartir solo el texto
-        await Share.share(
-          shareText,
-          subject: 'Información de Credencial',
-        );
-      }
-      
-    } catch (e) {
-      // Mostrar error si falla el compartir
-      Get.snackbar(
-        'Error',
-        'No se pudo compartir la información: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
     }
+    
+    info.writeln('\n📱 Procesado con ATOM OCR AI M v3');
+    info.writeln('⏰ ${DateTime.now().toString().split('.')[0]}');
+    if (isDemoMode) {
+      info.writeln('\n🔒 Modo Demo - Información limitada por privacidad');
+    }
+    
+    return info.toString();
   }
 
   void _showDeleteDialog(BuildContext context, CredentialDetailsController controller) {

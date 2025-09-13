@@ -757,6 +757,104 @@ class LocalProcessView extends GetView<LocalProcessController> {
                                   ),
                                 ],
                                 
+                                // Sección de imagen MRZ extraída (para credenciales T2 y T3)
+                                if ((credential.tipo == 't2' || credential.tipo == 't3') && credential.mrzImagePath.isNotEmpty) ...[                                  
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.teal.withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.image,
+                                              color: Colors.teal.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Imagen MRZ Extraída',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Center(
+                                           child: Container(
+                                             constraints: const BoxConstraints(
+                                               maxHeight: 200,
+                                               maxWidth: 400,
+                                             ),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Image.file(
+                                                 File(credential.mrzImagePath),
+                                                 fit: BoxFit.fitHeight,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Container(
+                                                     height: 200,
+                                                     width: 400,
+                                                    color: Colors.grey.shade100,
+                                                    child: Column(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.error_outline,
+                                                          color: Colors.grey.shade600,
+                                                          size: 32,
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Text(
+                                                          'Error al cargar imagen MRZ',
+                                                          style: TextStyle(
+                                                            color: Colors.grey.shade600,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Center(
+                                          child: Text(
+                                            'Región MRZ extraída de la credencial',
+                                            style: TextStyle(
+                                              color: Colors.teal.shade700,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
                                 // Sección de código QR extraído (para credenciales T2 y T3 traseras - mostrar imagen aunque no tenga contenido)
                                 if ((credential.tipo == 't2' || credential.tipo == 't3') && credential.lado == 'reverso' && credential.qrImagePath.isNotEmpty) ...[
                                   const SizedBox(height: 16),

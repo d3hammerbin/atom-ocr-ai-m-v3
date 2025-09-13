@@ -9,6 +9,7 @@ import 'app/core/services/hidden_menu_service.dart';
 import 'app/core/services/special_settings_service.dart';
 import 'app/core/services/user_session_service.dart';
 import 'app/core/services/location_fallback_service.dart';
+import 'app/core/services/app_config_service.dart';
 import 'app/data/repositories/user_repository.dart';
 
 void main() async {
@@ -17,6 +18,7 @@ void main() async {
   
   // Inicializar servicios
   await LoggerService.instance.initialize();
+  await AppConfigService.initialize();
   
   // Solicitar permisos de ubicación al inicio de la aplicación
   await _requestLocationPermissions();

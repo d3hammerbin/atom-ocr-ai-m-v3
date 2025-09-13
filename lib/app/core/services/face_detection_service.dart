@@ -4,6 +4,9 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'memory_management_service.dart';
+import 'exif_service.dart';
+import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 class FaceDetectionService {
   static FaceDetector? _detectorInstance;
@@ -338,6 +341,19 @@ class FaceDetectionService {
       final pngBytes = img.encodePng(faceImage);
       final file = File(filePath);
       await file.writeAsBytes(pngBytes);
+      
+      // Agregar metadatos EXIF a la imagen del rostro extraído solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: filePath,
+          credentialType: 'Face Extraction',
+          processingDate: DateTime.now().toIso8601String(),
+        );
+      }
+      
+      // Aplicar watermark inmediatamente después de guardar
+      await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);
       
       return filePath;
       

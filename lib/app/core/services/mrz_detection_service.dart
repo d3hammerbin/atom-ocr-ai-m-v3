@@ -4,6 +4,9 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'logger_service.dart';
+import 'exif_service.dart';
+import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 /// Servicio híbrido de detección de códigos MRZ para credenciales T2
 /// 
@@ -165,8 +168,8 @@ class MrzDetectionService {
   /// Nivel 3: Región fija optimizada como último recurso
   static Future<Map<String, dynamic>> _detectMrzFixedRegion(img.Image image) async {
     try {
-      // Región fija en la parte inferior (últimos 15% de la imagen)
-      final regionHeight = (image.height * 0.15).round();
+      // Región fija en la parte inferior (aumentada a 30% para capturar MRZ completo)
+      final regionHeight = (image.height * 0.30).round();
       final regionY = image.height - regionHeight;
       
       final fixedRegion = img.copyCrop(
@@ -412,8 +415,8 @@ class MrzDetectionService {
   /// Intenta localizar la región MRZ en la imagen completa
   static Future<img.Image?> _locateMrzRegionInFullImage(img.Image image, String text) async {
     try {
-      // Por ahora, retornar la región inferior como aproximación
-      final regionHeight = (image.height * 0.2).round();
+      // Aumentar región inferior para capturar MRZ completo
+      final regionHeight = (image.height * 0.35).round();
       final regionY = image.height - regionHeight;
       
       return img.copyCrop(
@@ -439,6 +442,19 @@ class MrzDetectionService {
       final pngBytes = img.encodePng(mrzImage);
       final file = File(filePath);
       await file.writeAsBytes(pngBytes);
+      
+      // Agregar metadatos EXIF a la imagen MRZ extraída solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: filePath,
+          credentialType: 'MRZ Extraction',
+          processingDate: DateTime.now().toIso8601String(),
+        );
+      }
+      
+      // Aplicar watermark inmediatamente después de guardar
+      await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);
       
       _logger.info('MrzDetectionService', 'Imagen MRZ guardada en: $filePath');
       return filePath;

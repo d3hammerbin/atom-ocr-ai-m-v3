@@ -6,6 +6,7 @@ import '../core/app_version_service.dart';
 import '../core/services/logger_service.dart';
 import '../core/services/hidden_menu_service.dart';
 import '../core/services/special_settings_service.dart';
+import '../core/services/app_config_service.dart';
 import '../modules/device/device_info_page.dart';
 import '../modules/device/device_controller.dart';
 import '../modules/special_settings/special_settings_page.dart';
@@ -130,41 +131,43 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
           
           const SizedBox(height: 16),
           
-          // Sección de Datos
-          _buildSectionHeader('Datos'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.file_download),
-                  title: const Text('Exportar configuraciones'),
-                  subtitle: const Text('Guardar una copia de tus preferencias'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    _showExportDialog(context, preferencesController);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.file_upload),
-                  title: const Text('Importar configuraciones'),
-                  subtitle: const Text('Restaurar preferencias desde un archivo'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    _showImportDialog(context, preferencesController);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.restore, color: Colors.orange),
-                  title: const Text('Restablecer configuraciones'),
-                  subtitle: const Text('Volver a los valores predeterminados'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    _showResetDialog(context, preferencesController);
-                  },
-                ),
-              ],
+          // Sección de Datos - Oculta en modo demo
+          if (!(AppConfigService.isDemoEnabled ?? false)) ...[
+            _buildSectionHeader('Datos'),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.file_download),
+                    title: const Text('Exportar configuraciones'),
+                    subtitle: const Text('Guardar una copia de tus preferencias'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      _showExportDialog(context, preferencesController);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.file_upload),
+                    title: const Text('Importar configuraciones'),
+                    subtitle: const Text('Restaurar preferencias desde un archivo'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      _showImportDialog(context, preferencesController);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.restore, color: Colors.orange),
+                    title: const Text('Restablecer configuraciones'),
+                    subtitle: const Text('Volver a los valores predeterminados'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      _showResetDialog(context, preferencesController);
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           
           const SizedBox(height: 16),
           
@@ -368,8 +371,4 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
       },
     );
   }
-  
-
-
-
 }

@@ -10,7 +10,7 @@ class DatabaseService {
 
   static Database? _database;
   static const String _databaseName = 'atom_ocr_ai.db';
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 9;
 
   /// Obtiene la instancia de la base de datos
   Future<Database> get database async {
@@ -34,7 +34,6 @@ class DatabaseService {
   /// Crea las tablas iniciales de la base de datos
   Future<void> _onCreate(Database db, int version) async {
     await _createUsersTable(db);
-    await _createUserGeodataTable(db);
     await _createDeviceTable(db);
     await _createCredentialsTable(db);
     await _createGeoLoginTable(db);
@@ -91,6 +90,12 @@ class DatabaseService {
       // Agregar campo metodo_ubicacion a tabla geo_login
       await db.execute('ALTER TABLE geo_login ADD COLUMN metodo_ubicacion TEXT DEFAULT "gps"');
     }
+    
+    if (oldVersion < 9) {
+      // Agregar campos de geolocalización a tabla credentials
+      await db.execute('ALTER TABLE credentials ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE credentials ADD COLUMN longitude REAL');
+    }
   }
 
   /// Crea la tabla de usuarios
@@ -107,19 +112,7 @@ class DatabaseService {
     ''');
   }
 
-  /// Crea la tabla de geodatos de usuario
-  Future<void> _createUserGeodataTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE user_geodata (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
-  }
+
 
   /// Crea la tabla de dispositivos
   Future<void> _createDeviceTable(Database db) async {
@@ -215,6 +208,10 @@ class DatabaseService {
         -- Auditoría
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        
+        -- Geolocalización
+        latitude REAL,
+        longitude REAL,
         
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )

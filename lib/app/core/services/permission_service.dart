@@ -122,7 +122,14 @@ class PermissionService {
   static Future<bool> requestGalleryPermissions() async {
     try {
       if (Platform.isAndroid) {
-        // Para Android 13+, usar permisos específicos de medios
+        // Verificar primero si ya tenemos MANAGE_EXTERNAL_STORAGE
+        final manageStorageStatus = await Permission.manageExternalStorage.status;
+        if (manageStorageStatus.isGranted) {
+          await Log.i('PermissionService', 'MANAGE_EXTERNAL_STORAGE ya concedido, no se necesitan permisos adicionales de galería');
+          return true;
+        }
+        
+        // Si no tenemos MANAGE_EXTERNAL_STORAGE, solicitar permisos específicos de medios
         final photosStatus = await Permission.photos.request();
         return photosStatus.isGranted;
       } else if (Platform.isIOS) {
@@ -274,7 +281,7 @@ class PermissionService {
           break;
         case Permission.photos:
         case Permission.mediaLibrary:
-          names.add('• Galería: Para acceder y guardar imágenes');
+          names.add('• Acceso a imágenes: Para acceder y guardar imágenes (solo si no se tiene acceso completo a archivos)');
           break;
         case Permission.location:
         case Permission.locationWhenInUse:
@@ -312,7 +319,13 @@ class PermissionService {
   static Future<bool> checkGalleryPermission() async {
     try {
       if (Platform.isAndroid) {
-        // Para Android 13+, verificar READ_MEDIA_IMAGES
+        // Verificar primero si tenemos MANAGE_EXTERNAL_STORAGE (incluye acceso a imágenes)
+        final manageStorageStatus = await Permission.manageExternalStorage.status;
+        if (manageStorageStatus.isGranted) {
+          return true;
+        }
+        
+        // Si no tenemos MANAGE_EXTERNAL_STORAGE, verificar permisos específicos
         final photosStatus = await Permission.photos.status;
         if (photosStatus.isGranted) {
           return true;
@@ -453,7 +466,8 @@ class PermissionService {
           'Esta aplicación necesita acceso a:\n\n'
           '• Cámara: Para capturar imágenes de credenciales\n'
           '• Almacenamiento: Para guardar y procesar imágenes\n'
-          '• Galería: Para acceder a imágenes guardadas\n\n'
+          '• Acceso a archivos: Para gestionar imágenes y datos\n\n'
+          'Nota: El permiso de "Acceso completo a archivos" incluye el acceso a imágenes.\n\n'
           '¿Deseas continuar y conceder estos permisos?',
         ),
         actions: [

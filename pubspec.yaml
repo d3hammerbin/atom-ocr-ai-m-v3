@@ -183,8 +183,6 @@ flutter_native_splash:
 
 # Configuración personalizada de la aplicación
 app_config:
-  # Habilitar/deshabilitar marcas de agua en imágenes procesadas
-  enable_demo_watermark: true
   # Configuración de la marca de agua
   watermark:
     text: "DEMO"
@@ -192,3 +190,6 @@ app_config:
     color: "white"
   # Habilitar/deshabilitar procesamiento de datos EXIF en imágenes
   enable_exif_processing: false
+
+  # Definimos si es demo (controla las marcas de agua)
+  demo: true

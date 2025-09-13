@@ -82,15 +82,15 @@ class AppConfigService {
     return current is T ? current : defaultValue;
   }
 
-  /// Verifica si las marcas de agua están habilitadas
-  static bool? get isWatermarkEnabled {
+  /// Verifica si el modo demo está habilitado
+  static bool? get isDemoEnabled {
     final value = getValue<bool>(
-      'enable_demo_watermark',
+      'demo',
       true,
     ); // Default: true
     Log.d(
       'AppConfigService',
-      'isWatermarkEnabled: $value, initialized: $_initialized, config: $_config',
+      'isDemoEnabled: $value, initialized: $_initialized, config: $_config',
     );
     return value;
   }

@@ -22,7 +22,7 @@ class WatermarkService {
       Log.d('WatermarkService', 'Iniciando proceso de watermark para: $imagePath');
       
       // Verificar si las marcas de agua están habilitadas
-      final isEnabled = AppConfigService.isWatermarkEnabled ?? false;
+      final isEnabled = AppConfigService.isDemoEnabled ?? false;
       Log.d('WatermarkService', 'Watermark habilitado: $isEnabled');
       
       if (!isEnabled) {
@@ -104,7 +104,7 @@ class WatermarkService {
     Log.d('WatermarkService', 'Rutas de imágenes: ${imagePaths.join(", ")}');
     
     // Si las marcas de agua están deshabilitadas, retornar éxito para todas
-    if (!(AppConfigService.isWatermarkEnabled ?? false)) {
+    if (!(AppConfigService.isDemoEnabled ?? false)) {
       for (final imagePath in imagePaths) {
         if (imagePath.isNotEmpty) {
           results[imagePath] = true;
@@ -278,11 +278,11 @@ class WatermarkService {
   }
 
   /// Verifica si las marcas de agua están habilitadas
-  static bool get isEnabled => AppConfigService.isWatermarkEnabled ?? false;
+  static bool get isEnabled => AppConfigService.isDemoEnabled ?? false;
 
   /// Obtiene la configuración actual de marcas de agua
   static Map<String, dynamic> get currentConfig => {
-    'enabled': AppConfigService.isWatermarkEnabled ?? false,
+    'enabled': AppConfigService.isDemoEnabled ?? false,
     'text': AppConfigService.watermarkText ?? 'DEMO',
     'opacity': AppConfigService.watermarkOpacity ?? 0.3,
     'color': AppConfigService.watermarkColor ?? '#FF0000',

@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'logger_service.dart';
+import 'gps_verification_service.dart';
 
 class PermissionService {
   // Permisos básicos requeridos
   static const List<Permission> _basicPermissions = [
     Permission.camera,
+    Permission.locationWhenInUse,
   ];
 
   // Permisos de galería según la plataforma
@@ -48,8 +50,9 @@ class PermissionService {
       bool cameraGranted = await requestCameraPermission();
       bool storageGranted = await requestStoragePermissions();
       bool galleryGranted = await requestGalleryPermissions();
+      bool locationGranted = await requestLocationPermissions();
       
-      if (!cameraGranted || !storageGranted || !galleryGranted) {
+      if (!cameraGranted || !storageGranted || !galleryGranted || !locationGranted) {
         List<Permission> deniedPermissions = [];
         if (!cameraGranted) deniedPermissions.add(Permission.camera);
         if (!storageGranted) {
@@ -62,6 +65,7 @@ class PermissionService {
           }
         }
         if (!galleryGranted) deniedPermissions.add(Permission.photos);
+        if (!locationGranted) deniedPermissions.add(Permission.locationWhenInUse);
         
         await _handleDeniedPermissions(deniedPermissions);
         return false;
@@ -118,7 +122,14 @@ class PermissionService {
   static Future<bool> requestGalleryPermissions() async {
     try {
       if (Platform.isAndroid) {
-        // Para Android 13+, usar permisos específicos de medios
+        // Verificar primero si ya tenemos MANAGE_EXTERNAL_STORAGE
+        final manageStorageStatus = await Permission.manageExternalStorage.status;
+        if (manageStorageStatus.isGranted) {
+          await Log.i('PermissionService', 'MANAGE_EXTERNAL_STORAGE ya concedido, no se necesitan permisos adicionales de galería');
+          return true;
+        }
+        
+        // Si no tenemos MANAGE_EXTERNAL_STORAGE, solicitar permisos específicos de medios
         final photosStatus = await Permission.photos.request();
         return photosStatus.isGranted;
       } else if (Platform.isIOS) {
@@ -128,6 +139,44 @@ class PermissionService {
       return true;
     } catch (e) {
       await Log.e('PermissionService', 'Error solicitando permisos de galería', e);
+      return false;
+    }
+  }
+
+  /// Solicita permisos de ubicación
+  static Future<bool> requestLocationPermissions() async {
+    try {
+      await Log.i('PermissionService', 'Solicitando permisos de ubicación');
+      
+      // Primero verificar el hardware GPS y capacidades
+      final locationCapabilities = await GpsVerificationService.verifyLocationCapabilities();
+      
+      // Si no hay hardware GPS disponible, informar al usuario pero continuar
+      if (!locationCapabilities[GpsVerificationService.GPS_HARDWARE_AVAILABLE]!) {
+        await Log.w('PermissionService', 'Hardware GPS no disponible, verificando fuentes alternativas');
+      }
+      
+      // Solicitar permisos básicos de ubicación
+      final locationWhenInUseStatus = await Permission.locationWhenInUse.request();
+      
+      if (locationWhenInUseStatus.isGranted) {
+        await Log.i('PermissionService', 'Permisos de ubicación concedidos');
+        return true;
+      }
+      
+      // Si no se concede, intentar con permiso general de ubicación
+      final locationStatus = await Permission.location.request();
+      
+      if (locationStatus.isGranted) {
+        await Log.i('PermissionService', 'Permisos generales de ubicación concedidos');
+        return true;
+      }
+      
+      await Log.w('PermissionService', 'Permisos de ubicación denegados');
+      return false;
+      
+    } catch (e) {
+      await Log.e('PermissionService', 'Error solicitando permisos de ubicación', e);
       return false;
     }
   }
@@ -152,6 +201,12 @@ class PermissionService {
       // Verificar permisos de galería
       bool galleryGranted = await checkGalleryPermission();
       if (!galleryGranted) {
+        return false;
+      }
+      
+      // Verificar permisos de ubicación
+      bool locationGranted = await checkLocationPermission();
+      if (!locationGranted) {
         return false;
       }
       
@@ -226,7 +281,12 @@ class PermissionService {
           break;
         case Permission.photos:
         case Permission.mediaLibrary:
-          names.add('• Galería: Para acceder y guardar imágenes');
+          names.add('• Acceso a imágenes: Para acceder y guardar imágenes (solo si no se tiene acceso completo a archivos)');
+          break;
+        case Permission.location:
+        case Permission.locationWhenInUse:
+        case Permission.locationAlways:
+          names.add('• Ubicación: Para funciones de geolocalización y GPS');
           break;
         default:
           names.add('• ${permission.toString().split('.').last}');
@@ -259,7 +319,13 @@ class PermissionService {
   static Future<bool> checkGalleryPermission() async {
     try {
       if (Platform.isAndroid) {
-        // Para Android 13+, verificar READ_MEDIA_IMAGES
+        // Verificar primero si tenemos MANAGE_EXTERNAL_STORAGE (incluye acceso a imágenes)
+        final manageStorageStatus = await Permission.manageExternalStorage.status;
+        if (manageStorageStatus.isGranted) {
+          return true;
+        }
+        
+        // Si no tenemos MANAGE_EXTERNAL_STORAGE, verificar permisos específicos
         final photosStatus = await Permission.photos.status;
         if (photosStatus.isGranted) {
           return true;
@@ -275,6 +341,31 @@ class PermissionService {
       return true;
     } catch (e) {
       await Log.e('PermissionService', 'Error verificando permisos de galería', e);
+      return false;
+    }
+  }
+
+  /// Verifica permisos específicos para ubicación
+  static Future<bool> checkLocationPermission() async {
+    try {
+      // Verificar permisos de ubicación cuando la app está en uso
+      final locationWhenInUseStatus = await Permission.locationWhenInUse.status;
+      if (locationWhenInUseStatus.isGranted) {
+        return true;
+      }
+      
+      // Verificar permiso general de ubicación
+      final locationStatus = await Permission.location.status;
+      if (locationStatus.isGranted) {
+        return true;
+      }
+      
+      // Verificar permiso de ubicación siempre (menos común)
+      final locationAlwaysStatus = await Permission.locationAlways.status;
+      return locationAlwaysStatus.isGranted;
+      
+    } catch (e) {
+      await Log.e('PermissionService', 'Error verificando permisos de ubicación', e);
       return false;
     }
   }
@@ -375,7 +466,8 @@ class PermissionService {
           'Esta aplicación necesita acceso a:\n\n'
           '• Cámara: Para capturar imágenes de credenciales\n'
           '• Almacenamiento: Para guardar y procesar imágenes\n'
-          '• Galería: Para acceder a imágenes guardadas\n\n'
+          '• Acceso a archivos: Para gestionar imágenes y datos\n\n'
+          'Nota: El permiso de "Acceso completo a archivos" incluye el acceso a imágenes.\n\n'
           '¿Deseas continuar y conceder estos permisos?',
         ),
         actions: [

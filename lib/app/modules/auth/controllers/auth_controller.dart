@@ -6,12 +6,17 @@ import '../../../core/services/device_info_service.dart';
 import '../../../data/repositories/device_repository.dart';
 import '../../../core/services/logger_service.dart';
 import '../../../core/services/user_session_service.dart';
+import '../../../core/services/location_fallback_service.dart';
+import '../../../data/models/geo_login_model.dart';
+import '../../../data/repositories/geo_login_repository.dart';
 import '../../../routes/app_pages.dart';
 
 class AuthController extends GetxController {
   final UserRepository _userRepository = Get.find<UserRepository>();
   final DeviceInfoService _deviceInfoService = Get.find<DeviceInfoService>();
   final DeviceRepository _deviceRepository = Get.find<DeviceRepository>();
+  final LocationFallbackService _locationService = LocationFallbackService.instance;
+  final GeoLoginRepository _geoLoginRepository = GeoLoginRepository();
 
   // Estados reactivos
   final RxBool isLoading = false.obs;
@@ -85,6 +90,9 @@ class AuthController extends GetxController {
         
         await Log.i('AuthController', 'Sesión iniciada para usuario: ${existingUser.identifier}');
         
+        // Capturar datos de geolocalización
+        await _captureGeoLocation(existingUser.identifier);
+        
         // Proceder con verificación de permisos
         await _handlePermissionsAndDeviceFlow(existingUser);
       } else {
@@ -100,6 +108,9 @@ class AuthController extends GetxController {
           await sessionService.startSession(createdUser);
           
           await Log.i('AuthController', 'Sesión iniciada para usuario: ${createdUser.identifier}');
+          
+          // Capturar datos de geolocalización
+          await _captureGeoLocation(createdUser.identifier);
           
           // Proceder con verificación de permisos y dispositivo
           await _handlePermissionsAndDeviceFlow(createdUser);
@@ -176,6 +187,56 @@ class AuthController extends GetxController {
     }
     
     return null;
+  }
+
+  /// Captura y guarda los datos de geolocalización durante el login usando sistema de fallback
+  Future<void> _captureGeoLocation(String userIdentifier) async {
+    try {
+      await Log.i('AuthController', 'Iniciando captura de geolocalización con sistema de fallback para usuario: $userIdentifier');
+      
+      // Obtener ubicación usando sistema de fallback (GPS → Network → Passive)
+      LocationResult? locationResult = await _locationService.getLocationWithFallback(
+        timeout: const Duration(seconds: 45), // Timeout más generoso para el fallback
+        maxAccuracyMeters: 100.0, // Criterio de precisión más flexible
+      );
+      
+      if (locationResult != null) {
+        // Crear registro de geo login con el método de ubicación usado
+        final geoLogin = GeoLoginModel(
+          usuario: userIdentifier,
+          latitud: locationResult.position.latitude,
+          longitud: locationResult.position.longitude,
+          fechaInsercion: DateTime.now(),
+          metodoUbicacion: locationResult.method,
+        );
+        
+        // Guardar en la base de datos
+        int geoLoginId = await _geoLoginRepository.insertGeoLogin(geoLogin);
+        
+        await Log.i('AuthController', 
+          'Geolocalización guardada exitosamente - ID: $geoLoginId, '
+          'Método: ${locationResult.method.displayName}, '
+          'Lat: ${locationResult.position.latitude}, Lng: ${locationResult.position.longitude}, '
+          'Precisión: ${locationResult.position.accuracy}m, Confiable: ${locationResult.isReliable}');
+        
+        // Log información adicional de la ubicación
+        Map<String, dynamic> locationInfo = locationResult.toMap();
+        await Log.d('AuthController', 'Información detallada de ubicación: $locationInfo');
+        
+        // Log advertencia si la ubicación no es confiable
+        if (!locationResult.isReliable && locationResult.errorMessage != null) {
+          await Log.w('AuthController', 'Advertencia de ubicación: ${locationResult.errorMessage}');
+        }
+        
+      } else {
+        await Log.w('AuthController', 
+          'No se pudo obtener ubicación con ningún método disponible para el usuario: $userIdentifier. '
+          'Continuando con el proceso de login sin datos de geolocalización.');
+      }
+    } catch (e) {
+      await Log.e('AuthController', 'Error capturando geolocalización', e);
+      // No interrumpir el proceso de login por errores de geolocalización
+    }
   }
 
   @override

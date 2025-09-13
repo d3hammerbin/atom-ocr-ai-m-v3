@@ -317,6 +317,72 @@ class SpecialSettingsPage extends StatelessWidget {
                 ),
               ),
               
+              const SizedBox(height: 16),
+              
+              // Botón para exportar/compartir base de datos
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.share, color: Colors.blue),
+                        title: const Text(
+                          'Exportar/Compartir Base de Datos',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: const Text(
+                          'Comparte el archivo completo de la base de datos con todas las credenciales y datos',
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            _showExportDatabaseDialog(context, settingsService);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Exportar'),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      
+                      // Información
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.blue.shade700,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'El archivo se compartirá usando las opciones nativas del sistema (WhatsApp, email, etc.).',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
               const SizedBox(height: 24),
               
               // Botón para reiniciar configuraciones
@@ -438,6 +504,71 @@ class SpecialSettingsPage extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
               child: const Text('Eliminar Todo'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Muestra el diálogo de confirmación para exportar la base de datos
+  void _showExportDatabaseDialog(BuildContext context, SpecialSettingsService settingsService) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.share, color: Colors.blue),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Exportar Base de Datos',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Deseas exportar y compartir la base de datos completa?',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('El archivo incluirá:'),
+              SizedBox(height: 8),
+              Text('• Todas las credenciales procesadas'),
+              Text('• Todos los usuarios registrados'),
+              Text('• Todos los datos del dispositivo'),
+              Text('• Todos los geodatos'),
+              SizedBox(height: 12),
+              Text(
+                'El archivo se compartirá usando las opciones de compartir del sistema.',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await settingsService.exportDatabase();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Exportar'),
             ),
           ],
         );

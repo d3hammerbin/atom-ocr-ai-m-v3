@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'database_service.dart';
 import '../../data/repositories/user_repository.dart';
-import '../../data/repositories/user_geodata_repository.dart';
+import '../../data/repositories/geo_login_repository.dart';
 import '../../data/models/user_model.dart';
 
 /// Servicio para la inicialización y migración de la base de datos
@@ -10,7 +10,7 @@ class DatabaseInitializationService extends GetxService {
   
   final DatabaseService _databaseService = DatabaseService();
   final UserRepository _userRepository = UserRepository();
-  final UserGeodataRepository _geodataRepository = UserGeodataRepository();
+  final GeoLoginRepository _geoLoginRepository = GeoLoginRepository();
   
   bool _isInitialized = false;
   
@@ -93,17 +93,17 @@ class DatabaseInitializationService extends GetxService {
   Future<Map<String, int>> getDatabaseStats() async {
     try {
       final userCount = await _userRepository.getUserCount();
-      final geodataCount = await _geodataRepository.getGeodataCount();
+      final geoLoginCount = await _geoLoginRepository.getGeoLoginCount();
       
       return {
         'users': userCount,
-        'geodata_records': geodataCount,
+        'geo_login_records': geoLoginCount,
       };
     } catch (e) {
       print('Error al obtener estadísticas: $e');
       return {
         'users': 0,
-        'geodata_records': 0,
+        'geo_login_records': 0,
       };
     }
   }
@@ -121,12 +121,7 @@ class DatabaseInitializationService extends GetxService {
         return false;
       }
       
-      // Verificar tabla user_geodata
-      final geodataTableInfo = await db.rawQuery("PRAGMA table_info(user_geodata)");
-      if (geodataTableInfo.isEmpty) {
-        print('Tabla user_geodata no encontrada');
-        return false;
-      }
+
       
       // Verificar tabla device
       final deviceTableInfo = await db.rawQuery("PRAGMA table_info(device)");

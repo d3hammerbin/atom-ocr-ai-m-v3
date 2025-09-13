@@ -1,12 +1,14 @@
 // Exportaciones de modelos de base de datos
 export 'models/user_model.dart';
-export 'models/user_geodata_model.dart';
+
 export 'models/device_model.dart';
+export 'models/geo_login_model.dart';
 
 // Repositories
 export 'repositories/user_repository.dart';
-export 'repositories/user_geodata_repository.dart';
+
 export 'repositories/device_repository.dart';
+export 'repositories/geo_login_repository.dart';
 
 // Device Module
 export '../modules/device/device_controller.dart';

@@ -5,16 +5,19 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Debug
 import java.lang.System
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "memory_management"
+    private val MEMORY_CHANNEL = "memory_management"
+    private val GPS_CHANNEL = "gps_hardware_detector"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        // Channel para manejo de memoria
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEMORY_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "forceGC" -> {
                     try {
@@ -69,6 +72,31 @@ class MainActivity: FlutterActivity() {
                 }
             }
         }
+        
+        // Channel para detección de hardware GPS
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, GPS_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasGpsHardware" -> {
+                    try {
+                        val hasGps = hasGpsHardware()
+                        result.success(hasGps)
+                    } catch (e: Exception) {
+                        result.error("GPS_DETECTION_ERROR", "Error al detectar hardware GPS: ${e.message}", null)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+    }
+    
+    /**
+     * Verifica si el dispositivo tiene hardware GPS físico
+     * @return true si el dispositivo tiene GPS, false en caso contrario
+     */
+    private fun hasGpsHardware(): Boolean {
+        return packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS)
     }
     
     override fun onTrimMemory(level: Int) {

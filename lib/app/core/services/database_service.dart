@@ -10,7 +10,7 @@ class DatabaseService {
 
   static Database? _database;
   static const String _databaseName = 'atom_ocr_ai.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 9;
 
   /// Obtiene la instancia de la base de datos
   Future<Database> get database async {
@@ -34,9 +34,9 @@ class DatabaseService {
   /// Crea las tablas iniciales de la base de datos
   Future<void> _onCreate(Database db, int version) async {
     await _createUsersTable(db);
-    await _createUserGeodataTable(db);
     await _createDeviceTable(db);
     await _createCredentialsTable(db);
+    await _createGeoLoginTable(db);
   }
 
   /// Maneja las actualizaciones de la base de datos
@@ -80,6 +80,22 @@ class DatabaseService {
       await db.execute('ALTER TABLE credentials ADD COLUMN front_image_path TEXT');
       await db.execute('ALTER TABLE credentials ADD COLUMN back_image_path TEXT');
     }
+    
+    if (oldVersion < 7) {
+      // Crear tabla geo_login
+      await _createGeoLoginTable(db);
+    }
+    
+    if (oldVersion < 8) {
+      // Agregar campo metodo_ubicacion a tabla geo_login
+      await db.execute('ALTER TABLE geo_login ADD COLUMN metodo_ubicacion TEXT DEFAULT "gps"');
+    }
+    
+    if (oldVersion < 9) {
+      // Agregar campos de geolocalización a tabla credentials
+      await db.execute('ALTER TABLE credentials ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE credentials ADD COLUMN longitude REAL');
+    }
   }
 
   /// Crea la tabla de usuarios
@@ -96,19 +112,7 @@ class DatabaseService {
     ''');
   }
 
-  /// Crea la tabla de geodatos de usuario
-  Future<void> _createUserGeodataTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE user_geodata (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
-  }
+
 
   /// Crea la tabla de dispositivos
   Future<void> _createDeviceTable(Database db) async {
@@ -205,6 +209,10 @@ class DatabaseService {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         
+        -- Geolocalización
+        latitude REAL,
+        longitude REAL,
+        
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
@@ -268,5 +276,19 @@ class DatabaseService {
         // La columna ya existe o hay otro error
       }
     }
+  }
+
+  /// Crea la tabla de geo_login
+  Future<void> _createGeoLoginTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE geo_login (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario TEXT NOT NULL,
+        latitud REAL NOT NULL,
+        longitud REAL NOT NULL,
+        fecha_insercion TEXT NOT NULL,
+        metodo_ubicacion TEXT DEFAULT 'gps'
+      )
+    ''');
   }
 }

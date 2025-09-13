@@ -50,7 +50,9 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Esta aplicación necesita acceso a la galería de fotos para seleccionar imágenes.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Esta aplicación puede usar la ubicación para obtener información del dispositivo.</string>
+		<string>Esta aplicación necesita acceso a la ubicación GPS para registrar datos de geolocalización durante el inicio de sesión.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Esta aplicación necesita acceso a la ubicación GPS para registrar datos de geolocalización durante el inicio de sesión.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

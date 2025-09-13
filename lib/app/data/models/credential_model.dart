@@ -44,6 +44,10 @@ class CredentialModel {
   // Auditoría
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  
+  // Geolocalización
+  final double? latitude;
+  final double? longitude;
 
   const CredentialModel({
     this.id,
@@ -76,6 +80,8 @@ class CredentialModel {
     this.mrzContent,
     this.createdAt,
     this.updatedAt,
+    this.latitude,
+    this.longitude,
   });
 
   /// Constructor vacío
@@ -124,6 +130,8 @@ class CredentialModel {
       updatedAt: map['updated_at'] != null 
           ? DateTime.parse(map['updated_at']) 
           : null,
+      latitude: map['latitude']?.toDouble(),
+      longitude: map['longitude']?.toDouble(),
     );
   }
 
@@ -160,6 +168,8 @@ class CredentialModel {
       'mrz_content': mrzContent,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -195,6 +205,8 @@ class CredentialModel {
     String? mrzContent,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? latitude,
+    double? longitude,
   }) {
     return CredentialModel(
       id: id ?? this.id,
@@ -227,6 +239,8 @@ class CredentialModel {
       mrzContent: mrzContent ?? this.mrzContent,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 

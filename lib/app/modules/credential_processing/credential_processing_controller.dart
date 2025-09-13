@@ -1,9 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
 import '../../core/services/mlkit_text_recognition_service.dart';
+import '../../core/services/gps_location_service.dart';
 import '../../data/models/credencial_ine_model.dart';
 import '../../data/models/credential_model.dart';
 import '../../data/repositories/credential_repository.dart';
@@ -249,6 +251,28 @@ class CredentialProcessingController extends GetxController {
       final currentUser = users.first;
       final credential = processedCredential.value!;
 
+      // Obtener coordenadas GPS del dispositivo
+      double? latitude;
+      double? longitude;
+      
+      try {
+        Log.i('CredentialProcessingController', 'Obteniendo ubicación GPS para la credencial...');
+        final gpsService = GpsLocationService.instance;
+        final position = await gpsService.getCurrentPosition();
+        
+        if (position != null) {
+          latitude = position.latitude;
+          longitude = position.longitude;
+          Log.i('CredentialProcessingController', 
+            'Ubicación GPS obtenida - Lat: $latitude, Lng: $longitude, Precisión: ${position.accuracy}m');
+        } else {
+          Log.w('CredentialProcessingController', 'No se pudo obtener la ubicación GPS');
+        }
+      } catch (e) {
+        Log.e('CredentialProcessingController', 'Error obteniendo ubicación GPS', e);
+        // Continuar sin GPS si hay error
+      }
+
       // Convertir CredencialIneModel a CredentialModel
          final credentialToSave = CredentialModel(
            id: isEditMode ? existingCredential.value!.id : null,
@@ -279,6 +303,9 @@ class CredentialProcessingController extends GetxController {
            qrContent: credential.qrContent,
            barcodeContent: credential.barcodeContent,
            mrzContent: credential.mrzContent,
+           // Campos de geolocalización
+           latitude: latitude,
+           longitude: longitude,
          );
 
       if (isEditMode) {

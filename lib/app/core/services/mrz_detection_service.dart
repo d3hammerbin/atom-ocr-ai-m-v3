@@ -4,6 +4,8 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'logger_service.dart';
+import 'exif_service.dart';
+import 'watermark_service.dart';
 
 /// Servicio híbrido de detección de códigos MRZ para credenciales T2
 /// 
@@ -439,6 +441,16 @@ class MrzDetectionService {
       final pngBytes = img.encodePng(mrzImage);
       final file = File(filePath);
       await file.writeAsBytes(pngBytes);
+      
+      // Agregar metadatos EXIF a la imagen MRZ extraída
+      await ExifService.addProcessingMetadata(
+        imagePath: filePath,
+        credentialType: 'MRZ Extraction',
+        processingDate: DateTime.now().toIso8601String(),
+      );
+      
+      // Aplicar watermark inmediatamente después de guardar
+      await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);
       
       _logger.info('MrzDetectionService', 'Imagen MRZ guardada en: $filePath');
       return filePath;

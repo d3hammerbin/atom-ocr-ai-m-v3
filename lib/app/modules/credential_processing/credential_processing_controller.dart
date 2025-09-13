@@ -6,6 +6,7 @@ import '../../core/services/logger_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
 import '../../core/services/mlkit_text_recognition_service.dart';
 import '../../core/services/gps_location_service.dart';
+import '../../core/services/watermark_service.dart';
 import '../../data/models/credencial_ine_model.dart';
 import '../../data/models/credential_model.dart';
 import '../../data/repositories/credential_repository.dart';
@@ -271,6 +272,50 @@ class CredentialProcessingController extends GetxController {
       } catch (e) {
         Log.e('CredentialProcessingController', 'Error obteniendo ubicación GPS', e);
         // Continuar sin GPS si hay error
+      }
+
+      // Aplicar watermark a todas las imágenes de la credencial si está habilitado
+      try {
+        Log.i('CredentialProcessingController', 'Aplicando watermark a las imágenes de la credencial...');
+        
+        // Log de todas las rutas antes de filtrar
+        Log.d('CredentialProcessingController', 'Rutas de imágenes disponibles:');
+        Log.d('CredentialProcessingController', '  - photoPath: "${credential.photoPath}"');
+        Log.d('CredentialProcessingController', '  - signaturePath: "${credential.signaturePath}"');
+        Log.d('CredentialProcessingController', '  - qrImagePath: "${credential.qrImagePath}"');
+        Log.d('CredentialProcessingController', '  - barcodeImagePath: "${credential.barcodeImagePath}"');
+        Log.d('CredentialProcessingController', '  - mrzImagePath: "${credential.mrzImagePath}"');
+        Log.d('CredentialProcessingController', '  - signatureHuellaImagePath: "${credential.signatureHuellaImagePath}"');
+        Log.d('CredentialProcessingController', '  - frontImagePath: "${frontImagePath.value}"');
+        Log.d('CredentialProcessingController', '  - backImagePath: "${backImagePath.value}"');
+        
+        final imagePaths = <String>[
+          if (credential.photoPath.isNotEmpty) credential.photoPath,
+          if (credential.signaturePath.isNotEmpty) credential.signaturePath,
+          if (credential.qrImagePath.isNotEmpty) credential.qrImagePath,
+          if (credential.barcodeImagePath.isNotEmpty) credential.barcodeImagePath,
+          if (credential.mrzImagePath.isNotEmpty) credential.mrzImagePath,
+          if (credential.signatureHuellaImagePath.isNotEmpty) credential.signatureHuellaImagePath,
+          if (frontImagePath.value.isNotEmpty) frontImagePath.value,
+          if (backImagePath.value.isNotEmpty) backImagePath.value,
+        ];
+        
+        Log.i('CredentialProcessingController', 'Total de imágenes a procesar: ${imagePaths.length}');
+        for (int i = 0; i < imagePaths.length; i++) {
+          Log.d('CredentialProcessingController', '  ${i + 1}. ${imagePaths[i]}');
+        }
+        
+        final watermarkResults = await WatermarkService.addWatermarkToMultipleImages(
+          imagePaths: imagePaths,
+        );
+        
+        final successCount = watermarkResults.values.where((success) => success).length;
+        Log.i('CredentialProcessingController', 
+          'Watermark aplicado a $successCount de ${imagePaths.length} imágenes');
+        
+      } catch (e) {
+        Log.e('CredentialProcessingController', 'Error aplicando watermark', e);
+        // Continuar sin watermark si hay error
       }
 
       // Convertir CredencialIneModel a CredentialModel

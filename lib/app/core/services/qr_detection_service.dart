@@ -5,8 +5,9 @@ import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-
 import 'logger_service.dart';
+import 'exif_service.dart';
+import 'watermark_service.dart';
 
 /// Servicio para detectar y extraer códigos QR de credenciales INE T2
 /// Implementa detección inteligente usando finder patterns y métodos de respaldo
@@ -560,6 +561,16 @@ class QrDetectionService {
          final qrImageFile = File(qrImagePath);
          await qrImageFile.writeAsBytes(pngBytes);
          
+         // Agregar metadatos EXIF a la imagen QR extraída
+         await ExifService.addProcessingMetadata(
+           imagePath: qrImagePath,
+           credentialType: 'QR Code Extraction',
+           processingDate: DateTime.now().toIso8601String(),
+         );
+         
+         // Aplicar watermark inmediatamente después de guardar
+         await WatermarkService.addWatermarkIfEnabled(imagePath: qrImagePath);
+         
          _logger.info('QrDetectionService', 'Imagen QR guardada en: $qrImagePath');
          return qrImagePath;
          
@@ -567,7 +578,7 @@ class QrDetectionService {
          _logger.error('QrDetectionService', 'Error guardando imagen QR: $e');
          return '';
        }
-     }
+      }
      
      /// Decodificar QR usando Google ML Kit
       static Future<String> _decodeQrWithMLKit(img.Image qrRegion) async {

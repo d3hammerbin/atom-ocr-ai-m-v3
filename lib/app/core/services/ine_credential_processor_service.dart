@@ -10,6 +10,8 @@ import 'signature_extraction_service.dart';
 import 'qr_detection_service.dart';
 import 'barcode_detection_service.dart';
 import 'mrz_detection_service.dart';
+import 'exif_service.dart';
+import 'watermark_service.dart';
 import '../../../services/fixes/credential_processing_fixes.dart';
 
 class IneCredentialProcessorService {
@@ -108,8 +110,6 @@ class IneCredentialProcessorService {
     // - Códigos de país MEX
     // - Patrones de fecha con formato específico
     // - Líneas con números de documento y checksums
-    
-    final lines = upperText.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
     
     // Verificar patrones MRZ específicos
     bool hasMexCode = upperText.contains('MEX');
@@ -467,6 +467,8 @@ class IneCredentialProcessorService {
       try {
         frontalData['photoPath'] = await FaceDetectionService.extractFaceFromCredential(imagePath);
         print('📸 Foto extraída exitosamente: ${frontalData['photoPath']}');
+        
+        // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
       } catch (e) {
         print('❌ Error en detección facial: $e');
       }
@@ -486,6 +488,8 @@ class IneCredentialProcessorService {
         );
         if (frontalData['signaturePath']!.isNotEmpty) {
           print('🖋️ Firma extraída exitosamente: ${frontalData['signaturePath']}');
+          
+          // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
         } else {
           print('⚠️ No se pudo extraer la firma de la credencial T3');
         }
@@ -626,6 +630,8 @@ class IneCredentialProcessorService {
           print('⚠️ No se pudo detectar código QR: ${qrResult['error']}');
           print('📷 Imagen QR guardada para revisión: ${reversoData['qrImagePath']}');
         }
+        
+        // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
       } catch (e) {
         print('❌ Error en detección de QR: $e');
       }
@@ -648,6 +654,8 @@ class IneCredentialProcessorService {
           print('⚠️ No se pudo detectar código de barras: ${barcodeResult['error']}');
           print('📷 Imagen de código de barras guardada para revisión: ${reversoData['barcodeImagePath']}');
         }
+        
+        // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
       } catch (e) {
         print('❌ Error en detección de código de barras: $e');
       }
@@ -685,6 +693,8 @@ class IneCredentialProcessorService {
           print('⚠️ No se pudo detectar código MRZ: ${mrzResult['error']}');
           print('📷 Imagen MRZ guardada para revisión: ${reversoData['mrzImagePath']}');
         }
+        
+        // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
       } catch (e) {
         print('❌ Error en detección de código MRZ: $e');
       }
@@ -701,12 +711,14 @@ class IneCredentialProcessorService {
           final originalImage = img.decodeImage(imageBytes);
           
           if (originalImage != null) {
-            final signatureHuellaResult = _extractSignatureHuellaT2(originalImage, imagePath);
+            final signatureHuellaResult = await _extractSignatureHuellaT2(originalImage, imagePath);
             
             reversoData['signatureHuellaImagePath'] = signatureHuellaResult['imagePath'] ?? '';
             
             if (reversoData['signatureHuellaImagePath']!.isNotEmpty) {
               print('✅ Región firma-huella extraída exitosamente: ${reversoData['signatureHuellaImagePath']}');
+              
+              // Nota: Watermark se aplicará al guardar la credencial para optimizar recursos
             } else {
               print('⚠️ No se pudo extraer la región firma-huella');
             }
@@ -3091,7 +3103,7 @@ class IneCredentialProcessorService {
 
   /// Extrae la región de firma y huella digital para credenciales T2 del lado reverso
   /// Utiliza una región estimada basada en las dimensiones de la credencial
-  static Map<String, dynamic> _extractSignatureHuellaT2(img.Image originalImage, String imagePath) {
+  static Future<Map<String, dynamic>> _extractSignatureHuellaT2(img.Image originalImage, String imagePath) async {
     try {
       print('🔍 Iniciando extracción de región firma-huella T2...');
       
@@ -3143,6 +3155,12 @@ class IneCredentialProcessorService {
       // Guardar la imagen extraída
       final pngBytes = img.encodePng(signatureHuellaRegion);
       File(signatureHuellaPath).writeAsBytesSync(pngBytes);
+      
+      // Agregar metadatos EXIF a la imagen de firma-huella extraída
+      await ExifService.addProcessingMetadata(
+        imagePath: signatureHuellaPath,
+        credentialType: 'Signature-Fingerprint Extraction T2',
+      );
 
       print('✅ Región firma-huella T2 extraída: $signatureHuellaPath');
       print('📏 Dimensiones finales: ${regionWidth}x$regionHeight');

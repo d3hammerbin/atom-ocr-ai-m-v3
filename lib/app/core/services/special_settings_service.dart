@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'database_service.dart';
 
 /// Servicio para manejar configuraciones especiales de la aplicación
@@ -108,6 +112,55 @@ class SpecialSettingsService extends GetxController {
       Get.snackbar(
         'Error',
         'No se pudo limpiar la base de datos: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  /// Exporta y comparte la base de datos completa
+  Future<void> exportDatabase() async {
+    try {
+      // Obtener la ruta de la base de datos
+      final databasesPath = await getDatabasesPath();
+      final dbPath = join(databasesPath, 'atom_ocr_ai.db');
+      
+      // Verificar que el archivo existe
+      final dbFile = File(dbPath);
+      if (!await dbFile.exists()) {
+        Get.snackbar(
+          'Error',
+          'No se encontró el archivo de base de datos',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Obtener información del archivo
+      final fileSize = await dbFile.length();
+      final fileSizeKB = (fileSize / 1024).toStringAsFixed(2);
+      
+      // Compartir el archivo usando share_plus
+      await Share.shareXFiles(
+        [XFile(dbPath)],
+        text: 'Base de datos de Atom OCR AI (${fileSizeKB} KB)',
+        subject: 'Exportación de Base de Datos - Atom OCR AI',
+      );
+      
+      Get.snackbar(
+        'Exportación Exitosa',
+        'Base de datos compartida exitosamente (${fileSizeKB} KB)',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error de Exportación',
+        'No se pudo exportar la base de datos: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,

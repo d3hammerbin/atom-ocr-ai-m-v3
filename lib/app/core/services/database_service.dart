@@ -10,7 +10,7 @@ class DatabaseService {
 
   static Database? _database;
   static const String _databaseName = 'atom_ocr_ai.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 8;
 
   /// Obtiene la instancia de la base de datos
   Future<Database> get database async {
@@ -37,6 +37,7 @@ class DatabaseService {
     await _createUserGeodataTable(db);
     await _createDeviceTable(db);
     await _createCredentialsTable(db);
+    await _createGeoLoginTable(db);
   }
 
   /// Maneja las actualizaciones de la base de datos
@@ -79,6 +80,16 @@ class DatabaseService {
       // Agregar columnas para imágenes completas de credencial
       await db.execute('ALTER TABLE credentials ADD COLUMN front_image_path TEXT');
       await db.execute('ALTER TABLE credentials ADD COLUMN back_image_path TEXT');
+    }
+    
+    if (oldVersion < 7) {
+      // Crear tabla geo_login
+      await _createGeoLoginTable(db);
+    }
+    
+    if (oldVersion < 8) {
+      // Agregar campo metodo_ubicacion a tabla geo_login
+      await db.execute('ALTER TABLE geo_login ADD COLUMN metodo_ubicacion TEXT DEFAULT "gps"');
     }
   }
 
@@ -268,5 +279,19 @@ class DatabaseService {
         // La columna ya existe o hay otro error
       }
     }
+  }
+
+  /// Crea la tabla de geo_login
+  Future<void> _createGeoLoginTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE geo_login (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario TEXT NOT NULL,
+        latitud REAL NOT NULL,
+        longitud REAL NOT NULL,
+        fecha_insercion TEXT NOT NULL,
+        metodo_ubicacion TEXT DEFAULT 'gps'
+      )
+    ''');
   }
 }

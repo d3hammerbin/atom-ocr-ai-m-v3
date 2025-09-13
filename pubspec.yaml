@@ -88,6 +88,9 @@ dependencies:
   sensors_plus: ^6.0.1
   battery_plus: ^6.0.2
   system_info2: ^4.0.0
+  
+  # Geolocator para obtener ubicación GPS
+  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:

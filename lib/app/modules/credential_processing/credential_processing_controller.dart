@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:path/path.dart' as path;
 import '../../core/utils/snackbar_utils.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/ine_credential_processor_service.dart';
@@ -274,6 +276,45 @@ class CredentialProcessingController extends GetxController {
         // Continuar sin GPS si hay error
       }
 
+      // Copiar imágenes frontales y traseras a directorio permanente antes del watermark
+      String? permanentFrontPath;
+      String? permanentBackPath;
+      
+      try {
+        Log.i('CredentialProcessingController', 'Copiando imágenes frontales y traseras a directorio permanente...');
+        
+        if (frontImagePath.value.isNotEmpty) {
+          final frontFile = File(frontImagePath.value);
+          if (await frontFile.exists()) {
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final frontFileName = 'credencial_frontal_${timestamp}.jpg';
+            final frontDir = Directory(path.join(Directory.systemTemp.path, 'atom_ocr', 'credentials'));
+            await frontDir.create(recursive: true);
+            permanentFrontPath = path.join(frontDir.path, frontFileName);
+            await frontFile.copy(permanentFrontPath);
+            Log.i('CredentialProcessingController', 'Imagen frontal copiada a: $permanentFrontPath');
+          }
+        }
+        
+        if (backImagePath.value.isNotEmpty) {
+          final backFile = File(backImagePath.value);
+          if (await backFile.exists()) {
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final backFileName = 'credencial_trasera_${timestamp}.jpg';
+            final backDir = Directory(path.join(Directory.systemTemp.path, 'atom_ocr', 'credentials'));
+            await backDir.create(recursive: true);
+            permanentBackPath = path.join(backDir.path, backFileName);
+            await backFile.copy(permanentBackPath);
+            Log.i('CredentialProcessingController', 'Imagen trasera copiada a: $permanentBackPath');
+          }
+        }
+      } catch (e) {
+        Log.e('CredentialProcessingController', 'Error copiando imágenes a directorio permanente', e);
+        // Usar rutas originales como fallback
+        permanentFrontPath = frontImagePath.value.isNotEmpty ? frontImagePath.value : null;
+        permanentBackPath = backImagePath.value.isNotEmpty ? backImagePath.value : null;
+      }
+
       // Aplicar watermark a todas las imágenes de la credencial si está habilitado
       try {
         Log.i('CredentialProcessingController', 'Aplicando watermark a las imágenes de la credencial...');
@@ -286,8 +327,8 @@ class CredentialProcessingController extends GetxController {
         Log.d('CredentialProcessingController', '  - barcodeImagePath: "${credential.barcodeImagePath}"');
         Log.d('CredentialProcessingController', '  - mrzImagePath: "${credential.mrzImagePath}"');
         Log.d('CredentialProcessingController', '  - signatureHuellaImagePath: "${credential.signatureHuellaImagePath}"');
-        Log.d('CredentialProcessingController', '  - frontImagePath: "${frontImagePath.value}"');
-        Log.d('CredentialProcessingController', '  - backImagePath: "${backImagePath.value}"');
+        Log.d('CredentialProcessingController', '  - permanentFrontPath: "$permanentFrontPath"');
+        Log.d('CredentialProcessingController', '  - permanentBackPath: "$permanentBackPath"');
         
         final imagePaths = <String>[
           if (credential.photoPath.isNotEmpty) credential.photoPath,
@@ -296,8 +337,8 @@ class CredentialProcessingController extends GetxController {
           if (credential.barcodeImagePath.isNotEmpty) credential.barcodeImagePath,
           if (credential.mrzImagePath.isNotEmpty) credential.mrzImagePath,
           if (credential.signatureHuellaImagePath.isNotEmpty) credential.signatureHuellaImagePath,
-          if (frontImagePath.value.isNotEmpty) frontImagePath.value,
-          if (backImagePath.value.isNotEmpty) backImagePath.value,
+          if (permanentFrontPath != null && permanentFrontPath.isNotEmpty) permanentFrontPath,
+          if (permanentBackPath != null && permanentBackPath.isNotEmpty) permanentBackPath,
         ];
         
         Log.i('CredentialProcessingController', 'Total de imágenes a procesar: ${imagePaths.length}');

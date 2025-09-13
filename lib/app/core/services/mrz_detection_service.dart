@@ -168,8 +168,8 @@ class MrzDetectionService {
   /// Nivel 3: Región fija optimizada como último recurso
   static Future<Map<String, dynamic>> _detectMrzFixedRegion(img.Image image) async {
     try {
-      // Región fija en la parte inferior (últimos 15% de la imagen)
-      final regionHeight = (image.height * 0.15).round();
+      // Región fija en la parte inferior (aumentada a 30% para capturar MRZ completo)
+      final regionHeight = (image.height * 0.30).round();
       final regionY = image.height - regionHeight;
       
       final fixedRegion = img.copyCrop(
@@ -415,8 +415,8 @@ class MrzDetectionService {
   /// Intenta localizar la región MRZ en la imagen completa
   static Future<img.Image?> _locateMrzRegionInFullImage(img.Image image, String text) async {
     try {
-      // Por ahora, retornar la región inferior como aproximación
-      final regionHeight = (image.height * 0.2).round();
+      // Aumentar región inferior para capturar MRZ completo
+      final regionHeight = (image.height * 0.35).round();
       final regionY = image.height - regionHeight;
       
       return img.copyCrop(

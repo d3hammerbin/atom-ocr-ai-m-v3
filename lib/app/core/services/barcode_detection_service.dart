@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 /// Servicio híbrido de detección de códigos de barras para credenciales T2
 /// 
@@ -321,12 +322,15 @@ class BarcodeDetectionService {
       final pngBytes = img.encodePng(barcodeImage);
       await File(filePath).writeAsBytes(pngBytes);
       
-      // Agregar metadatos EXIF a la imagen de código de barras extraída
-      await ExifService.addProcessingMetadata(
-        imagePath: filePath,
-        credentialType: 'Barcode Extraction',
-        processingDate: DateTime.now().toIso8601String(),
-      );
+      // Agregar metadatos EXIF a la imagen de código de barras extraída solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: filePath,
+          credentialType: 'Barcode Extraction',
+          processingDate: DateTime.now().toIso8601String(),
+        );
+      }
       
       // Aplicar watermark inmediatamente después de guardar
       await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);

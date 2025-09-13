@@ -11,6 +11,7 @@ import '../../core/utils/secure_storage.dart';
 import '../../core/services/permission_service.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/exif_service.dart';
+import '../../core/services/app_config_service.dart';
 import '../../core/utils/snackbar_utils.dart';
 
 class CameraCaptureController extends GetxController with WidgetsBindingObserver {
@@ -343,13 +344,16 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
        );
        final String filePath = secureFile.path;
        
-       // Agregar metadatos EXIF a la imagen guardada
-       final String credentialType = isFrontSide.value ? 'Credential Front' : 'Credential Back';
-       await ExifService.addProcessingMetadata(
-         imagePath: filePath,
-         credentialType: credentialType,
-         processingDate: DateTime.now().toIso8601String(),
-       );
+       // Agregar metadatos EXIF a la imagen guardada solo si está habilitado
+       final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+       if (isExifEnabled) {
+         final String credentialType = isFrontSide.value ? 'Credential Front' : 'Credential Back';
+         await ExifService.addProcessingMetadata(
+           imagePath: filePath,
+           credentialType: credentialType,
+           processingDate: DateTime.now().toIso8601String(),
+         );
+       }
       
       capturedImagePath.value = filePath;
       isCapturing.value = false;

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'mlkit_text_recognition_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 class SignatureExtractionService {
   /// Extrae la firma de una credencial T3 basándose en referencias de texto OCR
@@ -257,12 +258,15 @@ class SignatureExtractionService {
       // Aplicar watermark inmediatamente después de guardar
       await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);
       
-      // Agregar metadatos EXIF a la imagen de firma extraída
-      await ExifService.addProcessingMetadata(
-        imagePath: filePath,
-        credentialType: 'Signature Extraction',
-        processingDate: DateTime.now().toIso8601String(),
-      );
+      // Agregar metadatos EXIF a la imagen de firma extraída solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: filePath,
+          credentialType: 'Signature Extraction',
+          processingDate: DateTime.now().toIso8601String(),
+        );
+      }
       
       print('Imagen de firma guardada en: $filePath');
       return filePath;

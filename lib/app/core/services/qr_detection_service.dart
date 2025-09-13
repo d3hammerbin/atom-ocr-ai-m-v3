@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 /// Servicio para detectar y extraer códigos QR de credenciales INE T2
 /// Implementa detección inteligente usando finder patterns y métodos de respaldo
@@ -561,12 +562,15 @@ class QrDetectionService {
          final qrImageFile = File(qrImagePath);
          await qrImageFile.writeAsBytes(pngBytes);
          
-         // Agregar metadatos EXIF a la imagen QR extraída
-         await ExifService.addProcessingMetadata(
-           imagePath: qrImagePath,
-           credentialType: 'QR Code Extraction',
-           processingDate: DateTime.now().toIso8601String(),
-         );
+         // Agregar metadatos EXIF a la imagen QR extraída solo si está habilitado
+         final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+         if (isExifEnabled) {
+           await ExifService.addProcessingMetadata(
+             imagePath: qrImagePath,
+             credentialType: 'QR Code Extraction',
+             processingDate: DateTime.now().toIso8601String(),
+           );
+         }
          
          // Aplicar watermark inmediatamente después de guardar
          await WatermarkService.addWatermarkIfEnabled(imagePath: qrImagePath);

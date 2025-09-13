@@ -12,6 +12,7 @@ import 'barcode_detection_service.dart';
 import 'mrz_detection_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
+import 'app_config_service.dart';
 import '../../../services/fixes/credential_processing_fixes.dart';
 
 class IneCredentialProcessorService {
@@ -3156,11 +3157,14 @@ class IneCredentialProcessorService {
       final pngBytes = img.encodePng(signatureHuellaRegion);
       File(signatureHuellaPath).writeAsBytesSync(pngBytes);
       
-      // Agregar metadatos EXIF a la imagen de firma-huella extraída
-      await ExifService.addProcessingMetadata(
-        imagePath: signatureHuellaPath,
-        credentialType: 'Signature-Fingerprint Extraction T2',
-      );
+      // Agregar metadatos EXIF a la imagen de firma-huella extraída solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: signatureHuellaPath,
+          credentialType: 'Signature-Fingerprint Extraction T2',
+        );
+      }
 
       print('✅ Región firma-huella T2 extraída: $signatureHuellaPath');
       print('📏 Dimensiones finales: ${regionWidth}x$regionHeight');

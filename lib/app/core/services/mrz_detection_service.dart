@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
+import 'app_config_service.dart';
 
 /// Servicio híbrido de detección de códigos MRZ para credenciales T2
 /// 
@@ -442,12 +443,15 @@ class MrzDetectionService {
       final file = File(filePath);
       await file.writeAsBytes(pngBytes);
       
-      // Agregar metadatos EXIF a la imagen MRZ extraída
-      await ExifService.addProcessingMetadata(
-        imagePath: filePath,
-        credentialType: 'MRZ Extraction',
-        processingDate: DateTime.now().toIso8601String(),
-      );
+      // Agregar metadatos EXIF a la imagen MRZ extraída solo si está habilitado
+      final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;
+      if (isExifEnabled) {
+        await ExifService.addProcessingMetadata(
+          imagePath: filePath,
+          credentialType: 'MRZ Extraction',
+          processingDate: DateTime.now().toIso8601String(),
+        );
+      }
       
       // Aplicar watermark inmediatamente después de guardar
       await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);

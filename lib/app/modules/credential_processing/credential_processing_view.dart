@@ -86,6 +86,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
         ),
         // Opción de compartir removida
       ),
+      bottomNavigationBar: _buildBottomAppBar(context),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -304,45 +305,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                 ),
               ),
               
-              const SizedBox(height: 24),
-              
-              // Botones de acción
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async => await controller.retakePhotos(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Volver a Tomar'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(0, 50),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Obx(() => ElevatedButton.icon(
-                      onPressed: controller.isProcessing.value ? null : controller.processCredential,
-                      icon: controller.isProcessing.value 
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.auto_fix_high),
-                      label: Text(controller.isProcessing.value ? 'Procesando...' : 'Procesar'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(0, 50),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    )),
-                  ),
-                ],
-              ),
+              // Botones movidos al BottomAppBar
               
               // Área de credencial procesada
               const SizedBox(height: 20),
@@ -905,31 +868,7 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                             ),
                           ],
                           
-                          const SizedBox(height: 16),
-                          
-                          // Botón Guardar
-                          SizedBox(
-                            width: double.infinity,
-                            child: Obx(() => ElevatedButton.icon(
-                              onPressed: controller.isSaving.value ? null : controller.saveCredential,
-                              icon: controller.isSaving.value 
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(Icons.save),
-                              label: Text(controller.isSaving.value ? 'Guardando...' : 'Guardar Credencial'),
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(0, 50),
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                              ),
-                            )),
-                          ),
+                          // Botón Guardar movido al BottomAppBar
                         ],
                       ),
                     ),
@@ -944,6 +883,161 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
 
     );
   }
-  
 
+  /// Construye el BottomAppBar con los botones de acción
+  Widget _buildBottomAppBar(BuildContext context) {
+    return BottomAppBar(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Botón Volver a Tomar
+            Expanded(
+              child: Obx(() => IconButton(
+                 onPressed: (controller.isProcessing.value || controller.isSaving.value) ? null : () => _showRetakeConfirmation(context),
+                icon: const Icon(Icons.refresh),
+                iconSize: 24,
+                 tooltip: 'Volver a Tomar',
+                 style: IconButton.styleFrom(
+                   backgroundColor: (controller.isProcessing.value || controller.isSaving.value) 
+                     ? Colors.grey.shade300 
+                     : Colors.orange.shade100,
+                   foregroundColor: (controller.isProcessing.value || controller.isSaving.value) 
+                     ? Colors.grey.shade600 
+                     : Colors.orange.shade700,
+                   minimumSize: const Size(48, 48),
+                   shape: const CircleBorder(),
+                 ),
+              )),
+            ),
+            // Botón Procesar
+            Expanded(
+              child: Obx(() => IconButton(
+                 onPressed: (controller.isProcessing.value || controller.isSaving.value) 
+                   ? null 
+                   : (controller.processedCredential.value != null 
+                       ? () => _showProcessConfirmation(context) 
+                       : controller.processCredential),
+                icon: controller.isProcessing.value 
+                   ? SizedBox(
+                       width: 20,
+                        height: 20,
+                       child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.blue.shade700,
+                        ),
+                     )
+                   : const Icon(Icons.auto_fix_high),
+                iconSize: 24,
+                 tooltip: (controller.isProcessing.value || controller.isSaving.value) ? 'Procesando...' : 'Procesar',
+                  style: IconButton.styleFrom(
+                    backgroundColor: (controller.isProcessing.value || controller.isSaving.value) 
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
+                      : Theme.of(context).colorScheme.primary,
+                   foregroundColor: Colors.white,
+                   minimumSize: const Size(48, 48),
+                   shape: const CircleBorder(),
+                 ),
+              )),
+            ),
+            // Botón Guardar Credencial
+            Expanded(
+              child: Obx(() => IconButton(
+                onPressed: (controller.processedCredential.value != null && !controller.isSaving.value) 
+                  ? controller.saveCredential 
+                  : null,
+                icon: controller.isSaving.value 
+                   ? SizedBox(
+                       width: 20,
+                        height: 20,
+                       child: CircularProgressIndicator(
+                           strokeWidth: 2,
+                           color: Colors.green.shade100,
+                         ),
+                     )
+                   : const Icon(Icons.save),
+                iconSize: 24,
+                 tooltip: controller.isSaving.value 
+                   ? 'Guardando...' 
+                   : (controller.processedCredential.value != null ? 'Guardar Credencial' : 'Procese primero la credencial'),
+                 style: IconButton.styleFrom(
+                   backgroundColor: controller.processedCredential.value != null
+                     ? (controller.isSaving.value 
+                         ? Colors.green.shade400 
+                         : Colors.green)
+                     : Colors.grey.shade300,
+                   foregroundColor: controller.processedCredential.value != null
+                     ? Colors.white
+                     : Colors.grey.shade600,
+                   minimumSize: const Size(48, 48),
+                   shape: const CircleBorder(),
+                 ),
+              )),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Muestra confirmación para volver a tomar fotos
+  void _showRetakeConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar acción'),
+          content: const Text('¿Está seguro que desea volver a tomar las fotos? Se perderán las imágenes actuales.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                controller.retakePhotos();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Muestra confirmación para procesar nuevamente
+  void _showProcessConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar reprocesamiento'),
+          content: const Text('La credencial ya ha sido procesada. ¿Desea procesarla nuevamente? Esto sobrescribirá los datos actuales.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                controller.processCredential();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Reprocesar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

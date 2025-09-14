@@ -7,6 +7,7 @@ import 'mlkit_text_recognition_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
 import 'app_config_service.dart';
+import '../utils/secure_storage.dart';
 
 class SignatureExtractionService {
   /// Extrae la firma de una credencial T3 basándose en referencias de texto OCR
@@ -238,22 +239,21 @@ class SignatureExtractionService {
   /// Guarda la imagen de la firma en el directorio de documentos
   static Future<String> _saveSignatureImage(img.Image signatureImage, String credentialId) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final signaturesDir = Directory(path.join(directory.path, 'signatures'));
-      
-      // Crear el directorio si no existe
-      if (!signaturesDir.existsSync()) {
-        signaturesDir.createSync(recursive: true);
-      }
+      // Codificar la imagen
+      final pngBytes = img.encodePng(signatureImage);
       
       // Generar nombre único para el archivo
-      final fileName = 'signature_${credentialId}_${DateTime.now().millisecondsSinceEpoch}.png';
-      final filePath = path.join(signaturesDir.path, fileName);
+      final fileName = SecureStorage.generateSecureFileName(
+        prefix: 'signature_${credentialId}',
+        extension: 'png',
+      );
       
-      // Codificar y guardar la imagen
-      final pngBytes = img.encodePng(signatureImage);
-      final file = File(filePath);
-      await file.writeAsBytes(pngBytes);
+      // Guardar en directorio seguro
+      final File savedFile = await SecureStorage.saveImageBytes(
+        pngBytes,
+        fileName: fileName,
+      );
+      final filePath = savedFile.path;
       
       // Aplicar watermark inmediatamente después de guardar
       await WatermarkService.addWatermarkIfEnabled(imagePath: filePath);

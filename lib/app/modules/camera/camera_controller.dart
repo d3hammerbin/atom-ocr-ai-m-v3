@@ -326,14 +326,8 @@ class CameraCaptureController extends GetxController with WidgetsBindingObserver
         screenSize,
         orientation,
       );
-      
-      // Guardar imagen recortada en la galería
-       await Gal.putImageBytes(
-         croppedImageBytes,
-         name: "atom_ocr_cropped_${DateTime.now().millisecondsSinceEpoch}.jpg",
-       );
        
-       // Guardar imagen recortada en directorio seguro y oculto
+       // Guardar imagen recortada únicamente en directorio seguro y oculto
        final String secureFileName = SecureStorage.generateSecureFileName(
          prefix: 'credential',
          extension: 'jpg',

@@ -9,6 +9,7 @@ import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
 import 'app_config_service.dart';
+import '../utils/secure_storage.dart';
 
 /// Servicio para detectar y extraer códigos QR de credenciales INE T2
 /// Implementa detección inteligente usando finder patterns y métodos de respaldo
@@ -546,21 +547,21 @@ class QrDetectionService {
      /// Guardar imagen del QR extraída
      static Future<String> _saveQrImage(img.Image qrRegion, String credentialId) async {
        try {
-         // Crear directorio para imágenes QR si no existe
-         final appDir = await getApplicationDocumentsDirectory();
-         final qrDir = Directory('${appDir.path}/qr_images');
-         if (!await qrDir.exists()) {
-           await qrDir.create(recursive: true);
-         }
+         // Codificar la imagen
+         final pngBytes = img.encodePng(qrRegion);
          
          // Generar nombre único para la imagen
-         final timestamp = DateTime.now().millisecondsSinceEpoch;
-         final qrImagePath = '${qrDir.path}/qr_${credentialId}_$timestamp.png';
+         final fileName = SecureStorage.generateSecureFileName(
+           prefix: 'qr_${credentialId}',
+           extension: 'png',
+         );
          
-         // Codificar y guardar la imagen
-         final pngBytes = img.encodePng(qrRegion);
-         final qrImageFile = File(qrImagePath);
-         await qrImageFile.writeAsBytes(pngBytes);
+         // Guardar en directorio seguro
+         final File savedFile = await SecureStorage.saveImageBytes(
+           pngBytes,
+           fileName: fileName,
+         );
+         final qrImagePath = savedFile.path;
          
          // Agregar metadatos EXIF a la imagen QR extraída solo si está habilitado
          final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;

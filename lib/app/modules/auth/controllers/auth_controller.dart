@@ -76,32 +76,43 @@ class AuthController extends GetxController {
       final identifier = identifierInput.value;
       await Log.i('AuthController', 'Iniciando proceso para identificador: $identifier');
 
-      // Paso 1: Verificar si el usuario ya existe
-      UserModel? existingUser = await _userRepository.getUserByIdentifier(identifier);
+      // Verificar si ya existe algún usuario registrado
+      final totalUsers = await _userRepository.getUserCount();
       
-      if (existingUser != null) {
-        // Usuario existe y está activo, actualizar último login
-        await _userRepository.updateLastLogin(existingUser.identifier);
-        await Log.i('AuthController', 'Usuario existente autenticado: ${existingUser.id}');
+      if (totalUsers > 0) {
+        // Ya existe un usuario registrado, verificar que el ID coincida
+        final allUsers = await _userRepository.getAllUsers();
+        final firstUser = allUsers.first;
+        
+        if (firstUser.identifier != identifier) {
+          // ID diferente al registrado, mostrar error de identificación
+          errorMessage.value = 'Error de identificación: Este dispositivo ya está registrado con un ID diferente';
+          await Log.w('AuthController', 'Intento de acceso con ID incorrecto. ID registrado: ${firstUser.identifier}, ID ingresado: $identifier');
+          return;
+        }
+        
+        // ID correcto, proceder con autenticación
+        await _userRepository.updateLastLogin(firstUser.identifier);
+        await Log.i('AuthController', 'Usuario existente autenticado: ${firstUser.id}');
         
         // Iniciar sesión de usuario
         final sessionService = UserSessionService.to;
-        await sessionService.startSession(existingUser);
+        await sessionService.startSession(firstUser);
         
-        await Log.i('AuthController', 'Sesión iniciada para usuario: ${existingUser.identifier}');
+        await Log.i('AuthController', 'Sesión iniciada para usuario: ${firstUser.identifier}');
         
         // Capturar datos de geolocalización
-        await _captureGeoLocation(existingUser.identifier);
+        await _captureGeoLocation(firstUser.identifier);
         
         // Proceder con verificación de permisos
-        await _handlePermissionsAndDeviceFlow(existingUser);
+        await _handlePermissionsAndDeviceFlow(firstUser);
       } else {
-        // Usuario no existe, crear nuevo usuario
-        await Log.i('AuthController', 'Creando nuevo usuario con identificador: $identifier');
+        // No hay usuarios registrados, crear el primer usuario
+        await Log.i('AuthController', 'Creando primer usuario con identificador: $identifier');
         
         final createdUser = await _userRepository.createUser(identifier);
         if (createdUser.id != null && createdUser.id! > 0) {
-          await Log.i('AuthController', 'Nuevo usuario creado con ID: ${createdUser.id}');
+          await Log.i('AuthController', 'Primer usuario creado con ID: ${createdUser.id}');
           
           // Iniciar sesión de usuario
           final sessionService = UserSessionService.to;

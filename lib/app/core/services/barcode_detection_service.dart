@@ -7,6 +7,7 @@ import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
 import 'app_config_service.dart';
+import '../utils/secure_storage.dart';
 
 /// Servicio híbrido de detección de códigos de barras para credenciales T2
 /// 
@@ -308,19 +309,17 @@ class BarcodeDetectionService {
   /// Guarda la imagen del código de barras extraído
   static Future<String> _saveBarcodeImage(img.Image barcodeImage) async {
     try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final barcodeDir = Directory(path.join(appDir.path, 'barcodes'));
-      
-      if (!await barcodeDir.exists()) {
-        await barcodeDir.create(recursive: true);
-      }
-      
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'barcode_$timestamp.png';
-      final filePath = path.join(barcodeDir.path, fileName);
-      
       final pngBytes = img.encodePng(barcodeImage);
-      await File(filePath).writeAsBytes(pngBytes);
+      final fileName = SecureStorage.generateSecureFileName(
+        prefix: 'barcode',
+        extension: 'png',
+      );
+      
+      final File savedFile = await SecureStorage.saveImageBytes(
+        pngBytes,
+        fileName: fileName,
+      );
+      final filePath = savedFile.path;
       
       // Agregar metadatos EXIF a la imagen de código de barras extraída solo si está habilitado
       final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;

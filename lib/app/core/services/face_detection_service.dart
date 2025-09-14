@@ -7,6 +7,7 @@ import 'memory_management_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
 import 'app_config_service.dart';
+import '../utils/secure_storage.dart';
 
 class FaceDetectionService {
   static FaceDetector? _detectorInstance;
@@ -323,24 +324,21 @@ class FaceDetectionService {
   /// Guarda la imagen del rostro en el directorio de la aplicación
   static Future<String> _saveFaceImage(img.Image faceImage, String credentialId) async {
     try {
-      // Obtener directorio de documentos de la aplicación
-      final appDir = await getApplicationDocumentsDirectory();
-      final facesDir = Directory(path.join(appDir.path, 'faces'));
-      
-      // Crear directorio si no existe
-      if (!await facesDir.exists()) {
-        await facesDir.create(recursive: true);
-      }
+      // Codificar la imagen
+      final pngBytes = img.encodePng(faceImage);
       
       // Generar nombre de archivo único
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = '${credentialId}_face_$timestamp.png';
-      final filePath = path.join(facesDir.path, fileName);
+      final fileName = SecureStorage.generateSecureFileName(
+        prefix: '${credentialId}_face',
+        extension: 'png',
+      );
       
-      // Codificar y guardar la imagen
-      final pngBytes = img.encodePng(faceImage);
-      final file = File(filePath);
-      await file.writeAsBytes(pngBytes);
+      // Guardar en directorio seguro
+      final File savedFile = await SecureStorage.saveImageBytes(
+        pngBytes,
+        fileName: fileName,
+      );
+      final filePath = savedFile.path;
       
       // Agregar metadatos EXIF a la imagen del rostro extraído solo si está habilitado
       final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;

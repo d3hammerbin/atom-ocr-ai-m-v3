@@ -336,14 +336,14 @@ class _CameraViewState extends State<CameraView> {
                           _buildControlButton(
                             icon: Icons.check,
                             onPressed: controller.confirmPhoto,
-                            backgroundColor: Colors.green.withValues(alpha: 0.6),
+                            backgroundColor: Colors.transparent,
                             size: 40,
                           ),
                           const SizedBox(height: 10),
                           _buildControlButton(
                             icon: Icons.close,
                             onPressed: controller.cancelPhoto,
-                            backgroundColor: Colors.red.withValues(alpha: 0.6),
+                            backgroundColor: Colors.transparent,
                             size: 40,
                           ),
                         ],

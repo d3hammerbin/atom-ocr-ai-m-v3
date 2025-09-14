@@ -7,6 +7,7 @@ import 'logger_service.dart';
 import 'exif_service.dart';
 import 'watermark_service.dart';
 import 'app_config_service.dart';
+import '../utils/secure_storage.dart';
 
 /// Servicio híbrido de detección de códigos MRZ para credenciales T2
 /// 
@@ -434,14 +435,21 @@ class MrzDetectionService {
   /// Guarda la imagen del MRZ extraído
   static Future<String> _saveMrzImage(img.Image mrzImage) async {
     try {
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'mrz_extracted_$timestamp.png';
-      final filePath = path.join(documentsDir.path, fileName);
-      
+      // Codificar la imagen
       final pngBytes = img.encodePng(mrzImage);
-      final file = File(filePath);
-      await file.writeAsBytes(pngBytes);
+      
+      // Generar nombre único para el archivo
+      final fileName = SecureStorage.generateSecureFileName(
+        prefix: 'mrz_extracted',
+        extension: 'png',
+      );
+      
+      // Guardar en directorio seguro
+      final File savedFile = await SecureStorage.saveImageBytes(
+        pngBytes,
+        fileName: fileName,
+      );
+      final filePath = savedFile.path;
       
       // Agregar metadatos EXIF a la imagen MRZ extraída solo si está habilitado
       final bool isExifEnabled = AppConfigService.isExifProcessingEnabled ?? false;

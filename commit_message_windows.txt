@@ -1,0 +1,13 @@
+chore(platform): eliminar carpeta Windows para enfoque exclusivo en Android; incremento de versión patch
+
+Cambios:
+- Eliminación física de la carpeta windows/ del proyecto.
+- Incremento de versión en pubspec.yaml de 3.0.3+75 a 3.0.4+75 (patch).
+
+Motivación:
+- Mantener el repositorio alineado con la plataforma objetivo (Android).
+- Reducir mantenimiento y evitar cambios accidentales en plataformas no soportadas actualmente.
+
+Impacto:
+- No afecta la funcionalidad de Android.
+- Las plataformas de escritorio pueden reintroducirse cuando se requiera soporte adicional.

@@ -39,16 +39,20 @@ class AppVersionService extends GetxService {
       _isLoading.value = true;
       final PackageInfo packageInfo = await PackageInfo.fromPlatform();
 
-      _appName.value = "Atom OCR AI (B)"; //packageInfo.appName;
+      _appName.value = "SEIN"; //packageInfo.appName;
       _packageName.value = packageInfo.packageName;
       _version.value = packageInfo.version;
       _buildNumber.value = packageInfo.buildNumber;
 
       _isLoading.value = false;
     } catch (e) {
-      await Log.e('AppVersionService', 'Error al cargar información del paquete', e);
+      await Log.e(
+        'AppVersionService',
+        'Error al cargar información del paquete',
+        e,
+      );
       // Valores por defecto en caso de error
-      _appName.value = 'Atom OCR AI (B)';
+      _appName.value = 'SEIN';
       _version.value = '1.0.0';
       _buildNumber.value = '1';
       _isLoading.value = false;

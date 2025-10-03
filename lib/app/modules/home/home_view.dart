@@ -47,12 +47,12 @@ class HomeView extends GetView<HomeController> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.3),
+                        .withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: Theme.of(
                         context,
-                      ).colorScheme.outline.withValues(alpha: 0.5),
+                      ).colorScheme.outline.withOpacity(0.5),
                       width: 1,
                     ),
                   ),
@@ -84,12 +84,12 @@ class HomeView extends GetView<HomeController> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer
-                        .withValues(alpha: 0.3),
+                        .withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withValues(alpha: 0.3),
+                      ).colorScheme.primary.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -177,6 +177,78 @@ class HomeView extends GetView<HomeController> {
                 const SizedBox(height: 40),
               ],
             ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: Obx(
+        () => Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Fondo gris claro
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 0,
+                blurRadius: 10,
+                offset: const Offset(0, -5), // Sombra hacia arriba
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              // Item 0: Home (Nuevo)
+              InkWell(
+                onTap: () => controller.onItemTapped(0),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.home,
+                    size: controller.selectedIndex.value == 0 ? 24.0 * 1.3 : 24.0,
+                    color: controller.selectedIndex.value == 0 ? const Color(0xFF55B994) : const Color(0xFF46495b),
+                  ),
+                ),
+              ),
+              // Item 1: Lista
+              InkWell(
+                onTap: () => controller.onItemTapped(1),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.list_alt,
+                    size: controller.selectedIndex.value == 1 ? 24.0 * 1.3 : 24.0,
+                    color: controller.selectedIndex.value == 1 ? const Color(0xFF55B994) : const Color(0xFF46495b),
+                  ),
+                ),
+              ),
+              // Item 2: Escáner
+              InkWell(
+                onTap: () => controller.onItemTapped(2),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    size: controller.selectedIndex.value == 2 ? 24.0 * 1.3 : 24.0,
+                    color: controller.selectedIndex.value == 2 ? const Color(0xFF55B994) : const Color(0xFF46495b),
+                  ),
+                ),
+              ),
+              // Item 3: Configuración
+              InkWell(
+                onTap: () => controller.onItemTapped(3),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.settings,
+                    size: controller.selectedIndex.value == 3 ? 24.0 * 1.3 : 24.0,
+                    color: controller.selectedIndex.value == 3 ? const Color(0xFF55B994) : const Color(0xFF46495b),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

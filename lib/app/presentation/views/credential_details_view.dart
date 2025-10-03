@@ -193,7 +193,7 @@ class CredentialDetailsView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.blue[50],
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.blue[200]!),
+                border: Border.all(color: Colors.blue.shade200),
               ),
               child: Text(
                 'CURP: ${credential.curp ?? 'No disponible'}',
@@ -371,7 +371,7 @@ class CredentialDetailsView extends StatelessWidget {
               : null,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -497,7 +497,7 @@ class CredentialDetailsView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: Colors.grey.shade200),
           ),
           child: SelectableText(
             content,
@@ -855,7 +855,9 @@ class CredentialDetailsView extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              // Inicio ajuste color de texto del botón (light)
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              // Fin ajuste color de texto del botón (light)
             ),
             child: const Text('Eliminar'),
           ),

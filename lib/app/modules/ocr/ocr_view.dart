@@ -102,7 +102,9 @@ class OcrView extends GetView<OcrController> {
               onPressed: controller.clearText,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Limpiar Texto'),
             ),

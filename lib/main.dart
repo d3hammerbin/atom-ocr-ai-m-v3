@@ -67,13 +67,51 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF616161),
             brightness: Brightness.light,
+          ).copyWith(
+            // Inicio de ajuste de esquema de color para botones light
+            primary: const Color(0xFF18DAA3),
+            onPrimary: const Color(0xFF191E33),
+            // Fin de ajuste de esquema de color para botones light
           ),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(
             backgroundColor: Color(0xFF424242),
-            foregroundColor: Colors.white,
+            // Inicio ajuste color de texto del AppBar (light)
+            foregroundColor: Color(0xFF191E33),
+            // Fin ajuste color de texto del AppBar (light)
             elevation: 2,
           ),
+          // Inicio de configuración de temas de botones (light)
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF18DAA3),
+              // Inicio ajuste color de texto del botón (light)
+              foregroundColor: const Color(0xFF191E33),
+              // Fin ajuste color de texto del botón (light)
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF18DAA3),
+              foregroundColor: const Color(0xFF191E33),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF191E33),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: const Color(0xFF18DAA3),
+              foregroundColor: const Color(0xFF191E33),
+              side: const BorderSide(
+                color: Color(0xFF18DAA3),
+                width: 1.5,
+              ),
+            ),
+          ),
+          // Fin de configuración de temas de botones (light)
         ),
         darkTheme: ThemeData(
           colorScheme: ColorScheme.fromSeed(

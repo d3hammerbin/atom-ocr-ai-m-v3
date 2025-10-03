@@ -97,7 +97,9 @@ class _HiddenInfoPageState extends State<HiddenInfoPage> {
       appBar: AppBar(
         title: const Text('Información del Sistema'),
         backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        // Inicio ajuste color de texto de AppBar (light)
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        // Fin ajuste color de texto de AppBar (light),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

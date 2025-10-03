@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'ine_credential_processor_service.dart';
 import 'logger_service.dart';
 import '../../../app/data/models/credencial_ine_model.dart';

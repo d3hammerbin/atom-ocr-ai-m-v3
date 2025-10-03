@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../core/app_version_service.dart';
 import '../controllers/auth_controller.dart';
+import 'package:pinput/pinput.dart';
 
 class InitialScreen extends GetView<AuthController> {
   const InitialScreen({super.key});
@@ -10,7 +10,7 @@ class InitialScreen extends GetView<AuthController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 8, 65, 41),
+      backgroundColor: const Color.fromARGB(255, 252, 252, 252),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -40,7 +40,7 @@ class InitialScreen extends GetView<AuthController> {
                               height: 120,
                               color: Colors.transparent,
                               child: Image.asset(
-                                'assets/SEIN_W.png',
+                                'assets/SEIN.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -60,60 +60,114 @@ class InitialScreen extends GetView<AuthController> {
                           // Campo de entrada para el identificador
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    0,
+                                    0,
+                                    0,
+                                  ).withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
-                            child: Obx(
-                              () => TextFormField(
-                                onChanged: controller.updateIdentifier,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 20,
+                              ),
+                              // Inicio del objeto Pinput para PIN
+                              child: Pinput(
+                                length: 4,
                                 keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                maxLength: 4,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(4),
-                                ],
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 8,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: '0000',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey[400],
-                                    letterSpacing: 8,
+                                onChanged: controller.updateIdentifier,
+                                onCompleted: controller.updateIdentifier,
+                                autofocus: false,
+                                showCursor: false,
+                                separatorBuilder:
+                                    (index) => const SizedBox(width: 12),
+                                defaultPinTheme: PinTheme(
+                                  width: 56,
+                                  height: 64,
+                                  textStyle: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
                                   ),
-                                  counterText: '',
-                                  border: OutlineInputBorder(
+                                  decoration: BoxDecoration(
+                                    //color: Colors.white,
+                                    color: const Color.fromARGB(
+                                      255,
+                                      213,
+                                      241,
+                                      237,
+                                    ),
                                     borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
+                                    border: Border.all(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        221,
+                                        221,
+                                        221,
+                                      ),
+                                      width: 1.2,
+                                    ),
                                   ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 20,
+                                ),
+                                focusedPinTheme: PinTheme(
+                                  width: 56,
+                                  height: 64,
+                                  textStyle: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(context).primaryColor,
                                   ),
-                                  errorText:
-                                      controller.errorMessage.value.isNotEmpty
-                                          ? controller.errorMessage.value
-                                          : null,
-                                  errorStyle: const TextStyle(
-                                    fontSize: 14,
-                                    height: 1.2,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Theme.of(context).primaryColor,
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(
+                                          context,
+                                        ).primaryColor.withValues(alpha: 0.12),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
+                              // Fin del objeto Pinput para PIN
                             ),
+                          ),
+
+                          // Mostrar error debajo del campo de PIN (si existe)
+                          Obx(
+                            () =>
+                                controller.errorMessage.value.isNotEmpty
+                                    ? Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(
+                                        controller.errorMessage.value,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 14,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    )
+                                    : const SizedBox.shrink(),
                           ),
 
                           const SizedBox(height: 32),
@@ -133,7 +187,9 @@ class InitialScreen extends GetView<AuthController> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
                                       Theme.of(context).primaryColor,
-                                  foregroundColor: Colors.white,
+                                  // Inicio ajuste color de texto del botón (light)
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                  // Fin ajuste color de texto del botón (light)
                                   elevation:
                                       controller.isValidIdentifier.value
                                           ? 8
@@ -144,8 +200,8 @@ class InitialScreen extends GetView<AuthController> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  disabledBackgroundColor: Colors.grey[300],
-                                  disabledForegroundColor: Colors.grey[500],
+                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  disabledForegroundColor: Colors.grey.shade500,
                                 ),
                                 child:
                                     controller.isLoading.value
@@ -162,12 +218,13 @@ class InitialScreen extends GetView<AuthController> {
                                         )
                                         : Text(
                                           'Comenzar',
+                                          // Inicio ajuste de color de texto del botón (light): se elimina color forzado para respetar el foregroundColor del botón (Theme.of(context).colorScheme.onPrimary)
                                           style: Theme.of(
                                             context,
                                           ).textTheme.titleMedium?.copyWith(
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.white,
                                           ),
+                                          // Fin ajuste de color de texto del botón (light)
                                         ),
                               ),
                             ),

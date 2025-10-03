@@ -362,7 +362,9 @@ class _UserSettingsWidgetState extends State<UserSettingsWidget> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Restablecer'),
             ),

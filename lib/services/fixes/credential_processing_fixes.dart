@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import '../../app/core/services/mlkit_text_recognition_service.dart';
 import '../../app/core/services/face_detection_service.dart';

@@ -274,7 +274,9 @@ class SpecialSettingsPage extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
+                            // Inicio ajuste color de texto del botón (light)
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            // Fin ajuste color de texto del botón (light)
                           ),
                           child: const Text('Limpiar'),
                         ),
@@ -340,7 +342,9 @@ class SpecialSettingsPage extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
+                            // Inicio ajuste color de texto del botón (light)
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            // Fin ajuste color de texto del botón (light)
                           ),
                           child: const Text('Exportar'),
                         ),
@@ -501,7 +505,9 @@ class SpecialSettingsPage extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Eliminar Todo'),
             ),
@@ -566,7 +572,9 @@ class SpecialSettingsPage extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Exportar'),
             ),

@@ -301,7 +301,9 @@ class LogsPage extends GetView<LogsController> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              // Inicio ajuste color de texto del botón (light)
+              foregroundColor: Get.theme.colorScheme.onPrimary,
+              // Fin ajuste color de texto del botón (light)
             ),
             child: const Text('Eliminar'),
           ),

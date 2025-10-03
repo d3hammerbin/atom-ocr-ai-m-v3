@@ -580,7 +580,9 @@ class CredentialEditView extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Get.theme.colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
             ),
           ),

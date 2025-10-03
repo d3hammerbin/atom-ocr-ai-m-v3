@@ -142,6 +142,9 @@ class HomeView extends GetView<HomeController> {
                   label: const Text('Capturar Credencial'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(200, 50),
+                    // Inicio ajuste color de texto del botón (light)
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    // Fin ajuste color de texto del botón (light)
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -151,6 +154,9 @@ class HomeView extends GetView<HomeController> {
                   label: const Text('Credenciales Procesadas'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(200, 50),
+                    // Inicio ajuste color de texto del botón (light)
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    // Fin ajuste color de texto del botón (light)
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -162,6 +168,9 @@ class HomeView extends GetView<HomeController> {
                     label: const Text('Procesar Local'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(200, 50),
+                      // Inicio ajuste color de texto del botón (light)
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      // Fin ajuste color de texto del botón (light)
                     ),
                   ),
                 )),

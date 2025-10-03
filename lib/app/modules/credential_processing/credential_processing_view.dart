@@ -935,7 +935,9 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                     backgroundColor: (controller.isProcessing.value || controller.isSaving.value) 
                       ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
                       : Theme.of(context).colorScheme.primary,
-                   foregroundColor: Colors.white,
+                   // Inicio ajuste color de texto del botón (light)
+                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                   // Fin ajuste color de texto del botón (light)
                    minimumSize: const Size(48, 48),
                    shape: const CircleBorder(),
                  ),
@@ -967,9 +969,11 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
                          ? Colors.green.shade400 
                          : Colors.green)
                      : Colors.grey.shade300,
+                   // Inicio ajuste color de texto del botón (light)
                    foregroundColor: controller.processedCredential.value != null
-                     ? Colors.white
+                     ? Theme.of(context).colorScheme.onPrimary
                      : Colors.grey.shade600,
+                   // Fin ajuste color de texto del botón (light),
                    minimumSize: const Size(48, 48),
                    shape: const CircleBorder(),
                  ),
@@ -1001,7 +1005,9 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Confirmar'),
             ),
@@ -1031,7 +1037,9 @@ class CredentialProcessingView extends GetView<CredentialProcessingController> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
+                // Inicio ajuste color de texto del botón (light)
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                // Fin ajuste color de texto del botón (light)
               ),
               child: const Text('Reprocesar'),
             ),

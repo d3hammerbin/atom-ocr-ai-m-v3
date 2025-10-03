@@ -103,7 +103,9 @@ class _CameraViewState extends State<CameraView> {
                       onPressed: _exitToHome,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                        // Inicio ajuste color de texto del botón (light)
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        // Fin ajuste color de texto del botón (light)
                       ),
                       child: const Text('Regresar al inicio'),
                     ),

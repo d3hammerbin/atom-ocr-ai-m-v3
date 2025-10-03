@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:pinput/pinput.dart';
 
 /// Servicio para manejar el estado del menú oculto
 class HiddenMenuService extends GetxService {
@@ -81,17 +82,38 @@ class HiddenMenuService extends GetxService {
           children: [
             const Text('Ingresa el PIN de 5 dígitos para acceder al menú especial:'),
             const SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              keyboardType: TextInputType.number,
-              maxLength: 5,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'PIN',
-                border: OutlineInputBorder(),
-                counterText: '',
-              ),
-            ),
+            // Inicio del objeto Pinput para PIN del menú oculto
+             Pinput(
+               length: 5,
+               keyboardType: TextInputType.number,
+               controller: pinController,
+               defaultPinTheme: PinTheme(
+                 width: 48,
+                 height: 56,
+                 textStyle: const TextStyle(
+                   fontSize: 20,
+                   fontWeight: FontWeight.w600,
+                 ),
+                 decoration: BoxDecoration(
+                   border: Border.all(color: Colors.grey.shade300),
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+               ),
+               focusedPinTheme: PinTheme(
+                 width: 48,
+                 height: 56,
+                 textStyle: const TextStyle(
+                   fontSize: 20,
+                   fontWeight: FontWeight.w700,
+                 ),
+                 decoration: BoxDecoration(
+                   border: Border.all(color: Get.theme.primaryColor),
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+               ),
+               onCompleted: (value) => pinController.text = value,
+             ),
+             // Fin del objeto Pinput para PIN del menú oculto
           ],
         ),
         actions: [

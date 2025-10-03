@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'mlkit_text_recognition_service.dart';
 import 'ine_credential_processor_service.dart';
 

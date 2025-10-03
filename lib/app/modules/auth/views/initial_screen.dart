@@ -200,7 +200,7 @@ class InitialScreen extends GetView<AuthController> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  disabledBackgroundColor: const Color.fromARGB(255, 179, 229, 222),
+                                  disabledBackgroundColor: const Color(0xFF424c50),
                                   disabledForegroundColor: Colors.grey.shade500,
                                 ),
                                 child:
@@ -216,15 +216,8 @@ class InitialScreen extends GetView<AuthController> {
                                                 ),
                                           ),
                                         )
-                                        : Text(
-                                          'Comenzar',
-                                          // Inicio ajuste de color de texto del botón (light): se elimina color forzado para respetar el foregroundColor del botón (Theme.of(context).colorScheme.onPrimary)
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          // Fin ajuste de color de texto del botón (light)
+                                        : const Text(
+                                          'INGRESAR',
                                         ),
                               ),
                             ),

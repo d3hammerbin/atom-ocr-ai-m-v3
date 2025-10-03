@@ -69,8 +69,8 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.light,
           ).copyWith(
             // Inicio de ajuste de esquema de color para botones light
-            primary: const Color(0xFF18DAA3),
-            onPrimary: const Color(0xFF191E33),
+            primary: const Color(0xFF181d34),
+            onPrimary: const Color(0xFF18DAA3),
             // Fin de ajuste de esquema de color para botones light
           ),
           useMaterial3: true,
@@ -84,16 +84,14 @@ class MyApp extends StatelessWidget {
           // Inicio de configuración de temas de botones (light)
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF18DAA3),
-              // Inicio ajuste color de texto del botón (light)
-              foregroundColor: const Color(0xFF191E33),
-              // Fin ajuste color de texto del botón (light)
+              backgroundColor: const Color(0xFF181d34),
+              foregroundColor: const Color(0xFF18DAA3),
             ),
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF18DAA3),
-              foregroundColor: const Color(0xFF191E33),
+              backgroundColor: const Color(0xFF181d34),
+              foregroundColor: const Color(0xFF18DAA3),
             ),
           ),
           textButtonTheme: TextButtonThemeData(
@@ -103,10 +101,10 @@ class MyApp extends StatelessWidget {
           ),
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
-              backgroundColor: const Color(0xFF18DAA3),
-              foregroundColor: const Color(0xFF191E33),
+              backgroundColor: const Color(0xFF181d34),
+              foregroundColor: const Color(0xFF18DAA3),
               side: const BorderSide(
-                color: Color(0xFF18DAA3),
+                color: Color(0xFF181d34),
                 width: 1.5,
               ),
             ),

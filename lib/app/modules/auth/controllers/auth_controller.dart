@@ -101,8 +101,8 @@ class AuthController extends GetxController {
         
         await Log.i('AuthController', 'Sesión iniciada para usuario: ${firstUser.identifier}');
         
-        // Capturar datos de geolocalización
-        await _captureGeoLocation(firstUser.identifier);
+        // Capturar datos de geolocalización en segundo plano (sin await)
+        _captureGeoLocation(firstUser.identifier);
         
         // Proceder con verificación de permisos
         await _handlePermissionsAndDeviceFlow(firstUser);
@@ -120,8 +120,8 @@ class AuthController extends GetxController {
           
           await Log.i('AuthController', 'Sesión iniciada para usuario: ${createdUser.identifier}');
           
-          // Capturar datos de geolocalización
-          await _captureGeoLocation(createdUser.identifier);
+          // Capturar datos de geolocalización en segundo plano (sin await)
+          _captureGeoLocation(createdUser.identifier);
           
           // Proceder con verificación de permisos y dispositivo
           await _handlePermissionsAndDeviceFlow(createdUser);

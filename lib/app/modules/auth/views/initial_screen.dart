@@ -103,9 +103,9 @@ class InitialScreen extends GetView<AuthController> {
                                     //color: Colors.white,
                                     color: const Color.fromARGB(
                                       255,
-                                      213,
-                                      241,
-                                      237,
+                                      179,
+                                      229,
+                                      222,
                                     ),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
@@ -200,7 +200,7 @@ class InitialScreen extends GetView<AuthController> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  disabledBackgroundColor: const Color.fromARGB(255, 179, 229, 222),
                                   disabledForegroundColor: Colors.grey.shade500,
                                 ),
                                 child:
@@ -254,7 +254,7 @@ class InitialScreen extends GetView<AuthController> {
                               style: Theme.of(
                                 context,
                               ).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[500],
+                                color: const Color(0xFF191E33),
                                 height: 1.4,
                               ),
                             );

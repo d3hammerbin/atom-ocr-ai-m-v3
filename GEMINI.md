@@ -1,36 +1,36 @@
-## Project Overview
+## Resumen del Proyecto
 
-This is a Flutter application called "Atom OCR AI Mobile v3". It's a mobile app for optical character recognition (OCR) with a focus on processing Mexican INE credentials. It uses GetX for state management and navigation, and Google ML Kit for the OCR functionality.
+Esta es una aplicación Flutter llamada "Atom OCR AI Mobile v3". Es una aplicación móvil para el reconocimiento óptico de caracteres (OCR) con un enfoque en el procesamiento de credenciales del INE de México. Utiliza GetX para la gestión de estado y la navegación, y Google ML Kit para la funcionalidad de OCR.
 
-The application is structured using a modular approach, with different modules for features like `home`, `ocr`, `camera`, and `credentials_list`. It also includes services for managing user preferences, app version, logging, and more.
+La aplicación está estructurada utilizando un enfoque modular, con diferentes módulos para características como `home`, `ocr`, `camera` y `credentials_list`. También incluye servicios para gestionar las preferencias del usuario, la versión de la aplicación, el registro de logs y más.
 
-## Building and Running
+## Compilación y Ejecución
 
-To build and run the project, follow these steps:
+Para compilar y ejecutar el proyecto, sigue estos pasos:
 
-1.  **Clone the repository:**
+1.  **Clona el repositorio:**
     ```bash
     git clone <repository-url>
     cd atom-ocr-ai-m-v3
     ```
 
-2.  **Install dependencies:**
+2.  **Instala las dependencias:**
     ```bash
     flutter pub get
     ```
 
-3.  **Configure environment variables:**
-    Create a `.env` file in the root of the project and add the necessary variables.
+3.  **Configura las variables de entorno:**
+    Crea un archivo `.env` en la raíz del proyecto y añade las variables necesarias.
 
-4.  **Run the application:**
+4.  **Ejecuta la aplicación:**
     ```bash
     flutter run
     ```
 
-## Development Conventions
+## Convenciones de Desarrollo
 
-*   **State Management:** The project uses GetX for state management. Controllers are used to manage the state of each screen, and bindings are used to inject the dependencies.
-*   **Navigation:** GetX is also used for navigation. The routes are defined in the `lib/app/routes/app_pages.dart` file.
-*   **Modular Architecture:** The project is divided into modules, with each module representing a feature. This helps to keep the code organized and maintainable.
-*   **Services:** The project uses services to provide common functionality, such as logging, user preferences, and app versioning.
-*   **Testing:** The project includes unit and widget tests. Run tests using the `flutter test` command.
+*   **Gestión de Estado:** El proyecto utiliza GetX para la gestión de estado. Se utilizan controladores para gestionar el estado de cada pantalla y `bindings` para inyectar las dependencias.
+*   **Navegación:** GetX también se utiliza para la navegación. Las rutas se definen en el archivo `lib/app/routes/app_pages.dart`.
+*   **Arquitectura Modular:** El proyecto está dividido en módulos, donde cada módulo representa una característica. Esto ayuda a mantener el código organizado y mantenible.
+*   **Servicios:** El proyecto utiliza servicios para proporcionar funcionalidades comunes, como el registro de logs, las preferencias del usuario y el control de versiones de la aplicación.
+*   **Pruebas:** El proyecto incluye pruebas unitarias y de widgets. Ejecuta las pruebas usando el comando `flutter test`.

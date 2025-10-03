@@ -5,12 +5,20 @@ import '../../global_widgets/user_settings_widget.dart';
 import '../../core/app_version_service.dart';
 import '../../core/services/special_settings_service.dart';
 
+import '../../global_widgets/bubble_bottom_nav_bar.dart';
+
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Ajustamos el color de fondo del Scaffold para que coincida con el diseño deseado
+    // Puedes cambiarlo o quitarlo si prefieres un fondo de color de tema.
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldColor = isDarkMode ? Theme.of(context).colorScheme.surface : const Color(0xFFF0F2F5);
+
     return Scaffold(
+      backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: Obx(() {
           final versionService = AppVersionService.to;
@@ -181,75 +189,12 @@ class HomeView extends GetView<HomeController> {
         ),
       ),
       bottomNavigationBar: Obx(
-        () => Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[200], // Fondo gris claro
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 0,
-                blurRadius: 10,
-                offset: const Offset(0, -5), // Sombra hacia arriba
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              // Item 0: Home (Nuevo)
-              InkWell(
-                onTap: () => controller.onItemTapped(0),
-                customBorder: const CircleBorder(),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.home,
-                    size: controller.selectedIndex.value == 0 ? 24.0 * 1.3 : 24.0,
-                    color: controller.selectedIndex.value == 0 ? const Color(0xFF55B994) : const Color(0xFF46495b),
-                  ),
-                ),
-              ),
-              // Item 1: Lista
-              InkWell(
-                onTap: () => controller.onItemTapped(1),
-                customBorder: const CircleBorder(),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.list_alt,
-                    size: controller.selectedIndex.value == 1 ? 24.0 * 1.3 : 24.0,
-                    color: controller.selectedIndex.value == 1 ? const Color(0xFF55B994) : const Color(0xFF46495b),
-                  ),
-                ),
-              ),
-              // Item 2: Escáner
-              InkWell(
-                onTap: () => controller.onItemTapped(2),
-                customBorder: const CircleBorder(),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.qr_code_scanner,
-                    size: controller.selectedIndex.value == 2 ? 24.0 * 1.3 : 24.0,
-                    color: controller.selectedIndex.value == 2 ? const Color(0xFF55B994) : const Color(0xFF46495b),
-                  ),
-                ),
-              ),
-              // Item 3: Configuración
-              InkWell(
-                onTap: () => controller.onItemTapped(3),
-                customBorder: const CircleBorder(),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.settings,
-                    size: controller.selectedIndex.value == 3 ? 24.0 * 1.3 : 24.0,
-                    color: controller.selectedIndex.value == 3 ? const Color(0xFF55B994) : const Color(0xFF46495b),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        () => BubbleBottomNavBar(
+          items: controller.navItems,
+          currentIndex: controller.selectedIndex.value,
+          onItemTapped: controller.onItemTapped,
+          // Puedes personalizar los colores aquí si lo deseas.
+          // Por defecto usará el verde del tema como color activo.
         ),
       ),
     );

@@ -109,12 +109,7 @@ class InitialScreen extends GetView<AuthController> {
                                     ),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        221,
-                                        221,
-                                        221,
-                                      ),
+                                      color: const Color.fromARGB(255, 77, 182, 172),
                                       width: 1.2,
                                     ),
                                   ),
